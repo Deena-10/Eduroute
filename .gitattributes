@@ -1,0 +1,11 @@
+# Handle all text files with automatic normalization
+* text=auto
+
+# Explicit line ending normalization for common code files
+*.js   text
+*.jsx  text
+*.ts   text
+*.tsx  text
+*.json text
+*.css  text
+*.html text

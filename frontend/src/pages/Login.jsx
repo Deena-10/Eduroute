@@ -1,7 +1,9 @@
-import React, { useState, useContext, useEffect, useRef } from 'react';
+import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../api/axiosInstance';
 import { AuthContext } from '../context/AuthContext';
+import { signInWithPopup } from 'firebase/auth';
+import { auth, googleProvider } from '../firebaseConfig';
 import '../style/Login.css';
 
 const Login = () => {
@@ -10,45 +12,17 @@ const Login = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const navigate = useNavigate();
-    const googleButtonRef = useRef(null);
-
-    useEffect(() => {
-        if (window.google && googleButtonRef.current) {
-            window.google.accounts.id.initialize({
-                client_id: '161541543161-hha51u6d907a3q1p79ojbqtmduql7ufn.apps.googleusercontent.com', // ⛳ Replace with actual Google Client ID
-                callback: handleGoogleResponse,
-            });
-
-            window.google.accounts.id.renderButton(googleButtonRef.current, {
-                theme: 'outline',
-                size: 'large',
-                width: '100%',
-            });
-        }
-    }, []);
-
-    const handleGoogleResponse = async (response) => {
-        try {
-            const res = await axiosInstance.post('/auth/google-login', {
-                token: response.credential,
-            });
-            login(res.data.user, res.data.token);
-            navigate('/questionnaire');
-        } catch (err) {
-            console.error('Google login failed:', err);
-            alert('Google login failed');
-        }
-    };
 
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
+    // 📌 Email/Password Login
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsLoading(true);
         try {
             const res = await axiosInstance.post('/auth/login', form);
             login(res.data.user, res.data.token);
-            alert('Login successful!');
+            localStorage.setItem('token', res.data.token);
             navigate('/questionnaire');
         } catch (error) {
             alert(error.response?.data?.message || 'Login failed. Please check your credentials.');
@@ -57,16 +31,38 @@ const Login = () => {
         }
     };
 
+    // 📌 Google Login via Firebase
+    const handleGoogleLogin = async () => {
+        try {
+            const result = await signInWithPopup(auth, googleProvider);
+            const user = result.user;
+
+            // ✅ Firebase ID token for backend verification
+            const idToken = await user.getIdToken();
+
+            const res = await axiosInstance.post('/auth/google', { idToken });
+
+            login(res.data.user, res.data.token);
+            localStorage.setItem('token', res.data.token);
+
+            navigate('/questionnaire');
+        } catch (error) {
+            console.error('Google login failed:', error);
+            alert('Google login failed. Please try again.');
+        }
+    };
+
     return (
         <div className="login-wrapper">
+            {/* LEFT SECTION */}
             <div className="login-left">
                 <div className="brand-section">
                     <div className="logo">
                         <div className="logo-icon">🚀</div>
                         <h2>EduRoute AI</h2>
                     </div>
-                    <h1>Welcome to Your Career Journey</h1>
-                    <p>Discover your path, build your future, and achieve your dreams with our comprehensive career roadmap platform.</p>
+                    <h1>Welcome Back</h1>
+                    <p>Log in to continue your career journey with our AI-powered guidance platform.</p>
                 </div>
                 <div className="illustration">
                     <div className="floating-card card-1">
@@ -84,13 +80,15 @@ const Login = () => {
                 </div>
             </div>
 
+            {/* RIGHT SECTION */}
             <div className="login-right">
                 <div className="login-form-container">
                     <div className="form-header">
                         <h2>Login</h2>
-                        <p>Enter your credentials to access your account</p>
+                        <p>Enter your credentials to log in</p>
                     </div>
 
+                    {/* EMAIL/PASSWORD LOGIN */}
                     <form onSubmit={handleSubmit} className="login-form">
                         <div className="input-group">
                             <div className="input-wrapper">
@@ -138,25 +136,30 @@ const Login = () => {
                             {isLoading ? (
                                 <span className="loading-spinner">
                                     <div className="spinner"></div>
-                                    Signing in...
+                                    Logging in...
                                 </span>
                             ) : (
-                                'Sign In'
+                                'Login'
                             )}
                         </button>
                     </form>
 
-                    <div className="divider">
-                        <span>or</span>
-                    </div>
+                    {/* DIVIDER */}
+                    <div className="divider"><span>or</span></div>
 
-                    {/* ✅ Replace this with Google's rendered button */}
+                    {/* GOOGLE LOGIN */}
                     <div className="social-login">
-                        <div ref={googleButtonRef}></div>
+                        <button className="google-btn" onClick={handleGoogleLogin}>
+                            <img
+                                src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+                                alt="Google logo"
+                            />
+                            Continue with Google
+                        </button>
                     </div>
 
                     <div className="signup-link">
-                        <p>Don't have an account? <a href="/signup">Create one</a></p>
+                        <p>Don't have an account? <a href="/signup">Sign up</a></p>
                     </div>
                 </div>
             </div>

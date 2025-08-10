@@ -1,76 +1,76 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
-const crypto = require('crypto');
-const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/User');
-require('dotenv').config();
-
 const router = express.Router();
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const admin = require('firebase-admin');
 
-// Signup
+// Initialize Firebase Admin SDK
+// Make sure you have serviceAccountKey.json from Firebase console
+// (Project Settings → Service accounts → Generate new private key)
+const serviceAccount = require('../config/serviceAccountKey.json');
+
+if (!admin.apps.length) {
+    admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+    });
+}
+
+// Helper: Create JWT
+const createToken = (userId) => {
+    return jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: '7d' });
+};
+
+// ==================
+// EMAIL + PASSWORD SIGNUP (Normal)
+// ==================
 router.post('/signup', async (req, res) => {
     try {
         const { name, email, password } = req.body;
-        const existingUser = await User.findOne({ email });
-        if (existingUser) return res.status(400).json({ message: 'User already exists' });
+        let user = await User.findOne({ email });
+        if (user) return res.status(400).json({ message: 'User already exists' });
 
-        const user = new User({ name, email, password });
+        user = new User({ name, email, password });
         await user.save();
 
-        res.status(201).json({ message: 'User created successfully' });
+        const token = createToken(user._id);
+        res.status(201).json({ token, user });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
     }
 });
 
-// Login
-router.post('/login', async (req, res) => {
+// ==================
+// FIREBASE GOOGLE SIGNUP / LOGIN
+// ==================
+router.post('/google', async (req, res) => {
     try {
-        const { email, password } = req.body;
-        const user = await User.findOne({ email });
-        if (!user) return res.status(400).json({ message: 'Invalid email or password' });
+        const { idToken } = req.body;
 
-        const isMatch = await user.comparePassword(password);
-        if (!isMatch) return res.status(400).json({ message: 'Invalid email or password' });
+        // Verify token with Firebase Admin
+        const decoded = await admin.auth().verifyIdToken(idToken);
 
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+        const { name, email, uid, picture } = decoded;
 
-        res.json({ token, user: { id: user._id, name: user.name, email: user.email } });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Google Login
-router.post('/google-login', async (req, res) => {
-    try {
-        const { token } = req.body;
-        const ticket = await googleClient.verifyIdToken({
-            idToken: token,
-            audience: process.env.GOOGLE_CLIENT_ID,
-        });
-
-        const { email, name } = ticket.getPayload();
+        // Check if user already exists
         let user = await User.findOne({ email });
 
         if (!user) {
-            // Auto-create user with random password
-            const randomPassword = crypto.randomBytes(10).toString('hex');
-            user = new User({ name, email, password: randomPassword });
+            user = new User({
+                name: name || "Unnamed User",
+                email,
+                googleId: uid,
+                profilePicture: picture || null
+            });
             await user.save();
         }
 
-        const jwtToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+        const token = createToken(user._id);
+        res.status(200).json({ token, user });
 
-        res.json({
-            token: jwtToken,
-            user: { id: user._id, name: user.name, email: user.email },
-        });
     } catch (error) {
-        console.error('Google Login Error:', error);
-        res.status(500).json({ message: 'Google login failed' });
+        console.error(error);
+        res.status(401).json({ message: 'Invalid Firebase ID token' });
     }
 });
 

@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import axiosInstance from '../api/axiosInstance';
 import '../style/Signup.css';
+import { auth, googleProvider } from '../firebaseConfig';
+
+import { signInWithPopup, getIdToken } from 'firebase/auth';
 
 const Signup = () => {
+    const navigate = useNavigate();
     const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
@@ -13,7 +17,6 @@ const Signup = () => {
     const handleChange = (e) => {
         const { name, value } = e.target;
         setForm({ ...form, [name]: value });
-        // Clear error when user starts typing
         if (errors[name]) {
             setErrors({ ...errors, [name]: '' });
         }
@@ -21,40 +24,29 @@ const Signup = () => {
 
     const validateForm = () => {
         const newErrors = {};
-
-        if (!form.name.trim()) {
-            newErrors.name = 'Name is required';
-        }
-
+        if (!form.name.trim()) newErrors.name = 'Name is required';
         if (!form.email.trim()) {
             newErrors.email = 'Email is required';
         } else if (!/\S+@\S+\.\S+/.test(form.email)) {
             newErrors.email = 'Please enter a valid email';
         }
-
         if (!form.password) {
             newErrors.password = 'Password is required';
         } else if (form.password.length < 6) {
             newErrors.password = 'Password must be at least 6 characters';
         }
-
         if (!form.confirmPassword) {
             newErrors.confirmPassword = 'Please confirm your password';
         } else if (form.password !== form.confirmPassword) {
             newErrors.confirmPassword = 'Passwords do not match';
         }
-
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
-        if (!validateForm()) {
-            return;
-        }
-
+        if (!validateForm()) return;
         setIsLoading(true);
         try {
             await axiosInstance.post('/auth/signup', {
@@ -63,13 +55,35 @@ const Signup = () => {
                 password: form.password
             });
             alert('Signup successful! Please login.');
-            // Redirect to login page
-            window.location.href = '/login';
+            navigate('/login');
         } catch (error) {
             const errorMessage = error.response?.data?.message || 'Signup failed. Please try again.';
             alert(errorMessage);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleGoogleSignup = async () => {
+        try {
+            // 1️⃣ Sign in with Firebase
+            const result = await signInWithPopup(auth, googleProvider);
+            const user = result.user;
+            const idToken = await getIdToken(user, true);
+
+            // 2️⃣ Send ID token to backend for verification + account creation
+            const res = await axiosInstance.post('/auth/google', { idToken });
+
+            // 3️⃣ Save backend's auth token to localStorage for session persistence
+            if (res.data?.token) {
+                localStorage.setItem('authToken', res.data.token);
+            }
+
+            alert('Google sign-in successful!');
+            navigate('/');
+        } catch (error) {
+            console.error('Google signup error:', error);
+            alert(error.response?.data?.message || 'Google sign-in failed.');
         }
     };
 
@@ -82,30 +96,7 @@ const Signup = () => {
                         <h2>EduRoute AI</h2>
                     </div>
                     <h1>Start Your Career Journey</h1>
-                    <p>Join thousands of professionals who are building their dream careers with our comprehensive roadmap platform.</p>
-                </div>
-                <div className="benefits">
-                    <div className="benefit-item">
-                        <span className="benefit-icon">🎯</span>
-                        <div className="benefit-content">
-                            <h3>Personalized Roadmaps</h3>
-                            <p>Get customized career paths based on your goals and skills</p>
-                        </div>
-                    </div>
-                    <div className="benefit-item">
-                        <span className="benefit-icon">📈</span>
-                        <div className="benefit-content">
-                            <h3>Track Progress</h3>
-                            <p>Monitor your advancement and celebrate milestones</p>
-                        </div>
-                    </div>
-                    <div className="benefit-item">
-                        <span className="benefit-icon">💡</span>
-                        <div className="benefit-content">
-                            <h3>Expert Guidance</h3>
-                            <p>Access industry insights and professional advice</p>
-                        </div>
-                    </div>
+                    <p>Join thousands of professionals building their dream careers with our platform.</p>
                 </div>
             </div>
             
@@ -216,13 +207,9 @@ const Signup = () => {
                     </div>
                     
                     <div className="social-signup">
-                        <button className="social-btn google">
+                        <button className="social-btn google" onClick={handleGoogleSignup}>
                             <span>🔍</span>
                             Continue with Google
-                        </button>
-                        <button className="social-btn github">
-                            <span>🐙</span>
-                            Continue with GitHub
                         </button>
                     </div>
                     

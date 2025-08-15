@@ -1,140 +1,125 @@
-import React, { useContext, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+//frontend/src/components/Navbar.jsx
+import React, { useContext } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import '../style/Navbar.css';
 
 const Navbar = () => {
     const { user, logout } = useContext(AuthContext);
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const location = useLocation();
+    const navigate = useNavigate();
 
-    const handleLogout = () => {
-        logout();
-        setIsMenuOpen(false);
+    const handleLogout = async () => {
+        try {
+            await logout();
+            navigate('/');
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
     };
 
     const isActive = (path) => location.pathname === path;
 
     return (
-        <nav className="navbar">
-            <div className="nav-container">
-                <div className="nav-brand">
-                    <Link to="/" className="brand-link">
-                        <div className="brand-icon">🚀</div>
-                        <span className="brand-text">EduRoute AI</span>
-                    </Link>
-                </div>
+        <nav style={{
+            backgroundColor: 'white',
+            color: '#1e293b',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            position: 'sticky',
+            top: 0,
+            zIndex: 1000
+        }}>
+            <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '0 24px',
+                maxWidth: '1200px',
+                margin: '0 auto',
+                minHeight: '64px'
+            }}>
+                
+                {/* Logo / Brand */}
+                <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ fontSize: '32px' }}>🚀</div>
+                    <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#3b82f6' }}>EduRoute AI</div>
+                </Link>
 
-                <div className={`nav-menu ${isMenuOpen ? 'active' : ''}`}>
+                {/* Actions: Direct Buttons */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     {!user ? (
-                        <div className="nav-links">
-                            <Link 
-                                to="/login" 
-                                className={`nav-link ${isActive('/login') ? 'active' : ''}`}
-                                onClick={() => setIsMenuOpen(false)}
+                        <>
+                            <Link
+                                to="/login"
+                                style={{
+                                    textDecoration: 'none',
+                                    color: isActive('/login') ? '#3b82f6' : '#1e293b',
+                                    padding: '8px 16px',
+                                    borderRadius: '6px',
+                                    backgroundColor: isActive('/login') ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                                    fontWeight: '500'
+                                }}
                             >
-                                <span className="nav-icon">🔐</span>
-                                Login
+                                🔐 Login
                             </Link>
-                            <Link 
-                                to="/signup" 
-                                className={`nav-link signup-btn ${isActive('/signup') ? 'active' : ''}`}
-                                onClick={() => setIsMenuOpen(false)}
+                            <Link
+                                to="/signup"
+                                style={{
+                                    textDecoration: 'none',
+                                    color: 'white',
+                                    backgroundColor: '#3b82f6',
+                                    padding: '10px 20px',
+                                    borderRadius: '8px',
+                                    fontWeight: '600'
+                                }}
                             >
-                                <span className="nav-icon">✨</span>
-                                Sign Up
+                                 Get Started
                             </Link>
-                            <Link 
-                                to="/signup" 
-                                className={`nav-link get-started-btn ${isActive('/signup') ? 'active' : ''}`}
-                                onClick={() => setIsMenuOpen(false)}
-                            >
-                                <span className="nav-icon">🚀</span>
-                                Get Started
-                            </Link>
-                        </div>
+                        </>
                     ) : (
-                        <div className="nav-links">
-                            <Link 
-                                to="/" 
-                                className={`nav-link ${isActive('/') ? 'active' : ''}`}
-                                onClick={() => setIsMenuOpen(false)}
+                        <>
+                            <Link
+                                to="/"
+                                style={{
+                                    textDecoration: 'none',
+                                    color: isActive('/') ? '#3b82f6' : '#1e293b',
+                                    padding: '8px 16px',
+                                    borderRadius: '6px',
+                                    backgroundColor: isActive('/') ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                                    fontWeight: '500'
+                                }}
                             >
-                                <span className="nav-icon">🏠</span>
-                                Dashboard
+                                🏠 Dashboard
                             </Link>
-                            <Link 
-                                to="/profile" 
-                                className={`nav-link ${isActive('/profile') ? 'active' : ''}`}
-                                onClick={() => setIsMenuOpen(false)}
+                            <Link
+                                to="/profile"
+                                style={{
+                                    textDecoration: 'none',
+                                    color: isActive('/profile') ? '#3b82f6' : '#1e293b',
+                                    padding: '8px 16px',
+                                    borderRadius: '6px',
+                                    backgroundColor: isActive('/profile') ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                                    fontWeight: '500'
+                                }}
                             >
-                                <span className="nav-icon">👤</span>
-                                Profile
+                                👤 Profile
                             </Link>
-                            <div className="user-menu">
-                                <button 
-                                    className="user-menu-btn"
-                                    onClick={() => setIsMenuOpen(!isMenuOpen)}
-                                >
-                                    <div className="user-avatar">
-                                        {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
-                                    </div>
-                                    <span className="user-name">{user.name || 'User'}</span>
-                                    <span className="dropdown-icon">▼</span>
-                                </button>
-                                {isMenuOpen && (
-                                    <div className="dropdown-menu">
-                                        <div className="dropdown-header">
-                                            <div className="user-info">
-                                                <div className="user-avatar-large">
-                                                    {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
-                                                </div>
-                                                <div className="user-details">
-                                                    <div className="user-name-large">{user.name || 'User'}</div>
-                                                    <div className="user-email">{user.email}</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="dropdown-divider"></div>
-                                        <Link 
-                                            to="/profile" 
-                                            className="dropdown-item"
-                                            onClick={() => setIsMenuOpen(false)}
-                                        >
-                                            <span className="dropdown-icon">⚙️</span>
-                                            Account Settings
-                                        </Link>
-                                        <Link 
-                                            to="/" 
-                                            className="dropdown-item"
-                                            onClick={() => setIsMenuOpen(false)}
-                                        >
-                                            <span className="dropdown-icon">📊</span>
-                                            My Dashboard
-                                        </Link>
-                                        <div className="dropdown-divider"></div>
-                                        <button 
-                                            className="dropdown-item logout-btn"
-                                            onClick={handleLogout}
-                                        >
-                                            <span className="dropdown-icon">🚪</span>
-                                            Sign Out
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+                            <button
+                                onClick={handleLogout}
+                                style={{
+                                    background: 'none',
+                                    border: '1px solid #ef4444',
+                                    color: '#ef4444',
+                                    padding: '8px 16px',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    fontWeight: '500'
+                                }}
+                            >
+                                🚪 Logout
+                            </button>
+                        </>
                     )}
                 </div>
-
-                <button 
-                    className={`hamburger ${isMenuOpen ? 'active' : ''}`}
-                    onClick={() => setIsMenuOpen(!isMenuOpen)}
-                >
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </button>
             </div>
         </nav>
     );

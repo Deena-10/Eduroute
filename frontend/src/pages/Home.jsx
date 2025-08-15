@@ -1,11 +1,13 @@
+//frontend/src/pages/Home.jsx
 import React, { useState, useContext } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import '../style/Home.css';
+import { Button, Box } from '@mui/material';
 
 const Home = () => {
     const { user } = useContext(AuthContext);
-    const [activeTab, setActiveTab] = useState('roadmap');
+    const navigate = useNavigate();
+    const [activeTab, setActiveTab] = useState(0);
 
     const careerRoadmaps = [
         {
@@ -141,254 +143,760 @@ const Home = () => {
         }
     ];
 
+    const handleTabChange = (event, newValue) => {
+        setActiveTab(newValue);
+    };
+
     return (
-        <div className="home-container">
+        <div style={{
+            flex: 1,
+            backgroundColor: '#f8fafc',
+            overflowY: 'auto',
+            minHeight: '100vh'
+        }}>
             {/* Hero Section */}
-            <section className="hero-section">
-                <div className="hero-content">
-                    <div className="hero-text">
-                        <h1 className="hero-title">
-                            Welcome to <span className="gradient-text">EduRoute AI</span>
-                        </h1>
-                        <p className="hero-subtitle">
+            <div style={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                padding: '64px 24px'
+            }}>
+                <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                    <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+                       <h1 style={{
+                           marginBottom: '16px',
+                              fontWeight: 'bold',
+                         fontSize: '48px',
+    margin: '0 0 16px 0',
+    color: '#FFFFFF'
+}}>
+    Welcome to EduRoute AI
+</h1>
+
+
+
+                        <p style={{
+                            marginBottom: '32px',
+                            opacity: 0.9,
+                            maxWidth: '800px',
+                            margin: '0 auto 32px',
+                            fontSize: '18px',
+                            lineHeight: '1.6'
+                        }}>
                             Your AI-powered career companion for personalized guidance, internship opportunities, 
                             and professional growth. Discover your path to success with intelligent career mapping.
                         </p>
-                        <div className="hero-stats">
-                            <div className="stat-item">
-                                <span className="stat-number">500+</span>
-                                <span className="stat-label">Career Paths</span>
+                        
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            gap: '32px',
+                            marginBottom: '32px',
+                            flexWrap: 'wrap'
+                        }}>
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{
+                                    fontSize: '32px',
+                                    fontWeight: 'bold',
+                                    marginBottom: '8px'
+                                }}>500+</div>
+                                <div style={{ fontSize: '14px' }}>Career Paths</div>
                             </div>
-                            <div className="stat-item">
-                                <span className="stat-number">1000+</span>
-                                <span className="stat-label">Internships</span>
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{
+                                    fontSize: '32px',
+                                    fontWeight: 'bold',
+                                    marginBottom: '8px'
+                                }}>1000+</div>
+                                <div style={{ fontSize: '14px' }}>Internships</div>
                             </div>
-                            <div className="stat-item">
-                                <span className="stat-number">50+</span>
-                                <span className="stat-label">Events Monthly</span>
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{
+                                    fontSize: '32px',
+                                    fontWeight: 'bold',
+                                    marginBottom: '8px'
+                                }}>50+</div>
+                                <div style={{ fontSize: '14px' }}>Events Monthly</div>
                             </div>
                         </div>
-                        {!user ? (
-                            <div className="hero-actions">
-                                <Link to="/signup" className="cta-button primary">
-                                    Get Started
-                                </Link>
-                                <Link to="/login" className="cta-button secondary">
-                                    Login
-                                </Link>
-                            </div>
-                        ) : (
-                            <div className="hero-actions">
-                                <Link to="/profile" className="cta-button primary">
-                                    View My Profile
-                                </Link>
-                            </div>
-                        )}
-                    </div>
-                    <div className="hero-visual">
-                        <div className="floating-elements">
-                            <div className="floating-card card-1">
-                                <span>🎯</span>
-                                <p>Career Mapping</p>
-                            </div>
-                            <div className="floating-card card-2">
-                                <span>💼</span>
-                                <p>Internships</p>
-                            </div>
-                            <div className="floating-card card-3">
-                                <span>📅</span>
-                                <p>Events</p>
-                            </div>
-                            <div className="floating-card card-4">
-                                <span>🚀</span>
-                                <p>Job Openings</p>
-                            </div>
+
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            gap: '16px',
+                            flexWrap: 'wrap'
+                        }}>
+                            {!user ? (
+                                <>
+                                    <button style={{
+                                        backgroundColor: '#10b981',
+                                        color: 'white',
+                                        border: 'none',
+                                        padding: '16px 32px',
+                                        borderRadius: '8px',
+                                        fontSize: '16px',
+                                        fontWeight: '600',
+                                        cursor: 'pointer'
+                                    }} onClick={() => navigate('/signup')}>
+                                        Get Started
+                                    </button>
+                                    <button style={{
+                                        backgroundColor: 'transparent',
+                                        color: 'white',
+                                        border: '2px solid white',
+                                        padding: '16px 32px',
+                                        borderRadius: '8px',
+                                        fontSize: '16px',
+                                        fontWeight: '600',
+                                        cursor: 'pointer'
+                                    }} onClick={() => navigate('/login')}>
+                                        Login
+                                    </button>
+                                </>
+                            ) : (
+                                <button style={{
+                                    backgroundColor: '#10b981',
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '16px 32px',
+                                    borderRadius: '8px',
+                                    fontSize: '16px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer'
+                                }} onClick={() => navigate('/questionnaire')}>
+                                    Take Career Assessment
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
-            </section>
+            </div>
 
             {/* Features Section */}
-            <section className="features-section">
-                <div className="container">
-                    <h2 className="section-title">What We Offer</h2>
-                    <div className="features-grid">
-                        <div className="feature-card">
-                            <div className="feature-icon">🗺️</div>
-                            <h3>Career Guidance Roadmap</h3>
-                            <p>AI-powered personalized career paths tailored to your skills, interests, and goals. Get step-by-step guidance for your dream career.</p>
+            <div style={{ padding: '48px 24px' }}>
+                <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                    <h2 style={{
+                        textAlign: 'center',
+                        marginBottom: '48px',
+                        fontSize: '36px',
+                        color: '#1e293b',
+                        fontWeight: '600'
+                    }}>
+                        What We Offer
+                    </h2>
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                        gap: '32px'
+                    }}>
+                        <div style={{
+                            backgroundColor: 'white',
+                            borderRadius: '12px',
+                            padding: '24px',
+                            textAlign: 'center',
+                            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+                        }}>
+                            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🗺️</div>
+                            <h3 style={{
+                                marginBottom: '16px',
+                                fontSize: '20px',
+                                fontWeight: '600',
+                                color: '#1e293b'
+                            }}>
+                                        Career Guidance Roadmap
+                            </h3>
+                            <p style={{
+                                color: '#64748b',
+                                lineHeight: '1.6',
+                                fontSize: '14px'
+                            }}>
+                                        AI-powered personalized career paths tailored to your skills, interests, and goals.
+                            </p>
                         </div>
-                        <div className="feature-card">
-                            <div className="feature-icon">💼</div>
-                            <h3>Internship Opportunities</h3>
-                            <p>Discover relevant internship opportunities from top companies. Get hands-on experience and build your professional network.</p>
+                        <div style={{
+                            backgroundColor: 'white',
+                            borderRadius: '12px',
+                            padding: '24px',
+                            textAlign: 'center',
+                            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+                        }}>
+                            <div style={{ fontSize: '48px', marginBottom: '16px' }}>💼</div>
+                            <h3 style={{
+                                marginBottom: '16px',
+                                fontSize: '20px',
+                                fontWeight: '600',
+                                color: '#1e293b'
+                            }}>
+                                        Internship Opportunities
+                            </h3>
+                            <p style={{
+                                color: '#64748b',
+                                lineHeight: '1.6',
+                                fontSize: '14px'
+                            }}>
+                                        Discover relevant internship opportunities from top companies.
+                            </p>
                         </div>
-                        <div className="feature-card">
-                            <div className="feature-icon">📅</div>
-                            <h3>Events & Workshops</h3>
-                            <p>Stay updated with industry events, workshops, and networking opportunities. Connect with professionals and expand your knowledge.</p>
+                        <div style={{
+                            backgroundColor: 'white',
+                            borderRadius: '12px',
+                            padding: '24px',
+                            textAlign: 'center',
+                            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+                        }}>
+                            <div style={{ fontSize: '48px', marginBottom: '16px' }}>📅</div>
+                            <h3 style={{
+                                marginBottom: '16px',
+                                fontSize: '20px',
+                                fontWeight: '600',
+                                color: '#1e293b'
+                            }}>
+                                        Events & Workshops
+                            </h3>
+                            <p style={{
+                                color: '#64748b',
+                                lineHeight: '1.6',
+                                fontSize: '14px'
+                            }}>
+                                        Stay updated with industry events, workshops, and networking opportunities.
+                            </p>
                         </div>
-                        <div className="feature-card">
-                            <div className="feature-icon">🚀</div>
-                            <h3>Current Job Openings</h3>
-                            <p>Find the latest job openings in your domain. Get personalized job recommendations based on your profile and preferences.</p>
+                        <div style={{
+                            backgroundColor: 'white',
+                            borderRadius: '12px',
+                            padding: '24px',
+                            textAlign: 'center',
+                            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+                        }}>
+                            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🚀</div>
+                            <h3 style={{
+                                marginBottom: '16px',
+                                fontSize: '20px',
+                                fontWeight: '600',
+                                color: '#1e293b'
+                            }}>
+                                        Current Job Openings
+                            </h3>
+                            <p style={{
+                                color: '#64748b',
+                                lineHeight: '1.6',
+                                fontSize: '14px'
+                            }}>
+                                        Find the latest job openings in your domain with personalized recommendations.
+                            </p>
                         </div>
                     </div>
                 </div>
-            </section>
+            </div>
 
             {/* Interactive Dashboard */}
-            <section className="dashboard-section">
-                <div className="container">
-                    <h2 className="section-title">Explore Opportunities</h2>
-                    <div className="tab-navigation">
-                        <button 
-                            className={`tab-button ${activeTab === 'roadmap' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('roadmap')}
-                        >
-                            🗺️ Career Roadmaps
-                        </button>
-                        <button 
-                            className={`tab-button ${activeTab === 'internships' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('internships')}
-                        >
-                            💼 Internships
-                        </button>
-                        <button 
-                            className={`tab-button ${activeTab === 'events' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('events')}
-                        >
-                            📅 Events
-                        </button>
-                        <button 
-                            className={`tab-button ${activeTab === 'jobs' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('jobs')}
-                        >
-                            🚀 Job Openings
-                        </button>
+            <div style={{ padding: '48px 24px' }}>
+                <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                    <h2 style={{
+                        textAlign: 'center',
+                        marginBottom: '48px',
+                        fontSize: '36px',
+                        color: '#1e293b',
+                        fontWeight: '600'
+                    }}>
+                        Explore Opportunities
+                    </h2>
+                    
+                    <div style={{
+                        backgroundColor: 'white',
+                        borderRadius: '12px',
+                        marginBottom: '32px',
+                        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+                    }}>
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            borderBottom: '1px solid #e5e7eb'
+                        }}>
+                            {['🗺️ Career Roadmaps', '💼 Internships', '📅 Events', '🚀 Job Openings'].map((label, index) => (
+                                <button
+                                    key={index}
+                                    onClick={() => setActiveTab(index)}
+                                    style={{
+                                        padding: '16px 24px',
+                                        border: 'none',
+                                        backgroundColor: 'transparent',
+                                        cursor: 'pointer',
+                                        fontSize: '16px',
+                                        fontWeight: '500',
+                                        color: activeTab === index ? '#3b82f6' : '#6b7280',
+                                        borderBottom: activeTab === index ? '2px solid #3b82f6' : 'none'
+                                    }}
+                                >
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
                     </div>
 
-                    <div className="tab-content">
-                        {activeTab === 'roadmap' && (
-                            <div className="roadmap-grid">
+                    <div style={{ marginTop: '32px' }}>
+                        {activeTab === 0 && (
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                                gap: '24px'
+                            }}>
                                 {careerRoadmaps.map(roadmap => (
-                                    <div key={roadmap.id} className="roadmap-card">
-                                        <div className="roadmap-header">
-                                            <span className="roadmap-icon">{roadmap.icon}</span>
-                                            <h3>{roadmap.title}</h3>
+                                    <div key={roadmap.id} style={{
+                                        backgroundColor: 'white',
+                                        borderRadius: '12px',
+                                        padding: '24px',
+                                        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+                                    }}>
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            marginBottom: '16px'
+                                        }}>
+                                            <div style={{ fontSize: '32px', marginRight: '16px' }}>{roadmap.icon}</div>
+                                            <h3 style={{
+                                                fontSize: '18px',
+                                                fontWeight: '600',
+                                                color: '#1e293b',
+                                                margin: 0
+                                            }}>{roadmap.title}</h3>
                                         </div>
-                                        <p className="roadmap-description">{roadmap.description}</p>
-                                        <div className="roadmap-details">
-                                            <span className="duration">⏱️ {roadmap.duration}</span>
-                                            <div className="skills">
-                                                {roadmap.skills.map(skill => (
-                                                    <span key={skill} className="skill-tag">{skill}</span>
-                                                ))}
-                                            </div>
+                                        <p style={{
+                                            color: '#64748b',
+                                            marginBottom: '16px',
+                                            fontSize: '14px',
+                                            lineHeight: '1.6'
+                                        }}>
+                                                    {roadmap.description}
+                                        </p>
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            marginBottom: '16px',
+                                            color: '#6b7280',
+                                            fontSize: '14px'
+                                        }}>
+                                            <span style={{ marginRight: '8px' }}>⏰</span>
+                                            {roadmap.duration}
                                         </div>
-                                        <button className="explore-btn">Explore Path</button>
+                                        <div style={{ marginBottom: '16px' }}>
+                                                    {roadmap.skills.map(skill => (
+                                                <span key={skill} style={{
+                                                    display: 'inline-block',
+                                                    backgroundColor: '#f3f4f6',
+                                                    color: '#374151',
+                                                    padding: '4px 12px',
+                                                    borderRadius: '16px',
+                                                    fontSize: '12px',
+                                                    marginRight: '8px',
+                                                    marginBottom: '8px'
+                                                }}>
+                                                    {skill}
+                                                </span>
+                                            ))}
+                                        </div>
+                                        <button style={{
+                                            width: '100%',
+                                            backgroundColor: '#3b82f6',
+                                            color: 'white',
+                                            border: 'none',
+                                            padding: '12px',
+                                            borderRadius: '8px',
+                                            fontSize: '14px',
+                                            fontWeight: '500',
+                                            cursor: 'pointer'
+                                        }}>
+                                                    Explore Path
+                                        </button>
                                     </div>
                                 ))}
                             </div>
                         )}
 
-                        {activeTab === 'internships' && (
-                            <div className="internship-grid">
+                        {activeTab === 1 && (
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                                gap: '24px'
+                            }}>
                                 {internshipOpportunities.map(internship => (
-                                    <div key={internship.id} className="internship-card">
-                                        <div className="internship-header">
-                                            <h3>{internship.position}</h3>
-                                            <span className="company">{internship.company}</span>
+                                    <div key={internship.id} style={{
+                                        backgroundColor: 'white',
+                                        borderRadius: '12px',
+                                        padding: '24px',
+                                        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+                                    }}>
+                                        <h3 style={{
+                                            fontSize: '18px',
+                                            fontWeight: '600',
+                                            color: '#1e293b',
+                                            marginBottom: '8px'
+                                        }}>
+                                                    {internship.position}
+                                        </h3>
+                                        <p style={{
+                                            color: '#3b82f6',
+                                            marginBottom: '16px',
+                                            fontSize: '14px',
+                                            fontWeight: '500'
+                                        }}>
+                                                    {internship.company}
+                                        </p>
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            marginBottom: '8px',
+                                            color: '#6b7280',
+                                            fontSize: '14px'
+                                        }}>
+                                            <span style={{ marginRight: '8px' }}>📍</span>
+                                            {internship.location}
                                         </div>
-                                        <div className="internship-details">
-                                            <span>📍 {internship.location}</span>
-                                            <span>⏱️ {internship.duration}</span>
-                                            <span>💰 {internship.stipend}</span>
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            marginBottom: '8px',
+                                            color: '#6b7280',
+                                            fontSize: '14px'
+                                        }}>
+                                            <span style={{ marginRight: '8px' }}>⏰</span>
+                                            {internship.duration}
                                         </div>
-                                        <div className="skills">
-                                            {internship.skills.map(skill => (
-                                                <span key={skill} className="skill-tag">{skill}</span>
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            marginBottom: '16px',
+                                            color: '#6b7280',
+                                            fontSize: '14px'
+                                        }}>
+                                            <span style={{ marginRight: '8px' }}>💰</span>
+                                            {internship.stipend}
+                                        </div>
+                                        <div style={{ marginBottom: '16px' }}>
+                                                    {internship.skills.map(skill => (
+                                                <span key={skill} style={{
+                                                    display: 'inline-block',
+                                                    backgroundColor: '#f3f4f6',
+                                                    color: '#374151',
+                                                    padding: '4px 12px',
+                                                    borderRadius: '16px',
+                                                    fontSize: '12px',
+                                                    marginRight: '8px',
+                                                    marginBottom: '8px'
+                                                }}>
+                                                    {skill}
+                                                </span>
                                             ))}
                                         </div>
-                                        <div className="deadline">
-                                            <span>⏰ Deadline: {internship.deadline}</span>
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            marginBottom: '16px',
+                                            color: '#6b7280',
+                                            fontSize: '14px'
+                                        }}>
+                                            <span style={{ marginRight: '8px' }}>📅</span>
+                                            Deadline: {internship.deadline}
                                         </div>
-                                        <button className="apply-btn">Apply Now</button>
+                                        <button style={{
+                                            width: '100%',
+                                            backgroundColor: '#10b981',
+                                            color: 'white',
+                                            border: 'none',
+                                            padding: '12px',
+                                            borderRadius: '8px',
+                                            fontSize: '14px',
+                                            fontWeight: '500',
+                                            cursor: 'pointer'
+                                        }}>
+                                                    Apply Now
+                                        </button>
                                     </div>
                                 ))}
                             </div>
                         )}
 
-                        {activeTab === 'events' && (
-                            <div className="events-grid">
+                        {activeTab === 2 && (
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                                gap: '24px'
+                            }}>
                                 {upcomingEvents.map(event => (
-                                    <div key={event.id} className="event-card">
-                                        <div className="event-header">
-                                            <span className="event-type">{event.type}</span>
-                                            <h3>{event.title}</h3>
+                                    <div key={event.id} style={{
+                                        backgroundColor: 'white',
+                                        borderRadius: '12px',
+                                        padding: '24px',
+                                        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+                                    }}>
+                                        <span style={{
+                                            backgroundColor: '#3b82f6',
+                                            color: 'white',
+                                            padding: '4px 12px',
+                                            borderRadius: '16px',
+                                            fontSize: '12px',
+                                            fontWeight: '500',
+                                            marginBottom: '16px',
+                                            display: 'inline-block'
+                                        }}>
+                                            {event.type}
+                                        </span>
+                                        <h3 style={{
+                                            fontSize: '18px',
+                                            fontWeight: '600',
+                                            color: '#1e293b',
+                                            marginBottom: '16px'
+                                        }}>
+                                                    {event.title}
+                                        </h3>
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            marginBottom: '8px',
+                                            color: '#6b7280',
+                                            fontSize: '14px'
+                                        }}>
+                                            <span style={{ marginRight: '8px' }}>📅</span>
+                                            {event.date}
                                         </div>
-                                        <div className="event-details">
-                                            <span>📅 {event.date}</span>
-                                            <span>🕒 {event.time}</span>
-                                            <span>📍 {event.location}</span>
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            marginBottom: '8px',
+                                            color: '#6b7280',
+                                            fontSize: '14px'
+                                        }}>
+                                            <span style={{ marginRight: '8px' }}>⏰</span>
+                                            {event.time}
                                         </div>
-                                        <p className="event-description">{event.description}</p>
-                                        <div className="event-footer">
-                                            <span>👥 {event.attendees} attendees</span>
-                                            <button className="register-btn">Register</button>
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            marginBottom: '16px',
+                                            color: '#6b7280',
+                                            fontSize: '14px'
+                                        }}>
+                                            <span style={{ marginRight: '8px' }}>📍</span>
+                                            {event.location}
+                                        </div>
+                                        <p style={{
+                                            color: '#64748b',
+                                            marginBottom: '16px',
+                                            fontSize: '14px',
+                                            lineHeight: '1.6'
+                                        }}>
+                                                    {event.description}
+                                        </p>
+                                        <div style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center'
+                                        }}>
+                                            <div style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                color: '#6b7280',
+                                                fontSize: '14px'
+                                            }}>
+                                                <span style={{ marginRight: '8px' }}>👥</span>
+                                                {event.attendees} attendees
+                                            </div>
+                                            <button style={{
+                                                backgroundColor: '#3b82f6',
+                                                color: 'white',
+                                                border: 'none',
+                                                padding: '8px 16px',
+                                                borderRadius: '6px',
+                                                fontSize: '12px',
+                                                fontWeight: '500',
+                                                cursor: 'pointer'
+                                            }}>
+                                                        Register
+                                            </button>
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         )}
 
-                        {activeTab === 'jobs' && (
-                            <div className="jobs-grid">
+                        {activeTab === 3 && (
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                                gap: '24px'
+                            }}>
                                 {currentOpenings.map(job => (
-                                    <div key={job.id} className="job-card">
-                                        <div className="job-header">
-                                            <h3>{job.position}</h3>
-                                            <span className="company">{job.company}</span>
+                                    <div key={job.id} style={{
+                                        backgroundColor: 'white',
+                                        borderRadius: '12px',
+                                        padding: '24px',
+                                        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+                                    }}>
+                                        <h3 style={{
+                                            fontSize: '18px',
+                                            fontWeight: '600',
+                                            color: '#1e293b',
+                                            marginBottom: '8px'
+                                        }}>
+                                                    {job.position}
+                                        </h3>
+                                        <p style={{
+                                            color: '#3b82f6',
+                                            marginBottom: '16px',
+                                            fontSize: '14px',
+                                            fontWeight: '500'
+                                        }}>
+                                                    {job.company}
+                                        </p>
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            marginBottom: '8px',
+                                            color: '#6b7280',
+                                            fontSize: '14px'
+                                        }}>
+                                            <span style={{ marginRight: '8px' }}>📍</span>
+                                            {job.location}
                                         </div>
-                                        <div className="job-details">
-                                            <span>📍 {job.location}</span>
-                                            <span>💼 {job.type}</span>
-                                            <span>⏱️ {job.experience}</span>
-                                            <span>💰 {job.salary}</span>
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            marginBottom: '8px',
+                                            color: '#6b7280',
+                                            fontSize: '14px'
+                                        }}>
+                                            <span style={{ marginRight: '8px' }}>💼</span>
+                                            {job.type}
                                         </div>
-                                        <div className="skills">
-                                            {job.skills.map(skill => (
-                                                <span key={skill} className="skill-tag">{skill}</span>
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            marginBottom: '8px',
+                                            color: '#6b7280',
+                                            fontSize: '14px'
+                                        }}>
+                                            <span style={{ marginRight: '8px' }}>⏰</span>
+                                            {job.experience}
+                                        </div>
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            marginBottom: '16px',
+                                            color: '#6b7280',
+                                            fontSize: '14px'
+                                        }}>
+                                            <span style={{ marginRight: '8px' }}>💰</span>
+                                            {job.salary}
+                                        </div>
+                                        <div style={{ marginBottom: '16px' }}>
+                                                    {job.skills.map(skill => (
+                                                <span key={skill} style={{
+                                                    display: 'inline-block',
+                                                    backgroundColor: '#f3f4f6',
+                                                    color: '#374151',
+                                                    padding: '4px 12px',
+                                                    borderRadius: '16px',
+                                                    fontSize: '12px',
+                                                    marginRight: '8px',
+                                                    marginBottom: '8px'
+                                                }}>
+                                                    {skill}
+                                                </span>
                                             ))}
                                         </div>
-                                        <button className="apply-btn">Apply Now</button>
+                                        <button style={{
+                                            width: '100%',
+                                            backgroundColor: '#10b981',
+                                            color: 'white',
+                                            border: 'none',
+                                            padding: '12px',
+                                            borderRadius: '8px',
+                                            fontSize: '14px',
+                                            fontWeight: '500',
+                                            cursor: 'pointer'
+                                        }}>
+                                                    Apply Now
+                                        </button>
                                     </div>
                                 ))}
                             </div>
                         )}
                     </div>
                 </div>
-            </section>
+            </div>
 
             {/* CTA Section */}
-            <section className="cta-section">
-                <div className="container">
-                    <div className="cta-content">
-                        <h2>Ready to Start Your Career Journey?</h2>
-                        <p>Join thousands of professionals who are building their dream careers with EduRoute AI</p>
+            <div style={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                padding: '48px 24px',
+                textAlign: 'center'
+            }}>
+                <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+                    <h2 style={{
+                        marginBottom: '16px',
+                        fontSize: '36px',
+                        fontWeight: '600'
+                    }}>
+                        Ready to Start Your Career Journey?
+                    </h2>
+                    <p style={{
+                        marginBottom: '32px',
+                        opacity: 0.9,
+                        fontSize: '18px',
+                        lineHeight: '1.6'
+                    }}>
+                        Join thousands of professionals who are building their dream careers with EduRoute AI
+                    </p>
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        gap: '16px',
+                        flexWrap: 'wrap'
+                    }}>
                         {!user ? (
-                            <div className="cta-actions">
-                                <Link to="/signup" className="cta-button primary">Get Started Free</Link>
-                                <Link to="/login" className="cta-button secondary">Login</Link>
-                            </div>
+                            <>
+                                <button style={{
+                                    backgroundColor: '#10b981',
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '16px 32px',
+                                    borderRadius: '8px',
+                                    fontSize: '16px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer'
+                                }} onClick={() => navigate('/signup')}>
+                                    Get Started Free
+                                </button>
+                                <button style={{
+                                    backgroundColor: 'transparent',
+                                    color: 'white',
+                                    border: '2px solid white',
+                                    padding: '16px 32px',
+                                    borderRadius: '8px',
+                                    fontSize: '16px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer'
+                                }} onClick={() => navigate('/login')}>
+                                    Login
+                                </button>
+                            </>
                         ) : (
-                            <div className="cta-actions">
-                                <Link to="/profile" className="cta-button primary">View My Dashboard</Link>
-                            </div>
+                            <button style={{
+                                backgroundColor: '#10b981',
+                                color: 'white',
+                                border: 'none',
+                                padding: '16px 32px',
+                                borderRadius: '8px',
+                                fontSize: '16px',
+                                fontWeight: '600',
+                                cursor: 'pointer'
+                            }} onClick={() => navigate('/questionnaire')}>
+                                Take Career Assessment
+                            </button>
                         )}
                     </div>
                 </div>
-            </section>
+            </div>
         </div>
     );
 };

@@ -1,70 +1,173 @@
-# Getting Started with Create React App
+# Career Roadmap App - Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This is the frontend application for the Career Roadmap App, built with React Native and Material-UI (MUI).
 
-## Available Scripts
+## 🚀 Recent Updates
 
-In the project directory, you can run:
+The application has been converted from React web components to React Native with Material-UI components, providing:
+- **Cross-platform compatibility** with React Native
+- **Modern UI components** from Material-UI
+- **Consistent design system** across all pages
+- **Responsive layouts** that work on mobile and web
 
-### `npm start`
+## 🛠️ Tech Stack
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **React Native** - Cross-platform mobile development
+- **Material-UI (MUI)** - React component library following Material Design
+- **React Router** - Client-side routing
+- **Axios** - HTTP client for API calls
+- **Firebase** - Authentication and backend services
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## 📱 Pages Converted
 
-### `npm test`
+All pages have been converted to use React Native components with MUI styling:
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+1. **Home.jsx** - Landing page with career roadmaps, internships, events, and job openings
+2. **Login.jsx** - User authentication with email/password and Google sign-in
+3. **Signup.jsx** - User registration with form validation
+4. **Profile.jsx** - User profile management and editing
+5. **Questionnaire.jsx** - AI-powered career assessment questionnaire
 
-### `npm run build`
+## 🎨 Material-UI Components Used
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+- **Layout**: `Box`, `Container`, `Grid`, `Paper`
+- **Navigation**: `Tabs`, `Tab`, `Button`
+- **Forms**: `TextField`, `Checkbox`, `FormControlLabel`
+- **Feedback**: `Alert`, `CircularProgress`, `LinearProgress`
+- **Data Display**: `Card`, `CardContent`, `Typography`, `Chip`, `Avatar`
+- **Icons**: Material Design icons from `@mui/icons-material`
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## 🚀 Getting Started
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Prerequisites
 
-### `npm run eject`
+- Node.js (v16 or higher)
+- npm or yarn package manager
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+### Installation
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+2. **Start the development server:**
+   ```bash
+   npm start
+   ```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+3. **Build for production:**
+   ```bash
+   npm run build
+   ```
 
-## Learn More
+## 📦 Key Dependencies
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```json
+{
+  "@mui/material": "^5.15.6",
+  "@mui/icons-material": "^5.15.6",
+  "@emotion/react": "^11.11.3",
+  "@emotion/styled": "^11.11.0",
+  "react-native": "^0.73.4",
+  "react-native-web": "^0.19.10"
+}
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## 🎯 Features
 
-### Code Splitting
+### Home Page
+- Interactive dashboard with tabs for different content types
+- Career roadmaps with skill requirements
+- Internship opportunities with company details
+- Upcoming events and workshops
+- Current job openings with salary information
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+### Authentication
+- Email/password login and registration
+- Google OAuth integration
+- Form validation and error handling
+- Responsive design for mobile and desktop
 
-### Analyzing the Bundle Size
+### Profile Management
+- User profile editing
+- Career interests and skills management
+- Real-time updates with backend API
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+### AI Questionnaire
+- Multi-step career assessment
+- Progress tracking with visual indicators
+- AI-powered career suggestions
+- Restart functionality for new assessments
 
-### Making a Progressive Web App
+## 🔧 Development
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+### Component Structure
+Each page follows a consistent pattern:
+- React Native imports for cross-platform compatibility
+- Material-UI components for consistent styling
+- Responsive design with MUI's breakpoint system
+- Form handling with MUI's form components
 
-### Advanced Configuration
+### Styling Approach
+- **MUI System**: Uses MUI's `sx` prop for component styling
+- **Responsive Design**: Leverages MUI's breakpoint system
+- **Theme Consistency**: Follows Material Design principles
+- **Custom Colors**: Brand-specific color schemes maintained
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+### State Management
+- React hooks for local state management
+- Context API for authentication state
+- Axios for API communication
+- Form validation with real-time feedback
 
-### Deployment
+## 📱 Mobile-First Design
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+The application is designed with mobile users in mind:
+- Touch-friendly button sizes and spacing
+- Responsive layouts that adapt to screen sizes
+- Optimized navigation for mobile devices
+- Consistent spacing and typography scales
 
-### `npm run build` fails to minify
+## 🌐 Web Compatibility
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+While built with React Native, the app maintains web compatibility:
+- React Native Web for cross-platform rendering
+- Responsive design that works on all screen sizes
+- Touch and mouse interaction support
+- SEO-friendly routing and structure
+
+## 🚀 Deployment
+
+### Development
+```bash
+npm start
+```
+
+### Production Build
+```bash
+npm run build
+```
+
+### Testing
+```bash
+npm test
+```
+
+## 📚 Additional Resources
+
+- [Material-UI Documentation](https://mui.com/)
+- [React Native Documentation](https://reactnative.dev/)
+- [React Native Web](https://necolas.github.io/react-native-web/)
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes following the established patterns
+4. Test on both mobile and web platforms
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License.

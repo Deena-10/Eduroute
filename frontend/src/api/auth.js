@@ -1,3 +1,4 @@
+//auth.js
 import API from './axios';
 
 export const signup = async (name, email, password) => {

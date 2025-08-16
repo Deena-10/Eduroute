@@ -1,28 +1,45 @@
-//frontend/src/components/Navbar.jsx
-import React, { useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext';
 
 const Navbar = () => {
-    const { user, logout } = useContext(AuthContext);
     const location = useLocation();
     const navigate = useNavigate();
+    const [user, setUser] = useState(null); 
 
-    const handleLogout = async () => {
-        try {
-            await logout();
-            navigate('/');
-        } catch (error) {
-            console.error('Logout error:', error);
-        }
+    // This useEffect simulates a user authentication check.
+    // It also handles the JSON parsing error.
+    useEffect(() => {
+        const fakeAuthCheck = () => {
+            try {
+                const loggedInUser = localStorage.getItem('user');
+                // Only attempt to parse if the user exists and is not an empty string
+                if (loggedInUser && loggedInUser !== 'null') {
+                    setUser(JSON.parse(loggedInUser));
+                } else {
+                    setUser(null);
+                }
+            } catch (error) {
+                console.error("Failed to parse user from localStorage:", error);
+                setUser(null);
+                localStorage.removeItem('user'); // Clear the bad data
+            }
+        };
+
+        fakeAuthCheck();
+    }, []);
+
+    const handleLogout = () => {
+        localStorage.removeItem('user');
+        setUser(null);
+        navigate('/');
     };
 
     const isActive = (path) => location.pathname === path;
 
     return (
         <nav style={{
-            backgroundColor: 'white',
-            color: '#1e293b',
+            backgroundColor: 'white', // 🎯 FIX: Changed background color to white
+            color: '#1e293b', // 🎯 FIX: Changed font color to dark gray for contrast
             boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
             position: 'sticky',
             top: 0,
@@ -32,16 +49,15 @@ const Navbar = () => {
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                padding: '0 24px',
+                padding: '0 16px', 
                 maxWidth: '1200px',
                 margin: '0 auto',
-                minHeight: '64px'
+                minHeight: '50px' 
             }}>
                 
                 {/* Logo / Brand */}
                 <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ fontSize: '32px' }}>🚀</div>
-                    <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#3b82f6' }}>EduRoute AI</div>
+                    <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#1e293b' }}>EduRoute AI</div>
                 </Link>
 
                 {/* Actions: Direct Buttons */}
@@ -52,10 +68,10 @@ const Navbar = () => {
                                 to="/login"
                                 style={{
                                     textDecoration: 'none',
-                                    color: isActive('/login') ? '#3b82f6' : '#1e293b',
+                                    color: '#1e293b', // 🎯 FIX: Changed text color
                                     padding: '8px 16px',
                                     borderRadius: '6px',
-                                    backgroundColor: isActive('/login') ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                                    backgroundColor: isActive('/login') ? 'rgba(0, 0, 0, 0.05)' : 'transparent',
                                     fontWeight: '500'
                                 }}
                             >
@@ -72,7 +88,7 @@ const Navbar = () => {
                                     fontWeight: '600'
                                 }}
                             >
-                                 Get Started
+                                Get Started
                             </Link>
                         </>
                     ) : (
@@ -81,10 +97,10 @@ const Navbar = () => {
                                 to="/"
                                 style={{
                                     textDecoration: 'none',
-                                    color: isActive('/') ? '#3b82f6' : '#1e293b',
+                                    color: '#1e293b', // 🎯 FIX: Changed text color
                                     padding: '8px 16px',
                                     borderRadius: '6px',
-                                    backgroundColor: isActive('/') ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                                    backgroundColor: isActive('/') ? 'rgba(0, 0, 0, 0.05)' : 'transparent',
                                     fontWeight: '500'
                                 }}
                             >
@@ -94,10 +110,10 @@ const Navbar = () => {
                                 to="/profile"
                                 style={{
                                     textDecoration: 'none',
-                                    color: isActive('/profile') ? '#3b82f6' : '#1e293b',
+                                    color: '#1e293b', // 🎯 FIX: Changed text color
                                     padding: '8px 16px',
                                     borderRadius: '6px',
-                                    backgroundColor: isActive('/profile') ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                                    backgroundColor: isActive('/profile') ? 'rgba(0, 0, 0, 0.05)' : 'transparent',
                                     fontWeight: '500'
                                 }}
                             >

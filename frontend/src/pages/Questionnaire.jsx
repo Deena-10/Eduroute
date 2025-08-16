@@ -1,236 +1,213 @@
-import React, { useState, useEffect, useRef, useContext } from "react";
-import { AuthContext } from "../context/AuthContext";
-import axiosInstance from "../api/axiosInstance";
+import React, { useState } from 'react';
 
-const Chatbot = () => {
-  const { user } = useContext(AuthContext); // 🎯 THE FIX: Get the logged-in user from the context
-  const [questions, setQuestions] = useState([]);
-  const [answers, setAnswers] = useState({});
-  const [messages, setMessages] = useState([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [userInput, setUserInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [botTyping, setBotTyping] = useState(false);
-  const chatWindowRef = useRef(null);
+const Questionnaire = () => {
+  // State to hold the user's question, the AI's answer, and loading status
+  const [question, setQuestion] = useState('');
+  const [answer, setAnswer] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  // 🎯 THE FIX: Fetch initial questions and user's saved data
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!user?.id) {
-        // Clear state if no user is logged in
-        setAnswers({});
-        setMessages([]);
-        setCurrentQuestionIndex(0);
-        return;
-      }
-
-      try {
-        // Fetch questions
-        const questionsRes = await axiosInstance.get("/questions");
-        const fetchedQuestions = questionsRes.data || [];
-        setQuestions(fetchedQuestions);
-
-        // Fetch user's saved progress
-        const answersRes = await axiosInstance.get(`/answers/${user.id}`); // Fetch answers specific to the user
-        const fetchedAnswers = answersRes.data || {};
-        setAnswers(fetchedAnswers);
-
-        // Reconstruct messages from saved answers and questions
-        const reconstructedMessages = [];
-        let lastQuestionIndex = 0;
-        
-        reconstructedMessages.push({ from: "bot", text: fetchedQuestions[0]?.text, icon: fetchedQuestions[0]?.icon });
-        
-        for (const [questionId, answer] of Object.entries(fetchedAnswers)) {
-            const question = fetchedQuestions.find(q => q.id === parseInt(questionId));
-            if (question) {
-                reconstructedMessages.push({ from: "user", text: answer });
-                reconstructedMessages.push({ from: "bot", text: fetchedQuestions[fetchedQuestions.indexOf(question) + 1]?.text, icon: fetchedQuestions[fetchedQuestions.indexOf(question) + 1]?.icon });
-                lastQuestionIndex = fetchedQuestions.indexOf(question) + 1;
-            }
-        }
-
-        setMessages(reconstructedMessages);
-        setCurrentQuestionIndex(lastQuestionIndex);
-
-        if (reconstructedMessages.length === 0 && fetchedQuestions.length > 0) {
-          setMessages([{ from: "bot", text: fetchedQuestions[0].text, icon: fetchedQuestions[0].icon }]);
-        }
-      } catch (error) {
-        console.error("Error fetching data", error);
-      }
-    };
-    
-    fetchData();
-  }, [user]); // Re-run effect when the user object changes (e.g., on login/logout)
-
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    chatWindowRef.current?.scrollTo({ top: chatWindowRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, botTyping]);
-
-  const handleSendMessage = async (e) => {
+  // Handle form submission
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!userInput.trim() || !user?.id) return;
+    setError(''); // Clear any previous errors
+    setAnswer(''); // Clear any previous answers
 
-    const currentQuestionId = questions[currentQuestionIndex]?.id;
-    const newUserMessage = { from: "user", text: userInput };
-
-    setMessages((prev) => [...prev, newUserMessage]);
-    setAnswers((prev) => ({ ...prev, [currentQuestionId]: userInput }));
-
-    // 🎯 THE FIX: Save the user's answer to the backend
-    try {
-        await axiosInstance.post(`/answers/${user.id}`, { questionId: currentQuestionId, answer: userInput });
-    } catch (error) {
-        console.error("Error saving answer", error);
+    // Do not proceed if the question is empty
+    if (!question.trim()) {
+      setError('Please enter a question.');
+      return;
     }
-    
-    setUserInput("");
 
-    if (currentQuestionIndex < questions.length - 1) {
-      setBotTyping(true);
-      setTimeout(() => {
-        const nextQuestionIndex = currentQuestionIndex + 1;
-        const nextQuestion = questions[nextQuestionIndex];
-        setMessages((prev) => [...prev, { from: "bot", text: nextQuestion.text, icon: nextQuestion.icon }]);
-        setCurrentQuestionIndex(nextQuestionIndex);
-        setBotTyping(false);
-      }, 800);
-    } else {
-      submitToAI();
-    }
-  };
+    setIsLoading(true);
 
-  const submitToAI = async () => {
-    if (!user?.id) return;
-    setLoading(true);
-    setBotTyping(true);
-    setMessages((prev) => [...prev, { from: "bot", text: "Analyzing your answers...", icon: "🧠" }]);
     try {
-      // 🎯 THE FIX: Pass the answers with the user ID to the AI endpoint
-      const res = await axiosInstance.post(`/ai/career-suggestion/${user.id}`, { answers });
-      setBotTyping(false);
+      // Make a POST request to the backend API
+      const response = await fetch('http://localhost:5000/ask_ai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ question: question }),
+      });
 
-      const suggestionCard = `
-🎯 Career: ${res.data.careerTitle}
-💡 Why: ${res.data.reason}
-📅 Next Steps:
-${res.data.nextSteps.map((s, i) => `${i + 1}. ${s}`).join("\n")}
-      `;
+      // Check if the response is successful
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
 
-      setMessages((prev) => [...prev, { from: "bot", text: suggestionCard, card: true, icon: "💡" }]);
+      // Parse the JSON response
+      const data = await response.json();
+
+      // Check for an error message from the backend
+      if (data.error) {
+        setError(data.error);
+        setAnswer('');
+      } else {
+        setAnswer(data.answer);
+        setError('');
+      }
+      
     } catch (err) {
-      console.error(err);
-      setMessages((prev) => [...prev, { from: "bot", text: "⚠️ Could not get a suggestion. Try again.", icon: "❌" }]);
+      console.error('Failed to fetch from API:', err);
+      setError('Failed to get a response from the AI. Please try again.');
     } finally {
-      setLoading(false);
-      setBotTyping(false);
+      setIsLoading(false);
+      setQuestion(''); // Clear the input field
     }
   };
-
-  // Removed the handleRestart function and the Restart button from the JSX.
-  
-  if (questions.length === 0) {
-    return <div style={{ padding: "40px", textAlign: "center", fontSize: "18px" }}>Loading questions...</div>;
-  }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", backgroundColor: "#f0f2f5" }}>
-      {/* Header */}
-      <header style={{ backgroundColor: "#4A90E2", padding: "20px", color: "#fff", textAlign: "center", boxShadow: "0 2px 6px rgba(0,0,0,0.2)", position: "relative" }}>
-        <h1 style={{ margin: 0 }}>💬 Career Chatbot</h1>
-      </header>
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: '100vh',
+      backgroundColor: '#f3f4f6', // Equivalent to bg-gray-100
+      padding: '1rem',
+    }}>
+      <div style={{
+        width: '100%',
+        maxWidth: '48rem', // Equivalent to max-w-2xl
+        backgroundColor: '#fff',
+        borderRadius: '0.5rem', // Equivalent to rounded-lg
+        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)', // Equivalent to shadow-xl
+        padding: '2rem', // Equivalent to p-8
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '2rem', // Equivalent to space-y-8
+      }}>
+        <h1 style={{
+          fontSize: '1.875rem', // Equivalent to text-3xl
+          fontWeight: 'bold',
+          textAlign: 'center',
+          color: '#1f2937', // Equivalent to text-gray-800
+        }}>
+          Ask the AI
+        </h1>
+        <p style={{
+          textAlign: 'center',
+          color: '#4b5563', // Equivalent to text-gray-600
+        }}>
+          Have questions about career paths, skills, or anything else? Ask our AI assistant!
+        </p>
 
-      {/* Chat Messages */}
-      <div ref={chatWindowRef} style={{ flex: 1, padding: "20px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "12px", maxWidth: "800px", margin: "0 auto" }}>
-        {messages.map((msg, i) => (
-          <div key={i} style={{ display: "flex", alignItems: "flex-start", justifyContent: msg.from === "user" ? "flex-end" : "flex-start" }}>
-            {msg.from === "bot" && <img src="https://cdn-icons-png.flaticon.com/512/4712/4712107.png" alt="bot" style={{ width: "32px", height: "32px", marginRight: "8px" }} />}
-            <div style={{
-              padding: "12px 16px",
-              background: msg.from === "user" ? "linear-gradient(135deg, #4A90E2, #357ABD)" : "#fff",
-              color: msg.from === "user" ? "#fff" : "#333",
-              borderRadius: "18px",
-              boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
-              maxWidth: "70%",
-              whiteSpace: "pre-wrap",
-              transition: "all 0.3s"
-            }}>
-              {msg.card ? (
-                <div style={{ border: "2px solid #4A90E2", padding: "10px", borderRadius: "12px", backgroundColor: "#EAF4FF" }}>
-                  <pre style={{ margin: 0, fontFamily: "inherit" }}>{msg.text}</pre>
-                </div>
-              ) : msg.text}
-            </div>
-            {msg.from === "user" && <img src="https://cdn-icons-png.flaticon.com/512/847/847969.png" alt="user" style={{ width: "32px", height: "32px", marginLeft: "8px" }} />}
-          </div>
-        ))}
-
-        {/* Typing Indicator */}
-        {botTyping && (
-          <div style={{ display: "flex", alignItems: "center" }}>
-            <img src="https://cdn-icons-png.flaticon.com/512/4712/4712107.png" alt="bot" style={{ width: "32px", height: "32px", marginRight: "8px" }} />
-            <div style={{ background: "#fff", padding: "10px 14px", borderRadius: "18px", color: "#555", fontStyle: "italic" }}>
-              Typing<span className="dots">...</span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Input */}
-      <form onSubmit={handleSendMessage} style={{ padding: "12px", backgroundColor: "#fff", borderTop: "1px solid #ddd" }}>
-        <div style={{ display: "flex", gap: "8px", maxWidth: "800px", margin: "0 auto" }}>
+        {/* The form for user input */}
+        <form onSubmit={handleSubmit} style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1rem', // Equivalent to space-y-4
+        }}>
           <input
             type="text"
-            value={userInput}
-            onChange={(e) => setUserInput(e.target.value)}
-            placeholder="Type your answer..."
-            disabled={loading || currentQuestionIndex >= questions.length}
             style={{
-              flex: 1,
-              padding: "12px 16px",
-              border: "1px solid #ccc",
-              borderRadius: "20px",
-              outline: "none",
-              fontSize: "16px",
-              backgroundColor: (loading || currentQuestionIndex >= questions.length) ? "#f2f2f2" : "#fff"
+              flex: '1 1 0%', // Equivalent to flex-grow
+              padding: '0.75rem', // Equivalent to p-3
+              border: '1px solid #d1d5db', // Equivalent to border-gray-300
+              borderRadius: '0.375rem', // Equivalent to rounded-md
+              outline: 'none',
             }}
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            placeholder="Type your question here..."
+            disabled={isLoading}
           />
-          <button type="submit" style={{
-            backgroundColor: "#4A90E2",
-            color: "#fff",
-            border: "none",
-            padding: "12px 20px",
-            borderRadius: "20px",
-            cursor: "pointer",
-            fontSize: "16px",
-            fontWeight: "bold"
-          }}>
-            Send
+          <button
+            type="submit"
+            style={{
+              width: '100%', // Equivalent to w-full
+              padding: '0.75rem 1.5rem', // Equivalent to px-6 py-3
+              backgroundColor: isLoading ? '#93c5fd' : '#2563eb', // Equivalent to bg-blue-400 and bg-blue-600
+              color: '#fff',
+              fontWeight: 'bold',
+              borderRadius: '0.375rem', // Equivalent to rounded-md
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              transitionProperty: 'background-color',
+              transitionDuration: '300ms',
+              transitionTimingFunction: 'ease-in-out',
+            }}
+            disabled={isLoading}
+          >
+            {isLoading ? 'Thinking...' : 'Ask'}
           </button>
+        </form>
+
+        {/* Display area for the answer and errors */}
+        <div style={{
+          marginTop: '2rem', // Equivalent to mt-8
+          padding: '1.5rem', // Equivalent to p-6
+          backgroundColor: '#f9fafb', // Equivalent to bg-gray-50
+          borderRadius: '0.5rem', // Equivalent to rounded-lg
+          border: '1px solid #e5e7eb', // Equivalent to border-gray-200
+          minHeight: '12.5rem', // Equivalent to min-h-[200px]
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          {isLoading && (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+            }}>
+              <div style={{
+                animation: 'spin 1s linear infinite',
+                borderRadius: '9999px',
+                height: '2rem',
+                width: '2rem',
+                borderTopWidth: '2px',
+                borderBottomWidth: '2px',
+                borderColor: '#3b82f6',
+              }}></div>
+              <p style={{
+                marginTop: '0.5rem', // Equivalent to mt-2
+                color: '#6b7280', // Equivalent to text-gray-500
+              }}>
+                Generating a response...
+              </p>
+            </div>
+          )}
+          {error && <p style={{ color: '#ef4444', textAlign: 'center' }}>{error}</p>}
+          {answer && (
+            <div style={{ width: '100%' }}>
+              <h2 style={{
+                fontSize: '1.25rem', // Equivalent to text-xl
+                fontWeight: '600',
+                marginBottom: '0.5rem', // Equivalent to mb-2
+                color: '#374151', // Equivalent to text-gray-700
+              }}>
+                AI Response:
+              </h2>
+              <p style={{
+                color: '#1f2937', // Equivalent to text-gray-800
+                lineHeight: '1.625', // Equivalent to leading-relaxed
+                whiteSpace: 'pre-wrap',
+              }}>{answer}</p>
+            </div>
+          )}
+          {!isLoading && !answer && !error && (
+            <p style={{
+              color: '#9ca3af', // Equivalent to text-gray-400
+              textAlign: 'center',
+              fontStyle: 'italic',
+            }}>
+              Your AI-generated answer will appear here.
+            </p>
+          )}
         </div>
-      </form>
-      <style>{`
-        .dots::after {
-          content: '';
-          display: inline-block;
-          width: 8px;
-          height: 8px;
-          margin-left: 3px;
-          border-radius: 50%;
-          background: #555;
-          animation: blink 1s infinite;
-        }
-        .dots::after:nth-child(2) { animation-delay: 0.2s; }
-        .dots::after:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes blink {
-          0%, 80%, 100% { opacity: 0; }
-          40% { opacity: 1; }
-        }
-      `}</style>
+      </div>
+      {/* Keyframe animation for spinning loader */}
+      <style>
+        {`
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `}
+      </style>
     </div>
   );
 };
 
-export default Chatbot;
+export default Questionnaire;

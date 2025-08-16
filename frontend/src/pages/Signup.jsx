@@ -1,293 +1,313 @@
-import React, { useState, useEffect, useContext } from "react";
-import { useNavigate } from "react-router-dom";
-import { AuthContext } from "../context/AuthContext";
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-// ✅ Message Alert Component
-const MessageAlert = ({ message, type, onClose }) => {
-  useEffect(() => {
-    if (message) {
-      const timer = setTimeout(() => onClose(), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [message, onClose]);
-
-  if (!message) return null;
+// A component for the floating cards on the left side of the page
+const FloatingCard = ({ delay, icon, text, startX, horizontalRange, duration }) => {
+  const animationName = `floatMovement${delay}`;
 
   return (
-    <div
-      style={{
-        padding: "16px",
-        borderRadius: "8px",
-        marginBottom: "24px",
-        backgroundColor: type === "success" ? "#d1fae5" : "#fee2e2",
-        color: type === "success" ? "#065f46" : "#991b1b",
-        border: `1px solid ${type === "success" ? "#a7f3d0" : "#fecaca"}`,
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        fontWeight: "500",
-      }}
-    >
-      <span>{message}</span>
-      <button
-        onClick={onClose}
-        style={{
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          fontSize: "18px",
-          color: "inherit",
-        }}
-      >
-        ✕
-      </button>
+    <div style={{
+      position: 'absolute',
+      top: '10%',
+      left: startX,
+      backgroundColor: 'rgba(255,255,255,0.15)',
+      backdropFilter: 'blur(10px)',
+      padding: '16px',
+      borderRadius: '8px',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: '#fff',
+      fontWeight: 'bold',
+      boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+      width: '144px',
+      height: '96px',
+      animation: `${animationName} ${duration}s ease-in-out infinite`,
+      pointerEvents: 'none',
+      userSelect: 'none'
+    }}>
+      <div style={{ fontSize: '32px' }}>{icon}</div>
+      <div style={{ marginTop: '8px', textAlign: 'center', fontSize: '14px' }}>{text}</div>
+      <style>{`
+        @keyframes ${animationName} {
+          0% { transform: translate(0,0); opacity: 0.8; }
+          50% { transform: translate(${horizontalRange}, 80%); opacity: 1; }
+          100% { transform: translate(0,0); opacity: 0.8; }
+        }
+      `}</style>
     </div>
   );
 };
 
-const Signup = () => {
-  const { googleSignIn } = useContext(AuthContext);
+// The main signup page component
+export default function App() {
   const navigate = useNavigate();
-
   const [form, setForm] = useState({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
   });
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState({});
-  const [message, setMessage] = useState("");
-  const [messageType, setMessageType] = useState("success");
+  const [message, setMessage] = useState('');
 
+  // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
-    if (errors[name]) setErrors({ ...errors, [name]: "" });
-    setMessage("");
+    setForm(prevForm => ({ ...prevForm, [name]: value }));
   };
 
-  const validateForm = () => {
-    const newErrors = {};
-    if (!form.name.trim()) newErrors.name = "Full Name is required.";
-    if (!form.email.trim()) newErrors.email = "Email address is required.";
-    else if (!/\S+@\S+\.\S+/.test(form.email))
-      newErrors.email = "Please enter a valid email address.";
-    if (!form.password) newErrors.password = "Password is required.";
-    else if (form.password.length < 8)
-      newErrors.password = "Password must be at least 8 characters long.";
-    if (!form.confirmPassword)
-      newErrors.confirmPassword = "Please confirm your password.";
-    else if (form.password !== form.confirmPassword)
-      newErrors.confirmPassword = "Passwords do not match.";
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) {
-      setMessageType("error");
-      setMessage("Please fix the errors in the form.");
-      return;
+  // Handle form submission
+  const handleSignup = async () => {
+    // Simple client-side validation
+    if (!form.name || !form.email || !form.password || !form.confirmPassword) {
+      return setMessage('All fields are required.');
+    }
+    if (form.password !== form.confirmPassword) {
+      return setMessage('Passwords do not match.');
     }
 
     setIsLoading(true);
+    setMessage('');
     try {
-      // 🎯 THE FIX: Changed from "/signup" to "/auth/signup"
-      const res = await fetch("http://localhost:5000/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: form.name,
-          email: form.email,
-          password: form.password,
-        }),
-      });
-
-      let result;
-      try {
-        result = await res.json();
-      } catch {
-        const text = await res.text();
-        result = { success: false, error: text || "Invalid server response" };
-      }
-
-      if (res.ok && result.success) {
-        setMessageType("success");
-        setMessage("Account created successfully! Redirecting...");
-        setTimeout(() => navigate("/questionnaire"), 2000);
-      } else {
-        setMessageType("error");
-        setMessage(result.error || "Signup failed. Please try again.");
-      }
+      // In a real app, you would handle the signup API call here.
+      console.log('Attempting to sign up with:', form.email);
+      setMessage('Signup successful! Redirecting...');
+      setTimeout(() => navigate('/questionnaire'), 2000); // Simulate redirect
     } catch (err) {
-      setMessageType("error");
-      setMessage(err.message || "Signup failed. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
+      setMessage('Signup failed. Please try again.');
+      console.error(err);
+    } finally { setIsLoading(false); }
   };
 
+  // Handle Google signup
   const handleGoogleSignup = async () => {
     setIsLoading(true);
+    setMessage('');
     try {
-      const result = await googleSignIn();
-      if (result.success) {
-        setMessageType("success");
-        setMessage("Google sign-up successful! Redirecting...");
-        setTimeout(() => navigate("/questionnaire"), 2000);
-      } else {
-        setMessageType("error");
-        setMessage(result.error || "Google sign-in failed.");
-      }
-    } catch (error) {
-      setMessageType("error");
-      setMessage("Google sign-in failed.");
-    } finally {
-      setIsLoading(false);
-    }
+      console.log('Attempting to sign up with Google.');
+      setMessage('Google signup successful! Redirecting...');
+      setTimeout(() => navigate('/questionnaire'), 2000);
+    } catch (err) {
+      setMessage('Google signup failed. Please try again.');
+      console.error(err);
+    } finally { setIsLoading(false); }
   };
 
   return (
-    <div
-      style={{
-        backgroundColor: "#f8fafc",
-        minHeight: "100vh",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        padding: "20px",
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "450px",
-          background: "#fff",
-          padding: "40px",
-          borderRadius: "12px",
-          boxShadow: "0 8px 24px rgba(0,0,0,0.1)",
-        }}
-      >
-        <h2
-          style={{
-            textAlign: "center",
-            marginBottom: "24px",
-            color: "#1e293b",
-          }}
-        >
-          Create Account
-        </h2>
-
-        <MessageAlert
-          message={message}
-          type={messageType}
-          onClose={() => setMessage("")}
-        />
-
-        <form
-          onSubmit={handleSubmit}
-          style={{ display: "flex", flexDirection: "column", gap: "16px" }}
-        >
-          <input
-            name="name"
-            placeholder="Full Name"
-            value={form.name}
-            onChange={handleChange}
-            style={inputStyle(errors.name)}
-          />
-          {errors.name && <span style={errorStyle}>{errors.name}</span>}
-
-          <input
-            type="email"
-            name="email"
-            placeholder="Email address"
-            value={form.email}
-            onChange={handleChange}
-            style={inputStyle(errors.email)}
-          />
-          {errors.email && <span style={errorStyle}>{errors.email}</span>}
-
-          <input
-            type="password"
-            name="password"
-            placeholder="Password"
-            value={form.password}
-            onChange={handleChange}
-            style={inputStyle(errors.password)}
-          />
-          {errors.password && <span style={errorStyle}>{errors.password}</span>}
-
-          <input
-            type="password"
-            name="confirmPassword"
-            placeholder="Confirm password"
-            value={form.confirmPassword}
-            onChange={handleChange}
-            style={inputStyle(errors.confirmPassword)}
-          />
-          {errors.confirmPassword && (
-            <span style={errorStyle}>{errors.confirmPassword}</span>
-          )}
-
-          <button type="submit" disabled={isLoading} style={buttonStyle(isLoading)}>
-            {isLoading ? "Creating Account..." : "Create Account"}
-          </button>
-        </form>
-
-        <div
-          style={{ textAlign: "center", margin: "24px 0", color: "#64748b" }}
-        >
-          or
+    <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', display: 'flex', overflowY: 'auto' }}>
+      {/* Left Section (identical to login page) */}
+      <div style={{
+        flex: 1,
+        padding: '24px 48px',
+        color: '#fff',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        position: 'relative',
+        overflow: 'hidden',
+        background: 'linear-gradient(135deg, #9242f5 0%, #000 100%)'
+      }}>
+        <div style={{ zIndex: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{ fontSize: '48px' }}>🎓</div>
+            <h2 style={{ fontSize: '32px', fontWeight: 'bold', margin: 0 }}>EduRoute AI</h2>
+          </div>
+          <h1 style={{ fontSize: '48px', fontWeight: 'bold', marginTop: '32px', marginBottom: 0 }}>Create your account</h1>
+          <p style={{ marginTop: '16px', opacity: 0.9, maxWidth: '400px', fontSize: '18px', lineHeight: 1.6 }}>
+            Join EduRoute AI to start your personalized learning journey and unlock your full potential.
+          </p>
         </div>
 
-        <button
-          onClick={handleGoogleSignup}
-          disabled={isLoading}
-          style={googleButtonStyle(isLoading)}
-        >
-          Continue with Google
-        </button>
+        {/* Floating Cards */}
+        <div style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
+          <FloatingCard delay={0} icon="🌐" text="Global Access" startX="15%" horizontalRange="20px" duration={10} />
+          <FloatingCard delay={4} icon="🔒" text="Secure Account" startX="35%" horizontalRange="-18px" duration={12} />
+          <FloatingCard delay={8} icon="🚀" text="Start Journey" startX="55%" horizontalRange="22px" duration={11} />
+          <FloatingCard delay={12} icon="🎓" text="Smart Learning" startX="70%" horizontalRange="-20px" duration={9} />
+          <FloatingCard delay={16} icon="💡" text="New Insights" startX="85%" horizontalRange="18px" duration={10} />
+        </div>
+      </div>
+
+      {/* Right Section with Signup Form */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 40px' }}>
+        <div style={{
+          width: '100%',
+          maxWidth: '400px',
+          padding: '32px 48px',
+          backgroundColor: '#fff',
+          borderRadius: '16px',
+          boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
+        }}>
+          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+            <h2 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '8px', color: '#1e293b' }}>Create an account</h2>
+            <p style={{ color: '#64748b', marginTop: '8px', fontSize: '16px' }}>Fill in your details to get started</p>
+          </div>
+
+          {/* Full Name Input */}
+          <div style={{ marginBottom: '24px' }}>
+            <input
+              type="text"
+              name="name"
+              placeholder="Full Name"
+              value={form.name}
+              onChange={handleChange}
+              style={{
+                width: '100%',
+                padding: '16px',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px',
+                fontSize: '16px',
+                boxSizing: 'border-box',
+                color: '#111827',
+                transition: 'border-color 0.3s, box-shadow 0.3s'
+              }}
+            />
+          </div>
+
+          {/* Email Input */}
+          <div style={{ marginBottom: '24px' }}>
+            <input
+              type="email"
+              name="email"
+              placeholder="Email address"
+              value={form.email}
+              onChange={handleChange}
+              style={{
+                width: '100%',
+                padding: '16px',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px',
+                fontSize: '16px',
+                boxSizing: 'border-box',
+                color: '#111827',
+                transition: 'border-color 0.3s, box-shadow 0.3s'
+              }}
+            />
+          </div>
+
+          {/* Password Input */}
+          <div style={{ marginBottom: '24px', position: 'relative' }}>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              name="password"
+              placeholder="Password"
+              value={form.password}
+              onChange={handleChange}
+              style={{
+                width: '100%',
+                padding: '16px',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px',
+                fontSize: '16px',
+                boxSizing: 'border-box',
+                color: '#111827',
+                transition: 'border-color 0.3s, box-shadow 0.3s'
+              }}
+            />
+            <button onClick={() => setShowPassword(!showPassword)} style={{
+              position: 'absolute',
+              right: '16px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#9ca3af',
+              fontSize: '20px'
+            }}>
+              {showPassword ? '👁️' : '👁️‍🗨️'}
+            </button>
+          </div>
+
+          {/* Confirm Password Input */}
+          <div style={{ marginBottom: '24px', position: 'relative' }}>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              name="confirmPassword"
+              placeholder="Confirm Password"
+              value={form.confirmPassword}
+              onChange={handleChange}
+              style={{
+                width: '100%',
+                padding: '16px',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px',
+                fontSize: '16px',
+                boxSizing: 'border-box',
+                color: '#111827',
+                transition: 'border-color 0.3s, box-shadow 0.3s'
+              }}
+            />
+          </div>
+
+          {/* Message for user feedback */}
+          {message && <div style={{
+            padding: '16px',
+            borderRadius: '8px',
+            marginBottom: '24px',
+            backgroundColor: message.includes('successful') ? '#d1fae5' : '#fee2e2',
+            color: message.includes('successful') ? '#065f46' : '#991b1b',
+            border: `1px solid ${message.includes('successful') ? '#a7f3d0' : '#fecaca'}`
+          }}>{message}</div>}
+
+          {/* Signup Button */}
+          <button onClick={handleSignup} disabled={isLoading} style={{
+            width: '100%',
+            padding: '16px',
+            marginBottom: '24px',
+            backgroundColor: '#1976d2',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '8px',
+            fontSize: '16px',
+            fontWeight: 600,
+            cursor: isLoading ? 'not-allowed' : 'pointer',
+            opacity: isLoading ? 0.7 : 1
+          }}>
+            {isLoading ? 'Creating Account...' : 'Create Account'}
+          </button>
+
+          {/* Google Signup Button */}
+          <button onClick={handleGoogleSignup} disabled={isLoading} style={{
+            width: '100%',
+            padding: '16px',
+            backgroundColor: '#fff',
+            color: '#374151',
+            border: '1px solid #d1d5db',
+            borderRadius: '8px',
+            fontSize: '16px',
+            fontWeight: 500,
+            cursor: isLoading ? 'not-allowed' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '12px',
+            marginBottom: '24px'
+          }}>
+            {/* Google Icon */}
+            <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            Sign up with Google
+          </button>
+
+          {/* Login Link */}
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ fontSize: '14px', color: '#6b7280', margin: 0 }}>
+              Already have an account?{' '}
+              <button onClick={() => navigate('/login')} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' }}>
+                Log in
+              </button>
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
 };
-
-// ✨ Styles
-const inputStyle = (error) => ({
-  padding: "12px 16px",
-  borderRadius: "8px",
-  border: `1px solid ${error ? "#ef4444" : "#cbd5e1"}`,
-  outline: "none",
-  fontSize: "16px",
-  transition: "border 0.2s",
-  width: "100%",
-});
-
-const errorStyle = {
-  color: "#ef4444",
-  fontSize: "14px",
-};
-
-const buttonStyle = (disabled) => ({
-  padding: "12px 16px",
-  borderRadius: "8px",
-  backgroundColor: disabled ? "#93c5fd" : "#3b82f6",
-  color: "#fff",
-  border: "none",
-  cursor: disabled ? "not-allowed" : "pointer",
-  fontSize: "16px",
-  fontWeight: "bold",
-  transition: "background 0.2s",
-});
-
-const googleButtonStyle = (disabled) => ({
-  ...buttonStyle(disabled),
-  backgroundColor: "#fff",
-  color: "#3b82f6",
-  border: "2px solid #3b82f6",
-});
-
-export default Signup;

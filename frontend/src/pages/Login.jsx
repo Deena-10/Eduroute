@@ -1,11 +1,10 @@
-//frontend/src/pages/Login.jsx
+//frontend\src\pages\Login.jsx
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
 const FloatingCard = ({ delay, icon, text, startX, horizontalRange, duration }) => {
   const animationName = `floatMovement${delay}`;
-
   return (
     <div style={{
       position: 'absolute',
@@ -50,38 +49,43 @@ const LoginApp = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
 
+  // EMAIL/PASSWORD LOGIN
   const handleLogin = async () => {
-    if (!email || !password) return setMessage('Please enter both email and password.');
+    if (!email || !password) {
+      setMessage('Please enter both email and password.');
+      return;
+    }
     setIsLoading(true);
     setMessage('');
     try {
-      const result = await login(email, password);
+      const result = await login(email, password); // AuthContext should handle POST /login
       if (result.success) {
         setMessage('Login successful! Redirecting...');
-        setTimeout(() => navigate('/questionnaire'), 2000);
+        setTimeout(() => navigate('/questionnaire'), 1500);
       } else {
-        setMessage(result.error || 'Login failed. Check your credentials.');
+        setMessage(result.message || 'Login failed. Check your credentials.');
       }
     } catch (err) {
+      console.error('Login error:', err);
       setMessage('Login failed. Please try again.');
-      console.error(err);
     } finally { setIsLoading(false); }
   };
 
+  // GOOGLE LOGIN
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     setMessage('');
     try {
-      const result = await googleSignIn();
+      const result = await googleSignIn(); // AuthContext should handle Google OAuth POST /google-signin
       if (result.success) {
         setMessage('Google login successful! Redirecting...');
-        setTimeout(() => navigate('/questionnaire'), 2000);
+        setTimeout(() => navigate('/questionnaire'), 1500);
       } else {
-        setMessage(result.error || 'Google login failed.');
+        setMessage(result.message || 'Google login failed.');
       }
     } catch (err) {
+      console.error('Google login error:', err);
       setMessage('Google login failed. Please try again.');
-      console.error(err);
     } finally { setIsLoading(false); }
   };
 
@@ -131,7 +135,6 @@ const LoginApp = () => {
           boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
         }}>
           <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-            {/* 🎯 THE FIX: Changed to "Login to your account" */}
             <h2 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '8px', color: '#1e293b' }}>Login to your account</h2>
             <p style={{ color: '#64748b', marginTop: '8px', fontSize: '16px' }}>Enter your details below to continue</p>
           </div>
@@ -150,7 +153,6 @@ const LoginApp = () => {
                 border: '1px solid #d1d5db',
                 borderRadius: '8px',
                 fontSize: '16px',
-                boxSizing: 'border-box',
                 color: '#111827'
               }}
             />
@@ -170,7 +172,6 @@ const LoginApp = () => {
                 border: '1px solid #d1d5db',
                 borderRadius: '8px',
                 fontSize: '16px',
-                boxSizing: 'border-box',
                 color: '#111827'
               }}
             />
@@ -182,9 +183,7 @@ const LoginApp = () => {
               cursor: 'pointer',
               color: '#9ca3af',
               fontSize: '20px'
-            }}>
-              {showPassword ? '👁️' : '👁️‍🗨️'}
-            </button>
+            }}>{showPassword ? '👁️' : '👁️‍🗨️'}</button>
           </div>
 
           {/* Remember/Forgot */}
@@ -196,7 +195,6 @@ const LoginApp = () => {
           </div>
 
           {/* Login Button */}
-          {/* 🎯 THE FIX: Changed to "Login" and "Logging In..." */}
           <button onClick={handleLogin} disabled={isLoading} style={{
             width: '100%',
             padding: '16px',
@@ -209,9 +207,7 @@ const LoginApp = () => {
             fontWeight: 600,
             cursor: isLoading ? 'not-allowed' : 'pointer',
             opacity: isLoading ? 0.7 : 1
-          }}>
-            {isLoading ? 'Logging In...' : 'Login'}
-          </button>
+          }}>{isLoading ? 'Logging In...' : 'Login'}</button>
 
           {/* Message */}
           {message && <div style={{
@@ -224,7 +220,6 @@ const LoginApp = () => {
           }}>{message}</div>}
 
           {/* Google Login */}
-          {/* 🎯 THE FIX: Changed to "Login with Google" */}
           <button onClick={handleGoogleLogin} disabled={isLoading} style={{
             width: '100%',
             padding: '16px',
@@ -241,7 +236,6 @@ const LoginApp = () => {
             gap: '12px',
             marginBottom: '24px'
           }}>
-            {/* Google Icon */}
             <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>

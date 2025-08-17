@@ -1,4 +1,4 @@
-// authController.js
+// backend\controllers\authController.js
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const util = require('util'); // Node.js built-in utility

@@ -1,71 +1,100 @@
-# Import necessary libraries
+# backend/service/application.py
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import google.generativeai as genai
 import os
-import time
+import requests
+import google.generativeai as genai
+from groq import Groq
+from dotenv import load_dotenv
 
-# Create the Flask application instance
+# Load environment variables
+load_dotenv()
+
 app = Flask(__name__)
-# Use Flask-CORS to allow cross-origin requests from your frontend
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
 
-# Configure the Gemini API with your API key from an environment variable.
-# It's a security best practice to not hardcode API keys.
-# 🎯 FIX: Changed the environment variable name to the correct one
-genai.configure(api_key=os.environ.get("AIzaSyDvvHhx8sobf3uI-LsW26xSySr1A4mESZI"))
+# ---------------- Gemini Setup ----------------
+gemini_api_key = os.environ.get("GEMINI_API_KEY")
+if gemini_api_key:
+    genai.configure(api_key=gemini_api_key)
+    gemini_model = genai.GenerativeModel("gemini-1.5-flash")
+else:
+    gemini_model = None
+    print("⚠️ GEMINI_API_KEY not set, Gemini won't work.")
 
-# Create a GenerativeModel instance for text generation
-model = genai.GenerativeModel('gemini-1.5-flash')
+# ---------------- Groq Setup ----------------
+groq_api_key = os.environ.get("GROQ_API_KEY")
+groq_client = Groq(api_key=groq_api_key) if groq_api_key else None
+if not groq_api_key:
+    print("⚠️ GROQ_API_KEY not set, Groq won't work.")
 
-# Define the backend API endpoint
-@app.route('/ask_ai', methods=['POST'])
+# ---------------- Hugging Face Setup ----------------
+hf_api_key = os.environ.get("HF_API_KEY")
+hf_headers = {"Authorization": f"Bearer {hf_api_key}"} if hf_api_key else None
+if not hf_api_key:
+    print("⚠️ HF_API_KEY not set, Hugging Face won't work.")
+
+# ---------------- Main Route ----------------
+@app.route("/ask_ai", methods=["POST"])
 def ask_ai():
-    """
-    Handles POST requests to get a response from the Gemini AI.
-    The request should contain a JSON body with a 'question' key.
-    """
-    # Use a try-except block for robust error handling
     try:
-        # Get the JSON data from the request body
-        data = request.get_json()
-        user_question = data.get('question')
+        data = request.get_json(force=True)
+        if not data:
+            return jsonify({"error": "Invalid JSON payload"}), 400
 
-        # Check if the question is provided
-        if not user_question:
-            return jsonify({"error": "No question provided"}), 400
+        engine = data.get("engine")
+        question = data.get("question")
 
-        # Implement exponential backoff for API calls
-        retries = 0
-        while retries < 5:
+        if not engine or not question:
+            return jsonify({"error": "Both 'engine' and 'question' are required"}), 400
+
+        # ---------------- Gemini ----------------
+        if engine == "gemini":
+            if not gemini_model:
+                return jsonify({"error": "Gemini not configured"}), 500
+            response = gemini_model.generate_content(question)
+            return jsonify({"answer": response.text}), 200
+
+        # ---------------- Groq ----------------
+        elif engine == "groq":
+            if not groq_client:
+                return jsonify({"error": "Groq not configured"}), 500
+            response = groq_client.chat.completions.create(
+                model="llama3-8b-8192",
+                messages=[{"role": "user", "content": question}],
+            )
+            return jsonify({"answer": response.choices[0].message.content}), 200
+
+        # ---------------- Hugging Face ----------------
+        elif engine == "huggingface":
+            if not hf_headers:
+                return jsonify({"error": "Hugging Face not configured"}), 500
+            payload = {"inputs": question}
+            hf_url = "https://api-inference.huggingface.co/models/bigscience/bloom-560m"
             try:
-                # Send the user's question to the Gemini model
-                response = model.generate_content(user_question)
-                
-                # Check if the response contains valid text
-                if not response.text:
-                    return jsonify({"error": "No valid response from AI"}), 500
+                response = requests.post(hf_url, headers=hf_headers, json=payload, timeout=60)
+                response.raise_for_status()
+                result = response.json()
 
-                # Return the AI's response in a JSON format
-                return jsonify({"answer": response.text}), 200
+                # Handle various response formats safely
+                if isinstance(result, list) and len(result) > 0 and "generated_text" in result[0]:
+                    return jsonify({"answer": result[0]["generated_text"]}), 200
+                elif isinstance(result, dict) and "error" in result:
+                    return jsonify({"error": f"Hugging Face API error: {result['error']}"}), 500
+                else:
+                    return jsonify({"answer": str(result)}), 200
 
-            except Exception as e:
-                # Handle API-specific errors, like rate limits
-                retries += 1
-                sleep_time = 2 ** retries
-                print(f"API call failed. Retrying in {sleep_time} seconds...")
-                time.sleep(sleep_time)
-                
-        # If all retries fail, return a server error
-        return jsonify({"error": "Failed to get a response from the AI after multiple retries."}), 500
+            except requests.exceptions.RequestException as req_err:
+                return jsonify({"error": f"Hugging Face request failed: {req_err}"}), 500
+
+        else:
+            return jsonify({"error": f"Unsupported engine '{engine}'"}), 400
 
     except Exception as e:
-        # Catch any other unexpected errors
-        print(f"An error occurred: {e}")
-        return jsonify({"error": "An unexpected server error occurred."}), 500
+        print(f"Unexpected server error: {e}")
+        return jsonify({"error": f"Unexpected server error: {str(e)}"}), 500
 
-# Run the Flask app
-if __name__ == '__main__':
-    # The app will run on host 0.0.0.0, making it accessible from outside the container.
-    # It will run on port 5000 by default.
-    app.run(host='0.0.0.0', debug=True)
+# ---------------- Run Flask ----------------
+if __name__ == "__main__":
+    print("Flask server running at http://localhost:5000")
+    app.run(host="0.0.0.0", port=5000, debug=True)

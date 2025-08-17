@@ -1,4 +1,3 @@
-//backend\routes\authRoutes.js
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
@@ -14,7 +13,7 @@ if (!admin.apps.length) {
   });
 }
 
-// Helper: Create JWT
+// Helper: Create JWT using the secret from your .env file
 const createToken = (userId) => {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: '7d' });
 };

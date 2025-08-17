@@ -1,10 +1,11 @@
-// server.js
-const express = require('express');
-const cors = require('cors');
+// Load environment variables from the .env file as early as possible
 require('dotenv').config();
 
+const express = require('express');
+const cors = require('cors');
+
 // MySQL connection
-const connection = require('./config/mysql'); // ensures DB connects
+const connection = require('./config/mysql'); // Now it can access DB variables from .env
 
 // Routes
 const authRoutes = require('./routes/authRoutes');
@@ -22,6 +23,11 @@ app.use('/auth', authRoutes);
 app.use('/questions', questionsRoute);
 app.use('/chat', chatRoutes);
 app.use('/user', userRoutes);
+
+// Simple welcome route for testing
+app.get('/', (req, res) => {
+  res.send('EduRoute AI Backend is running!');
+});
 
 // Start server
 const PORT = process.env.PORT || 5000;

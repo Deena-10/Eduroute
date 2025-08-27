@@ -1,44 +1,41 @@
-
-//backend\middleware\authMiddleware.js
+// backend/middleware/authMiddleware.js
 const jwt = require('jsonwebtoken');
-require('dotenv').config();
+const connection = require('../config/mysql');
 
-const authMiddleware = (req, res, next) => {
-    // Check for the Authorization header
-    const authHeader = req.header('Authorization');
+const authMiddleware = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
 
-    // If no header, deny access
-    if (!authHeader) {
-        return res.status(401).json({ message: 'Access denied. No token provided.' });
-    }
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "Unauthorized. No token provided." });
+  }
 
-    // Ensure the header is in the correct 'Bearer <token>' format
-    if (!authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ message: 'Invalid token format.' });
-    }
+  const token = authHeader.split(" ")[1];
 
-    // Extract the token from the header
-    const token = authHeader.replace('Bearer ', '');
-
-    try {
-        // Verify the token using the secret key
-        const verified = jwt.verify(token, process.env.JWT_SECRET);
-        // Attach the decoded user payload to the request object for use in subsequent middleware or routes
-        req.user = verified;
-        // Pass control to the next middleware or route handler
+  try {
+    // Verify JWT token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Get user from database
+    connection.query(
+      'SELECT id, name, email FROM users WHERE id = ?',
+      [decoded.id],
+      (err, results) => {
+        if (err) {
+          return res.status(500).json({ message: "Database error" });
+        }
+        
+        if (results.length === 0) {
+          return res.status(401).json({ message: "User not found" });
+        }
+        
+        req.user = results[0];
         next();
-    } catch (error) {
-        console.error('Token verification error:', error.message);
-        // Handle specific JWT errors to provide clearer feedback
-        if (error.name === 'TokenExpiredError') {
-            return res.status(401).json({ message: 'Token expired.' });
-        }
-        if (error.name === 'JsonWebTokenError') {
-            return res.status(401).json({ message: 'Invalid token.' });
-        }
-        // For any other error, return a generic unauthorized message
-        res.status(401).json({ message: 'Not authorized.' });
-    }
+      }
+    );
+  } catch (err) {
+    console.error("JWT auth error:", err.message);
+    return res.status(401).json({ message: "Invalid or expired token" });
+  }
 };
 
 module.exports = authMiddleware;

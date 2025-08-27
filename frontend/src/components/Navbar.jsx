@@ -1,148 +1,157 @@
 // frontend/src/components/Navbar.jsx
-import React, { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import React, { useState, useContext } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
 
 const Navbar = () => {
-    const location = useLocation();
-    const navigate = useNavigate();
-    const [user, setUser] = useState(null);
+  const { user, logout } = useContext(AuthContext);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const navigate = useNavigate();
 
-    // Load user from localStorage safely
-    useEffect(() => {
-        const loadUser = () => {
-            try {
-                const storedUser = localStorage.getItem('user');
-                if (storedUser && storedUser !== 'null') {
-                    setUser(JSON.parse(storedUser));
-                } else {
-                    setUser(null);
-                }
-            } catch (error) {
-                console.error("Failed to parse user from localStorage:", error);
-                setUser(null);
-                localStorage.removeItem('user');
-            }
-        };
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
-        loadUser();
-
-        // Optional: Listen for cross-tab logout/login
-        const handleStorageChange = () => loadUser();
-        window.addEventListener('storage', handleStorageChange);
-        return () => window.removeEventListener('storage', handleStorageChange);
-    }, []);
-
-    const handleLogout = () => {
-        localStorage.removeItem('user');
-        setUser(null);
-        navigate('/');
-    };
-
-    const isActive = (path) => location.pathname === path;
-
-    return (
-        <nav style={{
-            backgroundColor: 'white',
-            color: '#1e293b',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-            position: 'sticky',
-            top: 0,
-            zIndex: 1000
-        }}>
-            <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '0 16px',
-                maxWidth: '1200px',
-                margin: '0 auto',
-                minHeight: '50px'
-            }}>
-                {/* Logo / Brand */}
-                <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <img src="/logo1.png" alt="EduRoute AI Logo" style={{ height: '40px' }} />
-                    <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#1e293b' }}>EduRoute AI</span>
-                </Link>
-
-                {/* Navigation Actions */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    {!user ? (
-                        <>
-                            <Link
-                                to="/login"
-                                style={{
-                                    textDecoration: 'none',
-                                    color: '#1e293b',
-                                    padding: '8px 16px',
-                                    borderRadius: '6px',
-                                    backgroundColor: isActive('/login') ? 'rgba(0,0,0,0.05)' : 'transparent',
-                                    fontWeight: '500'
-                                }}
-                            >
-                                🔐 Login
-                            </Link>
-                            <Link
-                                to="/signup"
-                                style={{
-                                    textDecoration: 'none',
-                                    color: 'white',
-                                    backgroundColor: '#3b82f6',
-                                    padding: '10px 20px',
-                                    borderRadius: '8px',
-                                    fontWeight: '600'
-                                }}
-                            >
-                                Get Started
-                            </Link>
-                        </>
-                    ) : (
-                        <>
-                            <Link
-                                to="/"
-                                style={{
-                                    textDecoration: 'none',
-                                    color: '#1e293b',
-                                    padding: '8px 16px',
-                                    borderRadius: '6px',
-                                    backgroundColor: isActive('/') ? 'rgba(0,0,0,0.05)' : 'transparent',
-                                    fontWeight: '500'
-                                }}
-                            >
-                                🏠 Dashboard
-                            </Link>
-                            <Link
-                                to="/profile"
-                                style={{
-                                    textDecoration: 'none',
-                                    color: '#1e293b',
-                                    padding: '8px 16px',
-                                    borderRadius: '6px',
-                                    backgroundColor: isActive('/profile') ? 'rgba(0,0,0,0.05)' : 'transparent',
-                                    fontWeight: '500'
-                                }}
-                            >
-                                👤 Profile
-                            </Link>
-                            <button
-                                onClick={handleLogout}
-                                style={{
-                                    background: 'none',
-                                    border: '1px solid #ef4444',
-                                    color: '#ef4444',
-                                    padding: '8px 16px',
-                                    borderRadius: '6px',
-                                    cursor: 'pointer',
-                                    fontWeight: '500'
-                                }}
-                            >
-                                🚪 Logout
-                            </button>
-                        </>
-                    )}
-                </div>
+  return (
+    <nav className="fixed top-0 left-0 right-0 z-50" style={{ backgroundColor: '#F6F6F6' }}>
+      <div className="bg-white shadow-lg border-b border-gray-300 p-3">
+        <div className="flex items-center justify-between">
+          {/* Logo and Name - Left Side */}
+          <Link to="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
+            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+              <img src="/logo1.png" alt="EduRoute AI Logo" className="w-5 h-5" />
             </div>
-        </nav>
-    );
+            <span className="text-lg font-bold" style={{ color: '#000000' }}>
+              EduRoute AI
+            </span>
+          </Link>
+
+          {/* Desktop Navigation - Center */}
+          <div className="hidden md:flex items-center space-x-4">
+            <Link
+              to="/"
+              className="px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 hover:bg-gray-100"
+              style={{ color: '#000000' }}
+            >
+              Home
+            </Link>
+            <Link
+              to="/questionnaire"
+              className="px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 hover:bg-gray-100"
+              style={{ color: '#000000' }}
+            >
+              AI Chat
+            </Link>
+            <Link
+              to="/roadmap"
+              className="px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 hover:bg-gray-100"
+              style={{ color: '#000000' }}
+            >
+              Roadmap
+            </Link>
+            {user && (
+              <Link
+                to="/profile"
+                className="px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 hover:bg-gray-100"
+                style={{ color: '#000000' }}
+              >
+                Profile
+              </Link>
+            )}
+          </div>
+
+          {/* User Profile / Auth - Right Side */}
+          <div className="flex items-center space-x-3">
+            {user ? (
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm font-bold">
+                    {user.name?.charAt(0)?.toUpperCase() || 'U'}
+                  </span>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors duration-200"
+                >
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-3">
+                <Link
+                  to="/login"
+                  className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors duration-200"
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/signup"
+                  className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded-lg transition-colors duration-200"
+                >
+                  Sign Up
+                </Link>
+              </div>
+            )}
+
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#000000' }}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Navigation */}
+        {isMenuOpen && (
+          <div className="md:hidden mt-3 pt-3 border-t border-gray-300">
+            <div className="flex flex-col space-y-2">
+              <Link
+                to="/"
+                className="px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 hover:bg-gray-100"
+                style={{ color: '#000000' }}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Home
+              </Link>
+              {user && (
+                <Link
+                  to="/questionnaire"
+                  className="px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 hover:bg-gray-100"
+                  style={{ color: '#000000' }}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  AI Chat
+                </Link>
+              )}
+              <Link
+                to="/roadmap"
+                className="px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 hover:bg-gray-100"
+                style={{ color: '#000000' }}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Roadmap
+              </Link>
+              {user && (
+                <Link
+                  to="/profile"
+                  className="px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 hover:bg-gray-100"
+                  style={{ color: '#000000' }}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Profile
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </nav>
+  );
 };
 
 export default Navbar;

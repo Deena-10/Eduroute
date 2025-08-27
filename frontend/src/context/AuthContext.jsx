@@ -1,143 +1,138 @@
 // frontend/src/context/AuthContext.jsx
-import React, { createContext, useState, useEffect } from 'react';
-import { auth, googleProvider } from '../firebaseConfig';
-import { signInWithPopup, onAuthStateChanged, signOut } from 'firebase/auth';
-import axiosInstance from '../api/axiosInstance';
+import React, { createContext, useState, useEffect } from "react";
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const existingUser = localStorage.getItem('user');
-        if (existingUser) {
-            setUser(JSON.parse(existingUser));
-            setLoading(false);
-        } else {
-            const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-                if (firebaseUser) {
-                    const userData = {
-                        uid: firebaseUser.uid,
-                        email: firebaseUser.email,
-                        name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
-                        photoURL: firebaseUser.photoURL,
-                        authType: 'firebase'
-                    };
-                    setUser(userData);
-                    localStorage.setItem('user', JSON.stringify(userData));
-                } else {
-                    setUser(null);
-                    localStorage.removeItem('user');
-                }
-                setLoading(false);
-            });
-            return () => unsubscribe();
-        }
-    }, []);
-
-    const login = async (email, password) => {
-        try {
-            const res = await axiosInstance.post('/auth/login', { email, password });
-            if (res.data.success) {
-                const userData = { ...res.data.user, authType: 'backend' };
-                setUser(userData);
-                localStorage.setItem('user', JSON.stringify(userData));
-                localStorage.setItem('token', res.data.token);
-                return { success: true, user: userData };
-            } else {
-                return { success: false, error: res.data.message || 'Login failed' };
-            }
-        } catch (error) {
-            return { success: false, error: error.response?.data?.message || 'Login failed' };
-        }
-    };
-
-    const signup = async (name, email, password) => {
-        try {
-            const res = await axiosInstance.post('/auth/signup', { name, email, password });
-            if (res.data.success) {
-                const userData = { ...res.data.user, authType: 'backend' };
-                setUser(userData);
-                localStorage.setItem('user', JSON.stringify(userData));
-                localStorage.setItem('token', res.data.token);
-                return { success: true, user: userData };
-            } else {
-                return { success: false, error: res.data.message || 'Signup failed' };
-            }
-        } catch (error) {
-            return { success: false, error: error.response?.data?.message || 'Signup failed' };
-        }
-    };
-
-    const googleSignIn = async () => {
-        try {
-            const result = await signInWithPopup(auth, googleProvider);
-            if (!result.user) throw new Error('Firebase authentication failed');
-
-            const firebaseUserData = {
-                uid: result.user.uid,
-                email: result.user.email,
-                name: result.user.displayName || result.user.email?.split('@')[0] || 'User',
-                photoURL: result.user.photoURL,
-                authType: 'firebase'
-            };
-
-            // Send data to backend for profile creation/login
-            const backendRes = await axiosInstance.post('/auth/google-signin', {
-                uid: result.user.uid,
-                email: result.user.email,
-                name: firebaseUserData.name,
-                photoURL: result.user.photoURL
-            });
-
-            if (backendRes.data.success) {
-                const backendUser = { ...backendRes.data.user, authType: 'backend' };
-                setUser(backendUser);
-                localStorage.setItem('user', JSON.stringify(backendUser));
-                localStorage.setItem('token', backendRes.data.token);
-                return { success: true, user: backendUser };
-            } else {
-                setUser(firebaseUserData);
-                localStorage.setItem('user', JSON.stringify(firebaseUserData));
-                return { success: true, user: firebaseUserData };
-            }
-        } catch (error) {
-            console.error('Google SignIn error:', error);
-            return { success: false, error: error.message };
-        }
-    };
-
-    const logout = async () => {
-        try {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            if (user?.authType === 'firebase') await signOut(auth);
+  // Check for existing user on app load
+  useEffect(() => {
+    const loadUser = () => {
+      try {
+        const storedUser = localStorage.getItem("user");
+        if (storedUser && storedUser !== 'null' && storedUser !== 'undefined') {
+          const parsedUser = JSON.parse(storedUser);
+          // Validate that the parsed user has required fields
+          if (parsedUser && typeof parsedUser === 'object' && parsedUser.email) {
+            setUser(parsedUser);
+          } else {
+            console.warn("Invalid user data in localStorage, clearing...");
+            localStorage.removeItem("user");
             setUser(null);
-        } catch (error) {
-            console.error('Logout error:', error);
+          }
+        } else {
+          setUser(null);
         }
+      } catch (error) {
+        console.error("Error parsing stored user:", error);
+        localStorage.removeItem("user");
+        setUser(null);
+      }
     };
-      
-    if (loading) {
-        return (
-            <div style={{
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                height: '100vh',
-                fontSize: '18px',
-                color: '#64748b'
-            }}>
-                Loading...
-            </div>
-        );
-    }
 
+    loadUser();
+    setLoading(false);
+  }, []);
+
+  // Email login
+  const login = async (email, password) => {
+    try {
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // For demo purposes, accept any email/password combination
+      const userData = {
+        uid: Date.now().toString(),
+        email: email,
+        name: email.split('@')[0],
+        photoURL: null,
+        token: 'demo-token-' + Date.now(),
+      };
+
+      setUser(userData);
+      localStorage.setItem("user", JSON.stringify(userData));
+      
+      return { success: true, user: userData };
+    } catch (error) {
+      console.error("Login error:", error);
+      return { success: false, message: "Login failed. Please try again." };
+    }
+  };
+
+  // Email signup
+  const signup = async (email, password, name) => {
+    try {
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // For demo purposes, create user with provided data
+      const userData = {
+        uid: Date.now().toString(),
+        email: email,
+        name: name || email.split('@')[0],
+        photoURL: null,
+        token: 'demo-token-' + Date.now(),
+      };
+
+      setUser(userData);
+      localStorage.setItem("user", JSON.stringify(userData));
+      
+      return { success: true, user: userData };
+    } catch (error) {
+      console.error("Signup error:", error);
+      return { success: false, message: "Signup failed. Please try again." };
+    }
+  };
+
+  // Google login
+  const googleSignIn = async () => {
+    try {
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // For demo purposes, create a mock Google user
+      const userData = {
+        uid: 'google-' + Date.now().toString(),
+        email: 'demo@gmail.com',
+        name: 'Demo User',
+        photoURL: 'https://via.placeholder.com/150',
+        token: 'google-demo-token-' + Date.now(),
+      };
+
+      setUser(userData);
+      localStorage.setItem("user", JSON.stringify(userData));
+      
+      return { success: true, user: userData };
+    } catch (error) {
+      console.error("Google login error:", error);
+      return { success: false, message: "Google login failed. Please try again." };
+    }
+  };
+
+  // Logout
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem("user");
+  };
+
+  if (loading) {
     return (
-        <AuthContext.Provider value={{ user, login, signup, googleSignIn, logout, loading }}>
-            {children}
-        </AuthContext.Provider>
+      <div className="flex justify-center items-center h-screen" style={{ backgroundColor: '#F6F6F6' }}>
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-lg" style={{ color: '#000000' }}>Loading...</p>
+        </div>
+      </div>
     );
+  }
+
+  return (
+    <AuthContext.Provider
+      value={{ user, login, signup, googleSignIn, logout, loading }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 };

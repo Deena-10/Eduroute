@@ -1,3 +1,4 @@
+// backend/routes/authRoutes.js
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
@@ -29,7 +30,6 @@ router.post('/signup', async (req, res) => {
       return res.status(400).json({ success: false, message: 'All fields are required' });
     }
 
-    // Check if user exists
     connection.query(`SELECT * FROM users WHERE email = ?`, [email], async (err, results) => {
       if (err) return res.status(500).json({ success: false, message: 'Database error', error: err });
 
@@ -110,32 +110,36 @@ router.post('/login', async (req, res) => {
 });
 
 // ==================
-// GOOGLE OAUTH SIGNUP/LOGIN
+// GOOGLE OAUTH SIGNUP/LOGIN (secure with Firebase Admin)
 // ==================
 router.post('/google-signin', async (req, res) => {
   try {
-    const { uid, email, name, photoURL } = req.body;
+    const { token } = req.body; // frontend must send idToken
 
-    if (!uid || !email || !name) {
-      return res.status(400).json({ success: false, message: 'Missing required Google user data' });
+    if (!token) {
+      return res.status(400).json({ success: false, message: 'Google ID token is required' });
     }
+
+    // Verify token with Firebase Admin
+    const decoded = await admin.auth().verifyIdToken(token);
+    const { uid, email, name, picture } = decoded;
 
     connection.query(`SELECT * FROM users WHERE email = ?`, [email], (err, results) => {
       if (err) return res.status(500).json({ success: false, message: 'Database error', error: err });
 
       if (results.length > 0) {
-        // Update googleId if not set
         const existingUser = results[0];
+
         if (!existingUser.googleId) {
           connection.query(`UPDATE users SET googleId = ? WHERE id = ?`, [uid, existingUser.id]);
         }
 
-        const token = createToken(existingUser.id);
+        const jwtToken = createToken(existingUser.id);
 
         return res.json({
           success: true,
           message: 'Google authentication successful',
-          token,
+          token: jwtToken,
           user: {
             id: existingUser.id,
             name: existingUser.name,
@@ -152,22 +156,23 @@ router.post('/google-signin', async (req, res) => {
         INSERT INTO users (name, email, googleId, profilePicture, interests, strengths)
         VALUES (?, ?, ?, ?, '[]', '[]')
       `;
-      connection.query(insertQuery, [name, email, uid, photoURL || null], (err2, result) => {
+
+      connection.query(insertQuery, [name, email, uid, picture || null], (err2, result) => {
         if (err2) return res.status(500).json({ success: false, message: 'Error creating Google user', error: err2 });
 
-        const token = createToken(result.insertId);
+        const jwtToken = createToken(result.insertId);
 
         res.status(201).json({
           success: true,
           message: 'Google authentication successful',
-          token,
+          token: jwtToken,
           user: {
             id: result.insertId,
             name,
             email,
             interests: [],
             strengths: [],
-            profilePicture: photoURL || null
+            profilePicture: picture || null
           }
         });
       });

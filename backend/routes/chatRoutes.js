@@ -1,14 +1,18 @@
-//backend\routes\chatRoutes.js
+// backend/routes/chatRoutes.js
 const express = require('express');
 const connection = require('../config/mysql');
+const authMiddleware = require('../middleware/authMiddleware'); // ✅ Protect routes
 const router = express.Router();
 
-// Save a message
-router.post('/', (req, res) => {
-  const { userId, sender, message } = req.body;
+// Save a message (protected)
+router.post('/', authMiddleware, (req, res) => {
+  const { sender, message } = req.body;
 
-  if (!userId || !sender || !message) {
-    return res.status(400).json({ success: false, message: 'All fields are required' });
+  // ✅ userId comes from verified JWT instead of trusting req.body
+  const userId = req.user.id;
+
+  if (!sender || !message) {
+    return res.status(400).json({ success: false, message: 'Sender and message are required' });
   }
 
   connection.query(
@@ -22,9 +26,9 @@ router.post('/', (req, res) => {
   );
 });
 
-// Get all messages for a user
-router.get('/:userId', (req, res) => {
-  const { userId } = req.params;
+// Get all messages for a user (protected)
+router.get('/', authMiddleware, (req, res) => {
+  const userId = req.user.id; // ✅ again, from token not param
 
   connection.query(
     'SELECT * FROM messages WHERE user_id = ? ORDER BY created_at ASC',

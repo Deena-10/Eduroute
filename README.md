@@ -1,213 +1,361 @@
-# 🚀 Career Roadmap App
+# 🚀 EduRoute AI - Career Roadmap Application
 
-A full-stack career guidance platform that generates personalized learning roadmaps, projects, and event recommendations using AI.
+A comprehensive career guidance platform that provides personalized learning roadmaps, progress tracking, and milestone-based recommendations.
+
+## 🌟 Features
+
+### 1. **User Authentication & Profile Management**
+- Secure login/signup system
+- User profile creation with education details
+- Contact information for notifications
+
+### 2. **AI-Powered Career Assessment**
+- Interactive questionnaire system
+- Structured career assessment questions:
+  - Education level and department
+  - Career interests and goals
+  - Current skills inventory
+  - Skills to learn
+  - Planning timeline
+  - Contact information
+
+### 3. **Personalized Roadmap Generation**
+- AI-generated comprehensive career roadmaps
+- Learning phases and milestones
+- Daily/weekly task breakdown
+- Resource recommendations
+- Timeline planning
+- Progress tracking suggestions
+
+### 4. **Progress Tracking & Milestones**
+- Real-time progress monitoring
+- Milestone-based notifications:
+  - **40%**: Event and conference suggestions
+  - **60%**: Project recommendations
+  - **80%**: Job opening alerts
+- Task completion tracking
+- Visual progress indicators
+
+### 5. **Smart Notifications System**
+- **Daily reminders** via email
+- **Milestone notifications** with personalized recommendations
+- **Event suggestions** based on domain and progress
+- **Project recommendations** for skill building
+- **Job opening alerts** when ready
+
+### 6. **Database Integration**
+- MySQL database for data persistence
+- User profiles and roadmaps storage
+- Chat history tracking
+- Progress and notification management
 
 ## 🏗️ Architecture
 
-- **Frontend**: React (CRA) + Firebase Auth + Tailwind CSS
-- **Backend (Service 1)**: Node.js + Express + Firebase Admin + MySQL
-- **Backend (Service 2)**: Python Flask + AI APIs (Gemini, Groq, HuggingFace) + SQLite
+### Frontend (React.js)
+```
+frontend/
+├── src/
+│   ├── components/
+│   │   ├── Navbar.jsx          # Navigation component
+│   │   └── UI/                 # Reusable UI components
+│   ├── pages/
+│   │   ├── Home.jsx            # Landing page
+│   │   ├── Login.jsx           # Authentication
+│   │   ├── Questionnaire.jsx   # AI Chat & Assessment
+│   │   ├── Roadmap.jsx         # Roadmap display
+│   │   └── Profile.jsx         # User profile
+│   ├── context/
+│   │   └── AuthContext.jsx     # Authentication state
+│   └── api/
+│       └── axiosInstance.js    # API configuration
+```
 
-## 🚀 Quick Start
+### Backend (Node.js + Express)
+```
+backend/
+├── routes/
+│   ├── authRoutes.js           # Authentication endpoints
+│   ├── userRoutes.js           # User profile & roadmap
+│   ├── aiRoutes.js             # AI chat endpoints
+│   └── chatRoutes.js           # Chat history
+├── middleware/
+│   └── authMiddleware.js       # JWT authentication
+├── service/
+│   ├── notifications.js        # Email notifications
+│   └── application.py          # AI service (Flask)
+└── config/
+    └── mysql.js               # Database connection
+```
+
+### Database Schema
+```sql
+-- Core Tables
+users                    # User accounts
+user_profiles           # Detailed user information
+user_roadmaps           # Generated roadmaps
+chat_history            # AI conversation history
+user_progress           # Progress tracking
+
+-- Recommendation Tables
+notifications           # System notifications
+events                  # Event suggestions
+projects                # Project recommendations
+job_openings            # Job opportunities
+```
+
+## 🚀 Getting Started
 
 ### Prerequisites
 - Node.js (v16+)
 - Python (v3.8+)
-- MySQL (optional, SQLite fallback available)
-- Firebase project setup
+- MySQL (v8.0+)
+- npm or yarn
 
-### 1. Environment Setup
+### Installation
 
-#### Backend (Node.js)
-Create `backend/.env`:
-```env
-PORT=5000
-NODE_ENV=development
-FRONTEND_URL=http://localhost:3000
-JWT_SECRET=your_super_secret_jwt_key_here
-FIREBASE_PROJECT_ID=your-firebase-project-id
-AI_SERVICE_URL=http://localhost:5001
-GEMINI_API_KEY=your_gemini_api_key
-GROQ_API_KEY=your_groq_api_key
-HF_API_KEY=your_huggingface_api_key
-```
-
-#### Flask AI Service
-Create `backend/service/.env`:
-```env
-FLASK_ENV=development
-FLASK_DEBUG=True
-GEMINI_API_KEY=your_gemini_api_key
-GROQ_API_KEY=your_groq_api_key
-HF_API_KEY=your_huggingface_api_key
-DATABASE_URL=sqlite:///career_roadmap.db
-SMTP_SERVER=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USERNAME=your_email@gmail.com
-SMTP_PASSWORD=your_app_password
-```
-
-### 2. Installation
-
+1. **Clone the repository**
 ```bash
-# Install root dependencies
+git clone <repository-url>
+cd career-roadmap-app
+```
+
+2. **Install dependencies**
+```bash
+# Frontend
+cd frontend
 npm install
 
-# Install frontend dependencies
-cd frontend && npm install
+# Backend
+cd ../backend
+npm install
 
-# Install backend dependencies
-cd backend && npm install
-
-# Install Flask service dependencies
-cd backend/service
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# AI Service
+cd ../backend/service
 pip install -r requirements.txt
 ```
 
-### 3. Start Services
-
-#### Option 1: Using the root start script
+3. **Database Setup**
 ```bash
+# Create MySQL database
+mysql -u root -p
+CREATE DATABASE career_roadmap;
+
+# Run schema
+mysql -u root -p career_roadmap < database/schema.sql
+```
+
+4. **Environment Configuration**
+```bash
+# Backend .env
+cd backend
+cp env.example .env
+
+# Configure environment variables
+PORT=5000
+JWT_SECRET=your_super_secret_jwt_key_here
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=your_password
+DB_NAME=career_roadmap
+EMAIL_USER=your_email@gmail.com
+EMAIL_PASSWORD=your_app_password
+FRONTEND_URL=http://localhost:3000
+```
+
+5. **Start the application**
+```bash
+# Terminal 1: Backend
+cd backend
+npm start
+
+# Terminal 2: AI Service
+cd backend/service
+python application.py
+
+# Terminal 3: Frontend
+cd frontend
 npm start
 ```
 
-#### Option 2: Manual startup
-```bash
-# Terminal 1: Start Node.js backend
-cd backend && npm start
+## 📋 Complete Workflow
 
-# Terminal 2: Start Flask AI service
-cd backend/service && python application.py
+### 1. **User Registration & Login**
+- User creates account or logs in
+- Authentication token is generated and stored
+- User profile is initialized
 
-# Terminal 3: Start React frontend
-cd frontend && npm start
-```
+### 2. **Career Assessment**
+- User clicks "Start Career Assessment"
+- AI asks structured questions:
+  - **Education**: Grade, department, year
+  - **Interests**: Career domains and goals
+  - **Skills**: Current and desired skills
+  - **Timeline**: Planning days
+  - **Contact**: Email and phone for notifications
 
-## 🌐 Service URLs
+### 3. **Roadmap Generation**
+- AI analyzes user responses
+- Generates comprehensive roadmap with:
+  - Learning phases and milestones
+  - Daily/weekly tasks
+  - Resource recommendations
+  - Timeline breakdown
+- Roadmap is saved to database
 
-- **Frontend**: http://localhost:3000
-- **Node.js Backend**: http://localhost:5000
-- **Flask AI Service**: http://localhost:5001
+### 4. **Progress Tracking**
+- User can mark tasks as completed
+- Progress percentage is calculated
+- Milestone notifications are triggered:
+  - **40%**: Event suggestions
+  - **60%**: Project recommendations
+  - **80%**: Job opening alerts
+
+### 5. **Smart Notifications**
+- **Daily reminders** sent via email
+- **Milestone notifications** with personalized recommendations
+- **Event suggestions** based on user's domain
+- **Project recommendations** for skill building
+- **Job opening alerts** when user is ready
+
+### 6. **Data Persistence**
+- All user data stored in MySQL
+- Chat history preserved
+- Progress tracked over time
+- Notifications logged
 
 ## 🔧 API Endpoints
 
-### Node.js Backend (`/api`)
+### Authentication
+- `POST /api/auth/signup` - User registration
+- `POST /api/auth/login` - User login
+- `POST /api/auth/google` - Google OAuth
 
-#### Authentication
-- `POST /auth/register` - User registration
-- `POST /auth/login` - User login
-- `GET /auth/profile` - Get user profile
+### User Management
+- `GET /api/user/profile` - Get user profile
+- `POST /api/user/save-profile` - Save profile & roadmap
+- `GET /api/user/roadmap` - Get user roadmap
+- `PUT /api/user/roadmap/progress` - Update progress
+- `GET /api/user/progress` - Get progress
 
-#### AI Services (Proxied to Flask)
-- `POST /ai/chat` - AI Q&A chatbot
-- `POST /ai/generate-roadmap` - Generate career roadmap
-- `POST /ai/suggest-events` - Get event recommendations
-- `POST /ai/suggest-projects` - Get project recommendations
-- `POST /ai/send-notification` - Send email notifications
+### AI Chat
+- `POST /api/ai/chat` - Send message to AI
+- `GET /api/ai/chat-history` - Get chat history
+- `DELETE /api/ai/chat-history` - Clear chat
 
-### Flask AI Service
+### Notifications
+- `GET /api/notifications` - Get user notifications
+- `PUT /api/notifications/:id/read` - Mark as read
 
-- `POST /ask_ai` - AI Q&A with multiple engines
-- `POST /generate_roadmap` - Generate roadmap with visualization
-- `POST /suggest_event` - Domain-based event suggestions
-- `POST /suggest_project` - Domain-based project suggestions
-- `POST /send_notification` - Email notification service
+## 🎯 Key Features Implementation
 
-## 🗄️ Database Schema
-
-### SQLite (Flask Service)
-- `users` - User profiles and preferences
-- `chat_history` - AI conversation history
-- `roadmap_progress` - User learning progress
-- `events` - Event recommendations
-- `projects` - Project recommendations
-
-### MySQL (Node.js Backend)
-- User authentication and session management
-- Additional user data and preferences
-
-## 🔐 Authentication Flow
-
-1. User signs up/logs in via Firebase Auth
-2. JWT token stored in localStorage
-3. Token sent with API requests via Authorization header
-4. Node.js backend validates Firebase token
-5. User data synchronized between services
-
-## 🤖 AI Integration
-
-### Supported AI Engines
-- **Gemini**: Google's AI model (recommended)
-- **Groq**: Fast inference API
-- **HuggingFace**: Open-source models
-
-### AI Features
-- **Q&A Chatbot**: Multi-engine support with conversation history
-- **Roadmap Generation**: Step-by-step learning paths with visualizations
-- **Smart Recommendations**: Domain-specific events and projects
-- **Email Notifications**: Progress updates and reminders
-
-## 🎨 Frontend Features
-
-- **Responsive Design**: Mobile-first with Tailwind CSS
-- **Protected Routes**: Authentication-based access control
-- **Real-time Chat**: AI conversation interface
-- **Roadmap Generator**: Interactive skill planning tool
-- **Progress Tracking**: Learning milestone management
-
-## 🛠️ Development
-
-### Adding New Features
-
-1. **Frontend**: Add components in `frontend/src/`
-2. **Node.js Backend**: Add routes in `backend/routes/`
-3. **Flask Service**: Add endpoints in `backend/service/application.py`
-4. **Database**: Update models in respective services
-
-### Testing
-
-```bash
-# Frontend tests
-cd frontend && npm test
-
-# Backend tests (when implemented)
-cd backend && npm test
+### Assessment Questions
+```javascript
+const assessmentQuestions = [
+  {
+    id: 'education',
+    question: "What's your current education level?",
+    type: 'education',
+    subQuestions: [
+      { key: 'grade', label: 'Grade/Level' },
+      { key: 'department', label: 'Department/Major' },
+      { key: 'year', label: 'Current Year' }
+    ]
+  },
+  // ... more questions
+];
 ```
 
-## 🚨 Troubleshooting
+### Progress Tracking
+```javascript
+// Milestone checks
+if (progress_percentage >= 40 && progress_percentage < 60) {
+  suggestEvents(userId);
+} else if (progress_percentage >= 60 && progress_percentage < 80) {
+  suggestProjects(userId);
+} else if (progress_percentage >= 80) {
+  suggestJobOpenings(userId);
+}
+```
 
-### Common Issues
+### Email Notifications
+```javascript
+// Daily reminders
+const sendDailyReminders = async () => {
+  // Get all active roadmaps
+  // Send personalized emails
+  // Track notification delivery
+};
+```
 
-1. **Port Conflicts**: Ensure ports 3000, 5000, and 5001 are available
-2. **CORS Errors**: Check environment variables for correct URLs
-3. **AI API Errors**: Verify API keys in environment files
-4. **Database Issues**: Check connection strings and permissions
+## 🔒 Security Features
 
-### Debug Mode
+- JWT-based authentication
+- Password hashing with bcrypt
+- Protected API routes
+- Input validation and sanitization
+- CORS configuration
+- Environment variable management
 
-Enable debug logging by setting `NODE_ENV=development` and `FLASK_DEBUG=True`
+## 📊 Database Design
 
-## 📝 Environment Variables Reference
+### User Profiles
+- Education details
+- Skills inventory
+- Career interests
+- Contact information
+- Planning preferences
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `GEMINI_API_KEY` | Google Gemini API key | Yes |
-| `GROQ_API_KEY` | Groq API key | Optional |
-| `HF_API_KEY` | HuggingFace API key | Optional |
-| `FIREBASE_PROJECT_ID` | Firebase project ID | Yes |
-| `JWT_SECRET` | JWT signing secret | Yes |
-| `DATABASE_URL` | Database connection string | Yes |
+### Roadmaps
+- AI-generated content
+- Progress tracking
+- Status management
+- Completion history
+
+### Notifications
+- Email delivery tracking
+- Read status
+- Notification types
+- User preferences
+
+## 🚀 Deployment
+
+### Production Setup
+1. Configure production database
+2. Set up email service (Gmail SMTP)
+3. Configure environment variables
+4. Set up SSL certificates
+5. Deploy to cloud platform
+
+### Environment Variables
+```bash
+# Required for production
+NODE_ENV=production
+JWT_SECRET=your_production_secret
+DB_HOST=your_production_db_host
+EMAIL_USER=your_production_email
+EMAIL_PASSWORD=your_production_email_password
+FRONTEND_URL=https://your-domain.com
+```
 
 ## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Test thoroughly
+4. Add tests if applicable
 5. Submit a pull request
 
-## 📄 License
+## 📝 License
 
-This project is licensed under the MIT License. 
+This project is licensed under the MIT License.
+
+## 🆘 Support
+
+For support and questions:
+- Create an issue in the repository
+- Contact the development team
+- Check the documentation
+
+---
+
+**EduRoute AI** - Empowering career growth through AI-driven personalized learning paths! 🚀 

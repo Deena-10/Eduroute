@@ -122,3 +122,24 @@ firebase-config.js
 # Local configuration files
 .local
 local.*
+
+# Security and sensitive files
+*.env.production
+*.env.staging
+.env.*
+!env.example
+serviceAccountKey*.json
+firebase-adminsdk*.json
+*.p12
+*.pfx
+
+# Debug and development files
+debug.js
+debug.*
+test-*.js
+temp-*.js
+
+# Production deployment files
+deploy.sh
+deploy.*
+production.*

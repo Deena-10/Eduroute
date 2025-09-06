@@ -3,15 +3,15 @@ import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-// TODO: Replace these with your actual Firebase client configuration
-// Get these values from Firebase Console > Project Settings > General > Your apps > Web app
+// Firebase configuration for upteduroute project
 const firebaseConfig = {
-  apiKey: "AIzaSyBxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", // Replace with your actual API key
-  authDomain: "edurouteai-8ef31.firebaseapp.com",
-  projectId: "edurouteai-8ef31",
-  storageBucket: "edurouteai-8ef31.appspot.com",
-  messagingSenderId: "123456789012", // Replace with your actual messaging sender ID
-  appId: "1:123456789012:web:abcdefghijklmnop", // Replace with your actual app ID
+  apiKey: "AIzaSyDxUVPzrdr8ZAC7A9qvG_5REDXWxc2EcX8",
+  authDomain: "upteduroute.firebaseapp.com",
+  projectId: "upteduroute",
+  storageBucket: "upteduroute.firebasestorage.app",
+  messagingSenderId: "175309370242",
+  appId: "1:175309370242:web:3c3e24fe9834029848159b",
+  measurementId: "G-GRECR0BMY5",
 };
 
 // Alternative: Use environment variables (recommended for production)

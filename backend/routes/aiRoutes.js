@@ -35,6 +35,42 @@ router.post("/chat", authMiddleware, async (req, res) => {
 });
 
 // =======================
+// Get Chat History Route
+// =======================
+router.get("/chat-history", authMiddleware, async (req, res) => {
+  const uid = req.user.id;
+
+  try {
+    const response = await axios.get(`${AI_SERVICE_URL}/get_chat_history`, {
+      params: { uid: uid }
+    });
+
+    res.json(response.data);
+  } catch (error) {
+    console.error("Chat history error:", error.response?.data || error.message);
+    res.status(500).json({ error: "Failed to fetch chat history" });
+  }
+});
+
+// =======================
+// Clear Chat History Route
+// =======================
+router.delete("/chat-history", authMiddleware, async (req, res) => {
+  const uid = req.user.id;
+
+  try {
+    const response = await axios.delete(`${AI_SERVICE_URL}/clear_chat_history`, {
+      params: { uid: uid }
+    });
+
+    res.json(response.data);
+  } catch (error) {
+    console.error("Clear chat history error:", error.response?.data || error.message);
+    res.status(500).json({ error: "Failed to clear chat history" });
+  }
+});
+
+// =======================
 // Generate Roadmap Route
 // =======================
 router.post("/generate-roadmap", authMiddleware, async (req, res) => {

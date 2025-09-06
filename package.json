@@ -16,9 +16,12 @@
     "backend": "cd backend && npm start",
     "ai-service": "cd backend/service && python application.py",
     "build": "cd frontend && npm run build",
+    "build:production": "npm run build && npm run build:backend",
+    "build:backend": "cd backend && npm install --production",
     "test": "cd frontend && npm test",
     "test-integration": "node test-integration.js",
-    "eject": "cd frontend && npm run eject"
+    "eject": "cd frontend && npm run eject",
+    "deploy:build": "build-production.bat"
   },
   "devDependencies": {
     "concurrently": "^9.2.0"

@@ -46,7 +46,16 @@ exports.signup = async (req, res) => {
         const result = await query(insertQuery, [name, email, hashedPassword]);
 
         const token = generateToken(result.insertId, email);
-        res.status(201).json({ message: 'Signup successful', token, success: true });
+        res.status(201).json({ 
+            message: 'Signup successful', 
+            token, 
+            success: true,
+            user: {
+                id: result.insertId,
+                name: name,
+                email: email
+            }
+        });
     } catch (err) {
         // Handle specific MySQL duplicate entry error
         if (err.code === 'ER_DUP_ENTRY') {
@@ -81,7 +90,16 @@ exports.login = async (req, res) => {
         }
 
         const token = generateToken(user.id, user.email);
-        res.status(200).json({ message: 'Login successful', token, success: true });
+        res.status(200).json({ 
+            message: 'Login successful', 
+            token, 
+            success: true,
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email
+            }
+        });
     } catch (err) {
         console.error('Login error:', err);
         res.status(500).json({ message: 'Server error during login' });

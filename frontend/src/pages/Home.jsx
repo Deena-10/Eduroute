@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
 const Home = () => {
-  const { user } = useContext(AuthContext);
+  const { user, isAuthenticated } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState('roadmaps');
 
   // Mock data for roadmaps
@@ -117,6 +117,35 @@ const Home = () => {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F6F6F6' }}>
+      {/* Quick Login Section for Non-Authenticated Users */}
+      {!isAuthenticated && (
+        <section className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white py-8">
+          <div className="container mx-auto px-4 text-center">
+            <div className="max-w-2xl mx-auto">
+              <h2 className="text-2xl font-bold mb-4">🔐 Quick Access</h2>
+              <p className="text-lg mb-6">Login to access your personalized career roadmap and AI chat</p>
+              <div className="flex justify-center space-x-4">
+                <Link
+                  to="/login"
+                  className="bg-white text-orange-600 px-6 py-2 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/signup"
+                  className="border-2 border-white text-white px-6 py-2 rounded-lg font-semibold hover:bg-white hover:text-orange-600 transition-colors"
+                >
+                  Sign Up
+                </Link>
+              </div>
+              <div className="mt-4 text-sm opacity-90">
+                <strong>Test Account:</strong> test@example.com / password123
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       <div className="relative z-10">
         {/* Hero Section */}
         <section className="py-20 px-4">

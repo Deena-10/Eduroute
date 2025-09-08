@@ -41,4 +41,19 @@ router.get('/', authMiddleware, (req, res) => {
   );
 });
 
+// Clear all messages for a user (protected)
+router.delete('/', authMiddleware, (req, res) => {
+  const userId = req.user.id;
+
+  connection.query(
+    'DELETE FROM messages WHERE user_id = ?',
+    [userId],
+    (err, result) => {
+      if (err) return res.status(500).json({ success: false, error: err });
+
+      res.json({ success: true, message: 'Chat history cleared successfully' });
+    }
+  );
+});
+
 module.exports = router;

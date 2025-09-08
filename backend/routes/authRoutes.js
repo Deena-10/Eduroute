@@ -30,6 +30,11 @@ const createToken = (userId) => {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: "7d" });
 };
 
+// Test endpoint
+router.get("/test", (req, res) => {
+  res.json({ success: true, message: "Backend is running", timestamp: new Date().toISOString() });
+});
+
 // ==================
 // EMAIL + PASSWORD SIGNUP
 // ==================

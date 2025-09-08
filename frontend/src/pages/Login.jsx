@@ -54,11 +54,11 @@ const Login = () => {
       <div className="flex items-center justify-center min-h-screen p-4">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="flex items-center justify-center mx-auto mb-4">
               <img
-                src="/logo1.png"
+                src="/logo.png"
                 alt="EduRoute AI Logo"
-                className="w-12 h-12"
+                className="w-20 h-20 rounded-full object-cover"
               />
             </div>
             <h1

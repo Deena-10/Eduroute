@@ -7,16 +7,7 @@ const Profile = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
 
-  // Redirect if not logged in
-  useEffect(() => {
-    if (!user) {
-      navigate('/login');
-    }
-  }, [user, navigate]);
-
-  if (!user) {
-    return null;
-  }
+  // Authentication is handled by ProtectedRoute component
 
   // Mock user data
   const userData = {

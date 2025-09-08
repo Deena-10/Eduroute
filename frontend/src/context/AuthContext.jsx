@@ -18,12 +18,26 @@ export const AuthProvider = ({ children }) => {
           event.error.message.includes("You need t"))
       ) {
         console.warn("Global JSON parsing error caught:", event.error.message);
-        // Clear potentially corrupted localStorage
+        // Only clear specific corrupted keys, not everything
         try {
-          localStorage.clear();
-          sessionStorage.clear();
+          const corruptedKeys = ["user", "token"];
+          corruptedKeys.forEach((key) => {
+            try {
+              const value = localStorage.getItem(key);
+              if (
+                value &&
+                (value.includes("You need t") ||
+                  value.includes("Unexpected token"))
+              ) {
+                localStorage.removeItem(key);
+                console.log(`Removed corrupted key: ${key}`);
+              }
+            } catch (e) {
+              localStorage.removeItem(key);
+            }
+          });
         } catch (e) {
-          console.log("Error clearing storage:", e);
+          console.log("Error clearing corrupted storage:", e);
         }
         // Don't let JSON parsing errors crash the app
         event.preventDefault();
@@ -38,11 +52,26 @@ export const AuthProvider = ({ children }) => {
           event.reason.message.includes("Unexpected token"))
       ) {
         console.warn("Unhandled JSON parsing error:", event.reason.message);
+        // Only clear specific corrupted keys, not everything
         try {
-          localStorage.clear();
-          sessionStorage.clear();
+          const corruptedKeys = ["user", "token"];
+          corruptedKeys.forEach((key) => {
+            try {
+              const value = localStorage.getItem(key);
+              if (
+                value &&
+                (value.includes("You need t") ||
+                  value.includes("Unexpected token"))
+              ) {
+                localStorage.removeItem(key);
+                console.log(`Removed corrupted key: ${key}`);
+              }
+            } catch (e) {
+              localStorage.removeItem(key);
+            }
+          });
         } catch (e) {
-          console.log("Error clearing storage:", e);
+          console.log("Error clearing corrupted storage:", e);
         }
         event.preventDefault();
       }
@@ -64,6 +93,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const loadUser = async () => {
       try {
+        // Check authentication state
         // First, clear any corrupted localStorage data
         try {
           // Check all localStorage keys for corruption
@@ -182,7 +212,19 @@ export const AuthProvider = ({ children }) => {
               }
             );
 
+            if (!response.ok) {
+              console.error(
+                "Backend request failed:",
+                response.status,
+                response.statusText
+              );
+              setLoading(false);
+              return;
+            }
+
+            console.log("Backend response status:", response.status);
             const data = await response.json();
+            console.log("Backend response data:", data);
 
             if (data.success) {
               console.log(
@@ -205,7 +247,10 @@ export const AuthProvider = ({ children }) => {
 
               // Redirect to home page after successful login
               console.log("Redirecting to home page...");
-              window.location.href = "/";
+              // Use a small delay to ensure state is updated before navigation
+              setTimeout(() => {
+                window.location.href = "/";
+              }, 100);
               return;
             } else {
               console.error("Google OAuth backend error:", data.message);
@@ -321,6 +366,20 @@ export const AuthProvider = ({ children }) => {
             }
           }
         } else if (
+          token &&
+          (!storedUser || storedUser === "null" || storedUser === "undefined")
+        ) {
+          // We have a token but no user data - create a temporary user
+          console.log("Found token without user data, creating temporary user");
+          setUser({
+            id: "temp",
+            uid: "temp",
+            email: "user@example.com",
+            name: "User",
+            photoURL: null,
+            token: token,
+          });
+        } else if (
           storedUser &&
           storedUser !== "null" &&
           storedUser !== "undefined"
@@ -364,8 +423,9 @@ export const AuthProvider = ({ children }) => {
       }
     };
 
-    loadUser();
-    setLoading(false);
+    loadUser().finally(() => {
+      setLoading(false);
+    });
   }, []);
 
   // Email login
@@ -518,6 +578,21 @@ export const AuthProvider = ({ children }) => {
         photoURL: null,
         token: token,
       });
+      return true;
+    }
+
+    // During loading, assume user is authenticated if we have a token
+    if (loading && hasToken) {
+      return true;
+    }
+
+    // If we're still loading and have a token, give it a chance
+    if (loading) {
+      return hasToken;
+    }
+
+    // If we have a token but no user, still consider authenticated
+    if (hasToken && !hasUser) {
       return true;
     }
 

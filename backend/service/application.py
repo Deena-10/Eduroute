@@ -82,14 +82,35 @@ def ask_ai():
             
             The user asks: "{question}"
             
-            Please provide a detailed, practical, and actionable response that includes:
-            1. Specific steps or recommendations
-            2. Relevant technologies, tools, or skills to learn
-            3. Realistic timelines or milestones
-            4. Resources for learning (courses, books, platforms)
-            5. Industry insights and current trends
+            Please provide a clean, well-structured response with the following format:
             
-            Focus on being specific and helpful rather than generic advice. If the user is asking about a specific technology or career path, provide concrete guidance.
+            **Overview**
+            Brief introduction to the topic
+            
+            **Key Steps**
+            1. First important step
+            2. Second important step
+            3. Third important step
+            
+            **Technologies & Skills**
+            • Technology 1 - brief description
+            • Technology 2 - brief description
+            • Technology 3 - brief description
+            
+            **Timeline & Milestones**
+            • Month 1-3: Focus area
+            • Month 4-6: Next focus area
+            • Month 7-12: Advanced topics
+            
+            **Learning Resources**
+            • Course/Book 1 - brief description
+            • Course/Book 2 - brief description
+            • Platform/Resource 3 - brief description
+            
+            **Industry Insights**
+            Current trends and market demand information
+            
+            Keep each section concise but informative. Use bullet points and numbered lists for clarity. Make the response easy to read and well-organized.
             
             Response:"""
         
@@ -100,7 +121,17 @@ def ask_ai():
             if question_lower in ['hi', 'hello', 'hey', 'hi there', 'hello there']:
                 system_content = "You are a friendly career advisor for tech professionals. Give warm, brief responses (2-3 sentences max) for greetings. Be conversational and encouraging."
             else:
-                system_content = "You are a professional career advisor specializing in technology and software development. Provide detailed, practical, and actionable career guidance."
+                system_content = """You are a professional career advisor specializing in technology and software development. 
+                
+                Provide clean, well-structured responses with:
+                - **Overview** section
+                - **Key Steps** (numbered list)
+                - **Technologies & Skills** (bullet points)
+                - **Timeline & Milestones** (bullet points)
+                - **Learning Resources** (bullet points)
+                - **Industry Insights** section
+                
+                Use proper formatting with **bold headers**, numbered lists (1. 2. 3.), and bullet points (•). Keep each section concise but informative. Make responses easy to read and well-organized."""
             
             response = groq_client.chat.completions.create(
                 model="llama3-8b-8192",
@@ -129,18 +160,21 @@ def ask_ai():
             if question_lower in ['hi', 'hello', 'hey', 'hi there', 'hello there']:
                 answer_text = f"""Hi there! 👋 I'm your career roadmap assistant. I'm here to help you navigate your tech career journey. What would you like to know about? Are you looking to start a career in tech, switch fields, or advance in your current role?"""
             else:
-                answer_text = f"""I understand you're asking about: "{question}"
+                answer_text = f"""**Overview**
+I understand you're asking about: "{question}"
 
-Since the AI service is not fully configured, here's some general career guidance:
+**Current Status**
+• AI services are temporarily unavailable
+• Please try again in a few moments
 
-**For Technology Careers:**
-- Start with fundamentals (programming basics, problem-solving)
-- Choose a specialization (web development, data science, mobile apps, etc.)
-- Build projects to showcase your skills
-- Network with professionals in your field
-- Stay updated with industry trends
+**General Career Guidance**
+• Start with fundamentals (programming basics, problem-solving)
+• Choose a specialization (web development, data science, mobile apps, etc.)
+• Build projects to showcase your skills
+• Network with professionals in your field
+• Stay updated with industry trends
 
-**Recommended Learning Path:**
+**Recommended Learning Path**
 1. Learn core programming concepts
 2. Pick a technology stack (e.g., MERN for web development)
 3. Build small projects
@@ -148,13 +182,16 @@ Since the AI service is not fully configured, here's some general career guidanc
 5. Create a portfolio
 6. Apply for internships/jobs
 
-**Resources:**
-- FreeCodeCamp, The Odin Project, Udemy
-- YouTube channels: Traversy Media, The Net Ninja
-- Books: "You Don't Know JS", "Clean Code"
-- Practice platforms: LeetCode, HackerRank
+**Learning Resources**
+• FreeCodeCamp, The Odin Project, Udemy
+• YouTube channels: Traversy Media, The Net Ninja
+• Books: "You Don't Know JS", "Clean Code"
+• Practice platforms: LeetCode, HackerRank
 
-Would you like me to help you create a more specific roadmap once the AI service is fully configured?"""
+**Next Steps**
+1. Refresh the page and try again
+2. Check your internet connection
+3. Contact support if problems continue"""
 
         # ---------------- Store Chat ----------------
         chat = ChatHistory(uid=uid, question=question, answer=answer_text, engine=engine)

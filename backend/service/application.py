@@ -6,7 +6,7 @@ import requests
 import google.generativeai as genai
 from groq import Groq
 from dotenv import load_dotenv
-from db import SessionLocal, User, ChatHistory, RoadmapProgress
+from db_postgres import User, ChatHistory, RoadmapProgress, Event, Project, CareerOnboardingState
 from roadmap import generate_roadmap_image
 from events import get_events_for_user
 from projects import get_projects_for_user
@@ -22,38 +22,49 @@ try:
     if gemini_api_key:
         genai.configure(api_key=gemini_api_key)
         gemini_model = genai.GenerativeModel("gemini-1.5-flash")
-        print("✅ Gemini AI configured successfully")
+        print("[SUCCESS] Gemini AI configured successfully")
     else:
         gemini_model = None
-        print("⚠️  Gemini API key not found")
+        print("[WARNING] Gemini API key not found")
 except Exception as e:
-    print(f"⚠️  Gemini client initialization failed: {e}")
+    print(f"[WARNING] Gemini client initialization failed: {e}")
     gemini_model = None
 
 groq_api_key = os.environ.get("GROQ_API_KEY")
 try:
     groq_client = Groq(api_key=groq_api_key) if groq_api_key else None
 except Exception as e:
-    print(f"⚠️  Groq client initialization failed: {e}")
+    print(f"[WARNING] Groq client initialization failed: {e}")
     groq_client = None
 
 hf_api_key = os.environ.get("HF_API_KEY")
 try:
     hf_headers = {"Authorization": f"Bearer {hf_api_key}"} if hf_api_key else None
     if hf_api_key:
-        print("✅ Hugging Face API configured successfully")
+        print("[SUCCESS] Hugging Face API configured successfully")
     else:
-        print("⚠️  Hugging Face API key not found")
+        print("[WARNING] Hugging Face API key not found")
 except Exception as e:
-    print(f"⚠️  Hugging Face client initialization failed: {e}")
+    print(f"[WARNING] Hugging Face client initialization failed: {e}")
     hf_headers = None
 
+openai_api_key = os.environ.get("OPENAI_API_KEY")
+openai_headers = (
+    {"Authorization": f"Bearer {openai_api_key}", "Content-Type": "application/json"}
+    if openai_api_key else None
+)
+if openai_api_key:
+    print("[SUCCESS] OpenAI API configured successfully")
+else:
+    print("[WARNING] OpenAI API key not found")
+
 # ---------------- Startup Message ----------------
-print("\n🚀 Flask AI Service Starting...")
+print("\n[STARTUP] Flask AI Service Starting...")
 print("=" * 50)
-print(f"✅ Gemini AI: {'Available' if gemini_model else 'Not Available'}")
-print(f"✅ Groq AI: {'Available' if groq_client else 'Not Available'}")
-print(f"✅ Hugging Face: {'Available' if hf_headers else 'Not Available'}")
+print(f"[INFO] Gemini AI: {'Available' if gemini_model else 'Not Available'}")
+print(f"[INFO] Groq AI: {'Available' if groq_client else 'Not Available'}")
+print(f"[INFO] Hugging Face: {'Available' if hf_headers else 'Not Available'}")
+print(f"[INFO] OpenAI: {'Available' if openai_headers else 'Not Available'}")
 print("=" * 50)
 
 # ---------------- Routes ----------------
@@ -63,7 +74,6 @@ def ask_ai():
     engine = data.get("engine")
     question = data.get("question")
     uid = data.get("uid", "anonymous")
-    session = SessionLocal()
 
     # ---------------- AI Response ----------------
     answer_text = ""
@@ -155,10 +165,38 @@ def ask_ai():
                 answer_text = result[0]["generated_text"]
             else:
                 answer_text = str(result)
+        elif engine == "openai" and openai_headers:
+            if question_lower in ['hi', 'hello', 'hey', 'hi there', 'hello there']:
+                system_content = "You are a friendly career advisor for tech professionals. Give warm, brief responses (2-3 sentences max) for greetings. Be conversational and encouraging."
+            else:
+                system_content = """You are a professional career advisor specializing in technology and software development.
+                Provide clean, well-structured responses with:
+                - **Overview** section
+                - **Key Steps** (numbered list)
+                - **Technologies & Skills** (bullet points)
+                - **Timeline & Milestones** (bullet points)
+                - **Learning Resources** (bullet points)
+                - **Industry Insights** section
+                Use proper formatting with **bold headers**, numbered lists, and bullet points. Keep each section concise but informative."""
+            r = requests.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers=openai_headers,
+                json={
+                    "model": "gpt-4o-mini",
+                    "messages": [
+                        {"role": "system", "content": system_content},
+                        {"role": "user", "content": question},
+                    ],
+                },
+                timeout=60,
+            )
+            r.raise_for_status()
+            result = r.json()
+            answer_text = result.get("choices", [{}])[0].get("message", {}).get("content", "")
         else:
             # Fallback response when AI engines are not configured
             if question_lower in ['hi', 'hello', 'hey', 'hi there', 'hello there']:
-                answer_text = f"""Hi there! 👋 I'm your career roadmap assistant. I'm here to help you navigate your tech career journey. What would you like to know about? Are you looking to start a career in tech, switch fields, or advance in your current role?"""
+                answer_text = f"""Hi there! I'm your career roadmap assistant. I'm here to help you navigate your tech career journey. What would you like to know about? Are you looking to start a career in tech, switch fields, or advance in your current role?"""
             else:
                 answer_text = f"""**Overview**
 I understand you're asking about: "{question}"
@@ -194,15 +232,11 @@ I understand you're asking about: "{question}"
 3. Contact support if problems continue"""
 
         # ---------------- Store Chat ----------------
-        chat = ChatHistory(uid=uid, question=question, answer=answer_text, engine=engine)
-        session.add(chat)
-        session.commit()
+        ChatHistory.create(uid=uid, question=question, answer=answer_text, engine=engine)
 
     except Exception as e:
-        session.close()
         return jsonify({"error": f"AI Error: {str(e)}"}), 500
 
-    session.close()
     return jsonify({"answer": answer_text})
 
 @app.route("/get_chat_history", methods=["GET"])
@@ -211,35 +245,31 @@ def get_chat_history():
     if not uid:
         return jsonify({"error": "UID is required"}), 400
     
-    session = SessionLocal()
     try:
         # Get chat history for the user
-        chats = session.query(ChatHistory).filter(ChatHistory.uid == uid).order_by(ChatHistory.timestamp.asc()).all()
+        chats = ChatHistory.get_by_uid(uid)
         
         # Convert to list of dictionaries
         chat_history = []
         for chat in chats:
             chat_history.append({
-                "id": chat.id,
+                "id": chat['id'],
                 "type": "user",
-                "content": chat.question,
-                "timestamp": chat.timestamp.isoformat(),
-                "engine": chat.engine
+                "content": chat['question'],
+                "timestamp": chat['timestamp'].isoformat() if chat['timestamp'] else None,
+                "engine": chat['engine']
             })
             chat_history.append({
-                "id": chat.id + 1000,  # Different ID for AI response
+                "id": chat['id'] + 1000,  # Different ID for AI response
                 "type": "ai",
-                "content": chat.answer,
-                "timestamp": chat.timestamp.isoformat(),
-                "engine": chat.engine
+                "content": chat['answer'],
+                "timestamp": chat['timestamp'].isoformat() if chat['timestamp'] else None,
+                "engine": chat['engine']
             })
         
         return jsonify({"chat_history": chat_history})
     except Exception as e:
-        session.close()
         return jsonify({"error": f"Database Error: {str(e)}"}), 500
-    finally:
-        session.close()
 
 @app.route("/clear_chat_history", methods=["DELETE"])
 def clear_chat_history():
@@ -247,18 +277,313 @@ def clear_chat_history():
     if not uid:
         return jsonify({"error": "UID is required"}), 400
     
-    session = SessionLocal()
     try:
         # Delete chat history for the user
-        session.query(ChatHistory).filter(ChatHistory.uid == uid).delete()
-        session.commit()
+        ChatHistory.clear_by_uid(uid)
         return jsonify({"message": "Chat history cleared successfully"})
     except Exception as e:
-        session.rollback()
-        session.close()
         return jsonify({"error": f"Database Error: {str(e)}"}), 500
-    finally:
-        session.close()
+
+def _parse_domain_from_message(message):
+    """Use AI to extract primary interest/domain from user message. Returns a short label."""
+    if not gemini_model:
+        return (message.strip()[:100] or "General Tech") if message else "General Tech"
+    prompt = f"""From this user message about their career interest, extract ONE primary domain or interest in 2-6 words (e.g. "Python", "Web Development", "Data Science", "JavaScript", "Mobile Development"). Reply with ONLY that short label, nothing else. Message: "{message}" """
+    try:
+        r = gemini_model.generate_content(prompt)
+        return (r.text.strip().strip('"') or message[:50])[:100]
+    except Exception:
+        return (message.strip() or "General Tech")[:100]
+
+
+def _parse_proficiency_from_message(message):
+    """Extract Beginner or Intermediate from message."""
+    msg = (message or "").lower().strip()
+    if "intermediate" in msg or "mid" in msg:
+        return "Intermediate"
+    return "Beginner"
+
+
+def _parse_status_from_message(message):
+    """Extract School student / College student / Working professional."""
+    msg = (message or "").lower().strip()
+    if "work" in msg or "professional" in msg or "job" in msg or "employed" in msg:
+        return "Working professional"
+    if "college" in msg or "university" in msg or "uni " in msg or "undergrad" in msg:
+        return "College student"
+    return "School student"
+
+
+def _generate_full_roadmap_with_ai(domain, proficiency_level, current_status, professional_goal="job-ready"):
+    """Generate a professional-level roadmap: 10–15 yrs depth, core/advanced/interview only, no beginner setup."""
+    prompt = f"""You are an AI learning-path generator for a professional career learning platform. Generate ONE complete roadmap strictly from the inputs below. Do not use conversational language or chat-style responses.
+
+Inputs (use these as source of truth; domain is locked):
+- Domain / Interest: {domain}
+- Professional goal: {professional_goal} (job-ready = interview-focused; enterprise = large-scale systems; product-based = product/startup focus)
+- Knowledge level: {proficiency_level}
+- Current status: {current_status}
+
+Critical requirements:
+- Depth: Reflect 10–15 years of professional industry experience in the selected domain. Do NOT include: installing software, basic tool setup, environment configuration, or "what is X" basics. Focus ONLY on: core concepts, internals, architecture, performance, real-world use cases, industry-level practices.
+- Domain lock: All content must be strictly for "{domain}"; no cross-domain content.
+- Structure (mandatory): Roadmap → Phases → Topics → Daily Tasks. EVERY topic must be split into daily tasks. Daily task names must match roadmap content exactly.
+
+Task breakdown:
+- Four sequential phases only: Foundations → Core Concepts → Advanced Concepts → Practical Projects. Use these exact phase names. Each phase has 2–4 topics; each topic has multiple daily tasks. Each daily task has a clear title matching the concept (e.g. "JVM, JRE, JIT" or "Task 1: Topic name") and exactly 13–15 MCQs.
+- Each MCQ: "id", "question", "options" (exactly 4 strings), "correctIndex" (0-based). Questions must align with real-world usage and interview expectations.
+- For coding or technical domains: Include a mix of (1) theory-based questions (definitions, trade-offs, design) and (2) practical logic-based questions that test reasoning: output prediction, conditional logic, edge cases, program behavior, code snippet outcomes. No installation or setup questions.
+
+Interview importance:
+- Mark "interviewPriority": "high" and "isInterviewCritical": true where appropriate. MCQs should reflect common interview patterns.
+
+Weekly structure:
+- Assign "weekNumber" to every task. Add "weeklyRecaps" with "weekNumber", "importantQuestions", "repeatedConcepts", "selfAssessmentChecklist".
+
+Output: valid JSON only. No markdown, no code fences. Every task must have an "mcqs" array with exactly 13–15 items:
+
+{{
+  "domain": "{domain}",
+  "proficiencyLevel": "{proficiency_level}",
+  "professionalGoal": "{professional_goal}",
+  "currentStatus": "{current_status}",
+  "phases": [
+    {{
+      "id": "phase-1",
+      "name": "Foundations",
+      "order": 1,
+      "topics": [
+        {{
+          "id": "topic-1-1",
+          "title": "Topic title",
+          "order": 1,
+          "interviewPriority": "high or low",
+          "tasks": [
+            {{
+              "id": "t-1-1-1",
+              "title": "Task 1: Topic or concept name",
+              "weekNumber": 1,
+              "orderInWeek": 1,
+              "type": "concept",
+              "isInterviewCritical": false,
+              "mcqs": [
+                {{ "id": "q1", "question": "What is X?", "options": ["Option A", "Option B", "Option C", "Option D"], "correctIndex": 0 }}
+              ]
+            }}
+          ]
+        }}
+      ]
+    }},
+    {{ "id": "phase-2", "name": "Core Concepts", "order": 2, "topics": [] }},
+    {{ "id": "phase-3", "name": "Advanced Concepts", "order": 3, "topics": [] }},
+    {{ "id": "phase-4", "name": "Practical Projects", "order": 4, "topics": [] }}
+  ],
+  "weeklyRecaps": [
+    {{ "weekNumber": 1, "importantQuestions": ["q1", "q2"], "repeatedConcepts": ["c1"], "selfAssessmentChecklist": ["Item 1", "Item 2"] }}
+  ]
+}}
+
+Rules: Every task has exactly 13–15 MCQs. Each MCQ has id, question, options (4 strings), correctIndex (0-3). Phase names: Foundations, Core Concepts, Advanced Concepts, Practical Projects. Output is modular and database-ready."""
+
+    if not gemini_model:
+        return _fallback_roadmap_json(domain, proficiency_level, current_status)
+    try:
+        response = gemini_model.generate_content(prompt)
+        text = response.text.strip()
+        if text.startswith("```"):
+            text = text.split("```")[1]
+            if text.startswith("json"):
+                text = text[4:]
+        import json
+        return json.loads(text)
+    except Exception as e:
+        print(f"[ERROR] Roadmap generation failed: {e}")
+        return _fallback_roadmap_json(domain, proficiency_level, current_status)
+
+
+def _make_fallback_mcqs(n, task_id):
+    """Generate n placeholder MCQs for a task."""
+    return [
+        {
+            "id": "%s-q%d" % (task_id, qi + 1),
+            "question": "What best describes the core concept in this topic? (Question %d)" % (qi + 1),
+            "options": ["Definition A", "Definition B", "Definition C", "Definition D"],
+            "correctIndex": qi % 4,
+        }
+        for qi in range(n)
+    ]
+
+
+def _fallback_roadmap_json(domain, proficiency_level, current_status):
+    """Structured fallback roadmap when AI is unavailable. Each task has 13-15 MCQs."""
+    tasks_1 = []
+    for i in range(1, 16):
+        title = (
+            "Task 1: Core terminology and its role" if i == 1 else
+            "Task 2: Relationship between key concepts" if i == 2 else
+            "Task 3: Common patterns and when to apply them" if i == 3 else
+            "Task 4: Execution flow for a simple scenario" if i == 4 else
+            "Task 5: Compare two fundamental approaches" if i == 5 else
+            "Task 6: Apply the concept to a minimal example" if i == 6 else
+            "Task 7: Correct vs incorrect usage" if i == 7 else
+            "Task 8: Set up a basic environment" if i == 8 else
+            "Task 9: How errors are reported and handled" if i == 9 else
+            "Task 10: Best practices for the topic" if i == 10 else
+            "Task 11: Explain the concept in your own words" if i == 11 else
+            "Task 12: Identify one real-world use case" if i == 12 else
+            "Task 13: Verify understanding recap" if i == 13 else
+            "Task 14: Recall the main takeaway" if i == 14 else
+            "Week 1 recap: foundations and core terminology"
+        )
+        task_type = "recap" if i == 15 else ("concept" if i <= 10 else "question")
+        tid = "t-1-1-%d" % i
+        tasks_1.append({
+            "id": tid,
+            "title": title,
+            "weekNumber": 1,
+            "orderInWeek": i,
+            "type": task_type,
+            "isInterviewCritical": i <= 4,
+            "mcqs": _make_fallback_mcqs(14, tid),
+        })
+    return {
+        "domain": domain,
+        "proficiencyLevel": proficiency_level,
+        "currentStatus": current_status,
+        "phases": [
+            {
+                "id": "phase-1",
+                "name": "Foundations",
+                "order": 1,
+                "topics": [
+                    {
+                        "id": "topic-1-1",
+                        "title": "Core concepts and environment",
+                        "order": 1,
+                        "interviewPriority": "high",
+                        "tasks": tasks_1,
+                    }
+                ],
+            },
+            {"id": "phase-2", "name": "Core Concepts", "order": 2, "topics": []},
+            {"id": "phase-3", "name": "Advanced Concepts", "order": 3, "topics": []},
+            {"id": "phase-4", "name": "Practical Projects", "order": 4, "topics": []},
+        ],
+        "weeklyRecaps": [
+            {
+                "weekNumber": 1,
+                "importantQuestions": [
+                    "Define core terminology and its role",
+                    "Explain the relationship between key concepts",
+                    "Identify common patterns and when to apply them",
+                ],
+                "repeatedConcepts": ["Terminology", "Execution flow", "Patterns"],
+                "selfAssessmentChecklist": [
+                    "Can define key terms without notes",
+                    "Can explain one real-world use case",
+                    "Can recall the main takeaway for the week",
+                ],
+            }
+        ],
+    }
+
+
+@app.route("/career_chat", methods=["POST"])
+def career_chat():
+    """Conversational flow: collect domain → proficiency → status, then generate full roadmap."""
+    data = request.get_json(force=True)
+    uid = data.get("uid", "anonymous")
+    message = (data.get("message") or "").strip()
+    start = data.get("start", False)
+
+    # Start or get current state
+    state = CareerOnboardingState.get_by_uid(uid)
+    if start or (not state and ("roadmap" in message.lower() or "career path" in message.lower() or "learning path" in message.lower() or "get started" in message.lower())):
+        CareerOnboardingState.create(uid)
+        state = CareerOnboardingState.get_by_uid(uid)
+
+    if not state:
+        return jsonify({
+            "reply": "Hi! When you're ready, say you'd like to create a **career roadmap** and I'll guide you step by step.",
+            "state": None,
+            "roadmap": None
+        })
+
+    step = state.get("step") or "domain"
+    reply = ""
+    next_step = step
+
+    if step == "done":
+        return jsonify({
+            "reply": "You've already completed the setup. Your roadmap is on the Roadmap page. If you want a new one, ask your administrator to reset your career onboarding.",
+            "state": {"step": "done"},
+            "roadmap": None
+        })
+
+    if step == "domain":
+        if not message and not start:
+            reply = "What is your **primary interest or domain**? (e.g., a specific programming language, Web Development, Data Science, Cybersecurity, UI/UX)"
+        else:
+            domain = _parse_domain_from_message(message) if message else None
+            if domain:
+                CareerOnboardingState.update(uid, step="proficiency", domain=domain)
+                next_step = "proficiency"
+                reply = "Got it — we'll focus on **" + domain + "**. What is your **proficiency level**? (Beginner / Intermediate)"
+            else:
+                reply = "I'd love to tailor your roadmap. What is your **primary interest or domain**? (e.g., Python, Web Development, Data Science)"
+    elif step == "proficiency":
+        proficiency = _parse_proficiency_from_message(message) if message else "Beginner"
+        CareerOnboardingState.update(uid, step="status", proficiency_level=proficiency)
+        next_step = "status"
+        reply = "Thanks. Are you currently a **School student**, **College student**, or **Working professional**?"
+    elif step == "status":
+        current_status = _parse_status_from_message(message) if message else "College student"
+        CareerOnboardingState.update(uid, step="done", current_status=current_status)
+        next_step = "done"
+        reply = "Creating your personalized roadmap. One moment..."
+        # Generate full roadmap
+        roadmap = _generate_full_roadmap_with_ai(
+            state.get("domain") or "Tech",
+            state.get("proficiency_level") or "Beginner",
+            current_status
+        )
+        return jsonify({
+            "reply": "Your **career roadmap** is ready. You can view it on your Roadmap page and work through the tasks step by step. Good luck!",
+            "state": {"step": "done", "domain": state.get("domain"), "proficiency_level": state.get("proficiency_level"), "current_status": current_status},
+            "roadmap": roadmap
+        })
+
+    return jsonify({"reply": reply, "state": {"step": next_step}, "roadmap": None})
+
+
+@app.route("/generate_career_roadmap_direct", methods=["POST"])
+def generate_career_roadmap_direct():
+    """Generate full roadmap from domain, proficiency, goal, status in one request (no chat)."""
+    data = request.get_json(force=True)
+    domain = (data.get("domain") or "").strip() or "General Tech"
+    proficiency_level = (data.get("proficiency_level") or "Beginner").strip()
+    professional_goal = (data.get("professional_goal") or "job-ready").strip()
+    current_status = (data.get("current_status") or "College student").strip()
+    if proficiency_level not in ("Beginner", "Intermediate", "Advanced"):
+        proficiency_level = "Beginner"
+    if professional_goal not in ("job-ready", "enterprise", "product-based"):
+        professional_goal = "job-ready"
+    if current_status not in ("School student", "College student", "Working professional"):
+        current_status = "College student"
+    roadmap = _generate_full_roadmap_with_ai(domain, proficiency_level, current_status, professional_goal)
+    return jsonify({"roadmap": roadmap})
+
+
+@app.route("/career_onboarding_state", methods=["GET"])
+def career_onboarding_state():
+    uid = request.args.get("uid")
+    if not uid:
+        return jsonify({"error": "uid required"}), 400
+    state = CareerOnboardingState.get_by_uid(uid)
+    if not state:
+        return jsonify({"state": None})
+    return jsonify({"state": {"step": state.get("step"), "domain": state.get("domain"), "proficiency_level": state.get("proficiency_level"), "current_status": state.get("current_status")}})
+
 
 @app.route("/generate_roadmap", methods=["POST"])
 def generate_roadmap():
@@ -273,11 +598,7 @@ def generate_roadmap():
     img_path = generate_roadmap_image(roadmap_steps, uid)
 
     # Store progress
-    session = SessionLocal()
-    progress = RoadmapProgress(uid=uid, roadmap_step=";".join(roadmap_steps), completion_percentage=0)
-    session.add(progress)
-    session.commit()
-    session.close()
+    RoadmapProgress.create(uid=uid, roadmap_step=";".join(roadmap_steps), completion_percentage=0)
 
     return jsonify({"roadmap_steps": roadmap_steps, "roadmap_image": img_path})
 

@@ -1,12 +1,31 @@
 // frontend/src/components/Navbar.jsx
-import React, { useState, useContext } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useContext, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
+import axiosInstance from "../api/axiosInstance";
 
 const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
+  const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [hasRoadmap, setHasRoadmap] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!user) {
+      setHasRoadmap(false);
+      return;
+    }
+    const check = async () => {
+      try {
+        const res = await axiosInstance.get("/user/roadmap");
+        setHasRoadmap(!!(res.data.success && res.data.roadmap));
+      } catch {
+        setHasRoadmap(false);
+      }
+    };
+    check();
+  }, [user, location.pathname]);
 
   const handleLogout = () => {
     logout();
@@ -35,7 +54,7 @@ const Navbar = () => {
             </span>
           </Link>
 
-          {/* Desktop Navigation - Center */}
+          {/* Desktop Navigation - Center: Roadmap state decides Create vs Roadmap link */}
           <div className="hidden md:flex items-center space-x-4">
             <Link
               to="/"
@@ -44,20 +63,25 @@ const Navbar = () => {
             >
               Home
             </Link>
-            <Link
-              to="/questionnaire"
-              className="px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 hover:bg-gray-100"
-              style={{ color: "#000000" }}
-            >
-              AI Chat
-            </Link>
-            <Link
-              to="/roadmap"
-              className="px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 hover:bg-gray-100"
-              style={{ color: "#000000" }}
-            >
-              Roadmap
-            </Link>
+            {user && (
+              hasRoadmap ? (
+                <Link
+                  to="/roadmap"
+                  className="px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 hover:bg-gray-100"
+                  style={{ color: "#000000" }}
+                >
+                  Roadmap
+                </Link>
+              ) : (
+                <Link
+                  to="/questionnaire"
+                  className="px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 hover:bg-gray-100"
+                  style={{ color: "#000000" }}
+                >
+                  Create roadmap
+                </Link>
+              )
+            )}
             {user && (
               <Link
                 to="/profile"
@@ -138,23 +162,26 @@ const Navbar = () => {
                 Home
               </Link>
               {user && (
-                <Link
-                  to="/questionnaire"
-                  className="px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 hover:bg-gray-100"
-                  style={{ color: "#000000" }}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  AI Chat
-                </Link>
+                hasRoadmap ? (
+                  <Link
+                    to="/roadmap"
+                    className="px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 hover:bg-gray-100"
+                    style={{ color: "#000000" }}
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Roadmap
+                  </Link>
+                ) : (
+                  <Link
+                    to="/questionnaire"
+                    className="px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 hover:bg-gray-100"
+                    style={{ color: "#000000" }}
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Create roadmap
+                  </Link>
+                )
               )}
-              <Link
-                to="/roadmap"
-                className="px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 hover:bg-gray-100"
-                style={{ color: "#000000" }}
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Roadmap
-              </Link>
               {user && (
                 <Link
                   to="/profile"

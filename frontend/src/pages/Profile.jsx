@@ -1,22 +1,57 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import axiosInstance from '../api/axiosInstance';
 
 const Profile = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
+  const [streak, setStreak] = useState({ current_streak: 0, last_activity_date: null });
+  const [currentRoadmap, setCurrentRoadmap] = useState(null);
 
-  // Authentication is handled by ProtectedRoute component
+  useEffect(() => {
+    const fetchStreak = async () => {
+      try {
+        const res = await axiosInstance.get('/user/streak');
+        if (res.data.success) {
+          setStreak({
+            current_streak: res.data.current_streak ?? 0,
+            last_activity_date: res.data.last_activity_date ?? null,
+          });
+        }
+      } catch (e) {
+        console.error('Fetch streak error:', e);
+      }
+    };
+    fetchStreak();
+  }, []);
 
-  // Mock user data
+  useEffect(() => {
+    const fetchRoadmap = async () => {
+      try {
+        const res = await axiosInstance.get('/user/roadmap');
+        if (res.data.success && res.data.roadmap) {
+          setCurrentRoadmap(res.data.roadmap);
+        } else {
+          setCurrentRoadmap(null);
+        }
+      } catch (e) {
+        console.error('Fetch roadmap error:', e);
+        setCurrentRoadmap(null);
+      }
+    };
+    fetchRoadmap();
+  }, []);
+
+  // Mock user data (streak from API above)
   const userData = {
-    username: user.name || 'John Doe',
-    email: user.email || 'john.doe@example.com',
+    username: user?.name || 'John Doe',
+    email: user?.email || 'john.doe@example.com',
     interests: ['Software Development', 'Web Development', 'React', 'Node.js'],
     lessonsCompleted: 24,
     totalLessons: 50,
-    currentStreak: 7,
+    currentStreak: streak.current_streak,
     totalHours: 156,
     skills: [
       { name: 'JavaScript', level: 85, category: 'Programming' },
@@ -83,11 +118,56 @@ const Profile = () => {
                   ))}
                 </div>
               </div>
-              <div className="text-right">
-                <div className="text-2xl font-bold text-blue-600">{userData.currentStreak}</div>
-                <div className="text-sm text-gray-600">Day Streak</div>
+              <div className="text-right flex items-center gap-2">
+                <span className="text-2xl">🔥</span>
+                <div>
+                  <div className="text-2xl font-bold text-amber-600">{userData.currentStreak}</div>
+                  <div className="text-sm text-gray-600">Day Streak</div>
+                </div>
               </div>
             </div>
+          </div>
+
+          {/* Domains & roadmaps — Add New Domain only in Profile */}
+          <div className="bg-white rounded-2xl p-6 mb-8 border border-gray-300 shadow-lg">
+            <h3 className="text-xl font-bold mb-4" style={{ color: '#000000' }}>Learning domains</h3>
+            <p className="text-gray-600 text-sm mb-4">
+              You learn one domain at a time. To start another domain, add it here. Your current roadmap stays until you reset it.
+            </p>
+            {currentRoadmap && (() => {
+              let content = currentRoadmap.roadmap_content;
+              if (typeof content === 'string') {
+                try {
+                  content = JSON.parse(content);
+                } catch {
+                  content = null;
+                }
+              }
+              const domainName = content?.domain || 'Your current domain';
+              return (
+                <div className="mb-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                  <p className="text-sm text-gray-600 mb-1">Current active roadmap</p>
+                  <p className="font-semibold" style={{ color: '#000000' }}>{domainName}</p>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/roadmap')}
+                    className="mt-2 text-sm text-blue-600 hover:underline"
+                  >
+                    Open roadmap →
+                  </button>
+                </div>
+              );
+            })()}
+            <button
+              type="button"
+              onClick={() => navigate('/questionnaire')}
+              className="px-4 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors"
+            >
+              Add new domain
+            </button>
+            <p className="text-xs text-gray-500 mt-2">
+              Creating a new roadmap will replace your current one unless you reset from the roadmap page first.
+            </p>
           </div>
 
           {/* Tab Navigation */}

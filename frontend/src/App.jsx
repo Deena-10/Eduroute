@@ -9,6 +9,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Questionnaire from "./pages/Questionnaire";
 import Roadmap from "./pages/Roadmap";
+import TaskPage from "./pages/TaskPage";
 import Profile from "./pages/Profile";
 
 function App() {
@@ -34,6 +35,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Roadmap />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/roadmap/task/:taskId"
+              element={
+                <ProtectedRoute>
+                  <TaskPage />
                 </ProtectedRoute>
               }
             />

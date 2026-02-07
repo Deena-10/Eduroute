@@ -218,7 +218,372 @@ button {
   90% { transform: translate3d(0, -4px, 0); }
 }
 
+@keyframes levelGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+  50% { box-shadow: 0 0 20px 4px rgba(245, 158, 11, 0.6); }
+}
+
+@keyframes levelUnlock {
+  0% { transform: scale(0.9); opacity: 0.6; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
 .animate-fadeIn { animation: fadeIn 0.6s ease-out; }
+.animate-level-glow { animation: levelGlow 2s ease-in-out infinite; }
+.animate-level-unlock { animation: levelUnlock 0.4s ease-out; }
+
+/* Roadmap game route: continuous path + nodes */
+.roadmap-route-container {
+  position: relative;
+  min-height: 120px;
+}
+.roadmap-route-content {
+  position: relative;
+  z-index: 1;
+}
+.roadmap-route-row {
+  min-height: 3.5rem;
+}
+.roadmap-node-slot {
+  position: relative;
+  z-index: 2;
+}
+.roadmap-node {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.roadmap-node:disabled {
+  cursor: not-allowed;
+}
+.roadmap-node-locked {
+  background: rgba(55, 65, 81, 0.8);
+  border-color: rgb(75, 85, 99);
+  color: rgb(107, 114, 128);
+  opacity: 0.85;
+}
+.roadmap-node-available {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: rgb(245, 158, 11);
+  color: rgb(251, 191, 36);
+  cursor: pointer;
+  animation: levelGlow 2s ease-in-out infinite;
+}
+.roadmap-node-available:hover:not(:disabled) {
+  transform: scale(1.08);
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.5);
+}
+.roadmap-node-completed {
+  background: rgba(16, 185, 129, 0.25);
+  border-color: rgb(52, 211, 153);
+  color: rgb(52, 211, 153);
+}
+.roadmap-milestone {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 2px;
+  background: rgba(245, 158, 11, 0.7);
+  transform: rotate(45deg);
+}
+
+/* Skill Constellation game map */
+.constellation-bg {
+  background: radial-gradient(ellipse 120% 80% at 50% 0%, #0f172a 0%, #020617 40%, #030712 100%);
+  background-color: #030712;
+  min-height: 100vh;
+}
+.constellation-card {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  box-shadow: 0 0 24px rgba(56, 189, 248, 0.08);
+}
+.constellation-btn {
+  padding: 0.6rem 1.25rem;
+  background: linear-gradient(180deg, #38bdf8 0%, #0ea5e9 100%);
+  color: #fff;
+  font-weight: 600;
+  border: none;
+  border-radius: 0.75rem;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.4);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.constellation-btn:hover {
+  transform: scale(1.03);
+  box-shadow: 0 0 24px rgba(56, 189, 248, 0.5);
+}
+.constellation-header {
+  background: rgba(2, 6, 23, 0.6);
+}
+.constellation-section {
+  position: relative;
+}
+.constellation-dimmed {
+  opacity: 0.45;
+  pointer-events: none;
+}
+.constellation-dimmed .constellation-star-wrap {
+  pointer-events: none;
+}
+.constellation-title {
+  text-shadow: 0 0 20px rgba(56, 189, 248, 0.3);
+}
+.constellation-star-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  z-index: 2;
+}
+.constellation-tooltip {
+  position: absolute;
+  bottom: 100%;
+  margin-bottom: 0.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.5rem 0.75rem;
+  min-width: 120px;
+  max-width: 160px;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 0.5rem;
+  text-align: center;
+  box-shadow: 0 0 16px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.constellation-star {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+.constellation-star:hover:not(:disabled) {
+  transform: scale(1.12);
+}
+.constellation-star:disabled {
+  cursor: not-allowed;
+}
+.constellation-star-locked {
+  background: radial-gradient(circle at 30% 30%, #334155, #1e293b);
+  box-shadow: inset 0 1px 2px rgba(255,255,255,0.06), 0 2px 8px rgba(0,0,0,0.3);
+  color: #64748b;
+}
+.constellation-star-available {
+  background: radial-gradient(circle at 35% 35%, #7dd3fc, #0ea5e9);
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.6), 0 0 40px rgba(56, 189, 248, 0.25);
+  animation: constellation-pulse 2s ease-in-out infinite;
+}
+.constellation-star-completed {
+  background: radial-gradient(circle at 35% 35%, #a5f3fc, #22d3ee);
+  box-shadow: 0 0 14px rgba(34, 211, 238, 0.5);
+  color: #0e7490;
+  position: relative;
+}
+.constellation-star-check {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 0 6px rgba(0,0,0,0.4);
+}
+.constellation-star-trail {
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, rgba(34, 211, 238, 0.6) 0%, transparent 100%);
+  filter: blur(2px);
+}
+.constellation-star-pulse {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.4) 0%, transparent 70%);
+  animation: constellation-pulse 2s ease-in-out infinite;
+}
+.constellation-star-available .constellation-star-pulse {
+  width: 100%;
+  height: 100%;
+  inset: 0;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.5);
+  animation: constellation-ring 2s ease-out infinite;
+}
+@keyframes constellation-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 20px rgba(56, 189, 248, 0.6), 0 0 40px rgba(56, 189, 248, 0.25); }
+  50% { opacity: 0.9; box-shadow: 0 0 28px rgba(56, 189, 248, 0.7), 0 0 50px rgba(56, 189, 248, 0.35); }
+}
+@keyframes constellation-ring {
+  0% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.5); }
+  70% { box-shadow: 0 0 0 12px rgba(56, 189, 248, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); }
+}
+
+/* Duolingo-style game roadmap */
+.duo-roadmap-bg {
+  background-color: #f7f7f5;
+  min-height: 100vh;
+}
+.duo-card {
+  background: #fff;
+  box-shadow:
+    6px 6px 12px rgba(0, 0, 0, 0.06),
+    -6px -6px 12px rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+}
+.duo-btn-primary {
+  padding: 0.75rem 1.5rem;
+  background: #58cc02;
+  color: #fff;
+  font-weight: 700;
+  border: none;
+  border-radius: 1rem;
+  box-shadow: 0 4px 0 0 #46a302;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.duo-btn-primary:hover {
+  transform: translateY(1px);
+  box-shadow: 0 2px 0 0 #46a302;
+}
+.duo-strip {
+  background: #fff;
+  box-shadow:
+    4px 4px 10px rgba(0, 0, 0, 0.05),
+    -4px -4px 10px rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+}
+.duo-path-container {
+  width: 100%;
+}
+.duo-path-svg {
+  z-index: 0;
+}
+.duo-topic-card {
+  z-index: 1;
+  min-width: 140px;
+  max-width: 85%;
+}
+.duo-topic-inner {
+  background: linear-gradient(180deg, #58cc02 0%, #4cb302 100%);
+  color: #fff;
+  padding: 0.75rem 1rem;
+  border-radius: 1rem;
+  box-shadow:
+    4px 4px 10px rgba(0, 0, 0, 0.08),
+    -2px -2px 6px rgba(255, 255, 255, 0.5);
+  text-align: center;
+}
+.duo-topic-inner .text-green-700 { color: rgba(255,255,255,0.95); }
+.duo-topic-inner .text-gray-900 { color: #fff; }
+.duo-topic-inner .text-gray-600 { color: rgba(255,255,255,0.85); }
+.duo-node-wrap {
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+.duo-active-card {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 0.5rem;
+  padding: 0.75rem 1rem;
+  min-width: 160px;
+  max-width: 90vw;
+  background: #fff;
+  border-radius: 1rem;
+  box-shadow:
+    6px 6px 16px rgba(0, 0, 0, 0.1),
+    -4px -4px 12px rgba(255, 255, 255, 0.9);
+  border: 2px solid #58cc02;
+  text-align: center;
+  transition: transform 0.2s ease-in-out;
+}
+.duo-card-left,
+.duo-card-right { /* keep for potential alternate positioning */ }
+.duo-play-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #58cc02;
+  color: #fff;
+  font-weight: 700;
+  border: none;
+  border-radius: 0.75rem;
+  box-shadow: 0 3px 0 0 #46a302;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.duo-play-btn:hover {
+  transform: scale(1.05);
+}
+.duo-play-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 0 #46a302;
+}
+.duo-play-icon { font-size: 0.75rem; }
+.duo-node {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+.duo-node:hover:not(:disabled) {
+  transform: scale(1.08);
+}
+.duo-node:disabled {
+  cursor: not-allowed;
+}
+.duo-node-locked {
+  background: linear-gradient(145deg, #e5e5e5, #d0d0d0);
+  box-shadow:
+    4px 4px 10px rgba(0, 0, 0, 0.1),
+    -4px -4px 10px rgba(255, 255, 255, 0.7);
+  color: #9ca3af;
+}
+.duo-node-active {
+  background: linear-gradient(145deg, #58cc02, #4cb302);
+  box-shadow:
+    5px 5px 14px rgba(0, 0, 0, 0.15),
+    -3px -3px 10px rgba(255, 255, 255, 0.4);
+  animation: duo-bounce 2s ease-in-out infinite;
+}
+.duo-node-completed {
+  background: linear-gradient(145deg, #e8f5e9, #c8e6c9);
+  box-shadow:
+    4px 4px 10px rgba(0, 0, 0, 0.06),
+    -4px -4px 10px rgba(255, 255, 255, 0.8);
+  color: #2e7d32;
+}
+@keyframes duo-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
 .animate-slideInLeft { animation: slideInLeft 0.6s ease-out; }
 .animate-slideInRight { animation: slideInRight 0.6s ease-out; }
 .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }

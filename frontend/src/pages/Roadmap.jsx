@@ -1,293 +1,246 @@
 // frontend/src/pages/Roadmap.jsx
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import axiosInstance from '../api/axiosInstance';
+
+// Flatten phases/topics/tasks into one ordered list for progressive unlock
+function flattenTasks(phases) {
+  if (!Array.isArray(phases)) return [];
+  const list = [];
+  phases
+    .sort((a, b) => (a.order || 0) - (b.order || 0))
+    .forEach((phase) => {
+      (phase.topics || [])
+        .sort((a, b) => (a.order || 0) - (b.order || 0))
+        .forEach((topic) => {
+          (topic.tasks || []).forEach((t) => {
+            list.push({
+              ...t,
+              phaseName: phase.name,
+              topicTitle: topic.title,
+            });
+          });
+        });
+    });
+  return list;
+}
+
+// Build topic-grouped sections for optional headers — exactly as stored in DB
+function buildTopicGroups(phases) {
+  if (!Array.isArray(phases)) return [];
+  const groups = [];
+  phases
+    .sort((a, b) => (a.order || 0) - (b.order || 0))
+    .forEach((phase) => {
+      (phase.topics || [])
+        .sort((a, b) => (a.order || 0) - (b.order || 0))
+        .forEach((topic) => {
+          const tasks = (topic.tasks || []).map((t) => ({
+            ...t,
+            phaseName: phase.name,
+            topicTitle: topic.title,
+          }));
+          if (tasks.length > 0) {
+            groups.push({
+              phaseName: phase.name,
+              topicTitle: topic.title,
+              tasks,
+            });
+          }
+        });
+    });
+  return groups;
+}
 
 const Roadmap = () => {
+  const navigate = useNavigate();
   const { user } = useContext(AuthContext);
-  const [selectedPath, setSelectedPath] = useState('software-development');
+  const [userRoadmap, setUserRoadmap] = useState(null);
+  const [completedTasks, setCompletedTasks] = useState([]);
+  const [streak, setStreak] = useState({ current_streak: 0, last_activity_date: null });
+  const [roadmapLoading, setRoadmapLoading] = useState(true);
 
-  const careerPaths = {
-    'software-development': {
-      title: 'Software Development',
-      description: 'Full-stack development path with modern technologies',
-      duration: '12 months',
-      difficulty: 'Beginner to Advanced',
-      skills: ['JavaScript', 'React', 'Node.js', 'Python', 'Database', 'DevOps'],
-      steps: [
-        {
-          phase: 'Foundation',
-          duration: '3 months',
-          skills: ['HTML/CSS', 'JavaScript', 'Git', 'Command Line'],
-          resources: ['MDN Web Docs', 'freeCodeCamp', 'GitHub'],
-          projects: ['Personal Portfolio', 'Todo App', 'Calculator']
-        },
-        {
-          phase: 'Frontend Development',
-          duration: '3 months',
-          skills: ['React', 'TypeScript', 'CSS Frameworks', 'State Management'],
-          resources: ['React Documentation', 'TypeScript Handbook', 'Tailwind CSS'],
-          projects: ['E-commerce Site', 'Social Media App', 'Dashboard']
-        },
-        {
-          phase: 'Backend Development',
-          duration: '3 months',
-          skills: ['Node.js', 'Express', 'Databases', 'APIs'],
-          resources: ['Node.js Documentation', 'Express Guide', 'MongoDB Atlas'],
-          projects: ['REST API', 'Blog Platform', 'Chat Application']
-        },
-        {
-          phase: 'Advanced Topics',
-          duration: '3 months',
-          skills: ['Testing', 'Deployment', 'Performance', 'Security'],
-          resources: ['Jest Documentation', 'Docker Tutorial', 'OWASP Guide'],
-          projects: ['Full-stack Application', 'Microservices', 'CI/CD Pipeline']
+  useEffect(() => {
+    const fetchRoadmap = async () => {
+      try {
+        const res = await axiosInstance.get('/user/roadmap');
+        if (res.data.success && res.data.roadmap) {
+          const r = res.data.roadmap;
+          let content = r.roadmap_content;
+          if (typeof content === 'string') {
+            try {
+              content = JSON.parse(content);
+            } catch {
+              content = null;
+            }
+          }
+          if (content && content.phases) {
+            setUserRoadmap(content);
+            setCompletedTasks(Array.isArray(r.completed_tasks) ? r.completed_tasks : []);
+          }
         }
-      ]
-    },
-    'data-science': {
-      title: 'Data Science',
-      description: 'Analytics and machine learning career path',
-      duration: '10 months',
-      difficulty: 'Intermediate to Advanced',
-      skills: ['Python', 'SQL', 'Machine Learning', 'Statistics', 'Data Visualization'],
-      steps: [
-        {
-          phase: 'Python & Statistics',
-          duration: '2 months',
-          skills: ['Python', 'Pandas', 'NumPy', 'Statistics'],
-          resources: ['Python Documentation', 'Pandas Guide', 'Statistics Course'],
-          projects: ['Data Analysis', 'Statistical Report', 'Data Cleaning']
-        },
-        {
-          phase: 'Data Visualization',
-          duration: '2 months',
-          skills: ['Matplotlib', 'Seaborn', 'Plotly', 'Tableau'],
-          resources: ['Matplotlib Tutorial', 'Seaborn Guide', 'Tableau Training'],
-          projects: ['Interactive Dashboard', 'Data Story', 'Business Report']
-        },
-        {
-          phase: 'Machine Learning',
-          duration: '3 months',
-          skills: ['Scikit-learn', 'TensorFlow', 'Deep Learning', 'Model Evaluation'],
-          resources: ['Scikit-learn Documentation', 'TensorFlow Tutorial', 'Coursera ML'],
-          projects: ['Classification Model', 'Recommendation System', 'Image Recognition']
-        },
-        {
-          phase: 'Advanced ML & Deployment',
-          duration: '3 months',
-          skills: ['MLOps', 'Model Deployment', 'Big Data', 'Cloud Platforms'],
-          resources: ['MLOps Guide', 'AWS ML', 'Google Cloud ML'],
-          projects: ['Production ML Model', 'Real-time Prediction', 'ML Pipeline']
+      } catch (e) {
+        console.error('Fetch roadmap error:', e);
+      } finally {
+        setRoadmapLoading(false);
+      }
+    };
+    fetchRoadmap();
+  }, []);
+
+  useEffect(() => {
+    const fetchStreak = async () => {
+      try {
+        const res = await axiosInstance.get('/user/streak');
+        if (res.data.success) {
+          setStreak({
+            current_streak: res.data.current_streak ?? 0,
+            last_activity_date: res.data.last_activity_date ?? null,
+          });
         }
-      ]
-    },
-    'cybersecurity': {
-      title: 'Cybersecurity',
-      description: 'Learn ethical hacking and security practices',
-      duration: '8 months',
-      difficulty: 'Beginner to Intermediate',
-      skills: ['Network Security', 'Penetration Testing', 'Cryptography', 'Incident Response'],
-      steps: [
-        {
-          phase: 'Security Fundamentals',
-          duration: '2 months',
-          skills: ['Network Basics', 'Security Concepts', 'Linux', 'Cryptography'],
-          resources: ['CompTIA Security+', 'Linux Academy', 'Cryptography Course'],
-          projects: ['Network Setup', 'Security Assessment', 'Encryption Tool']
-        },
-        {
-          phase: 'Penetration Testing',
-          duration: '3 months',
-          skills: ['Kali Linux', 'Metasploit', 'Burp Suite', 'Social Engineering'],
-          resources: ['Kali Linux Documentation', 'Metasploit Guide', 'OWASP Testing'],
-          projects: ['Vulnerability Assessment', 'Penetration Test Report', 'Security Tool']
-        },
-        {
-          phase: 'Advanced Security',
-          duration: '3 months',
-          skills: ['Web Security', 'Mobile Security', 'Cloud Security', 'Incident Response'],
-          resources: ['Web Security Course', 'Mobile Security Guide', 'Cloud Security'],
-          projects: ['Security Audit', 'Incident Response Plan', 'Security Framework']
-        }
-      ]
-    },
-    'ui-ux-design': {
-      title: 'UI/UX Design',
-      description: 'User experience and interface design',
-      duration: '6 months',
-      difficulty: 'Beginner to Intermediate',
-      skills: ['Figma', 'Adobe XD', 'Prototyping', 'User Research', 'Design Systems'],
-      steps: [
-        {
-          phase: 'Design Fundamentals',
-          duration: '2 months',
-          skills: ['Design Principles', 'Color Theory', 'Typography', 'Layout'],
-          resources: ['Design Course', 'Color Theory Guide', 'Typography Rules'],
-          projects: ['Design System', 'Brand Identity', 'Style Guide']
-        },
-        {
-          phase: 'User Research',
-          duration: '2 months',
-          skills: ['User Interviews', 'Surveys', 'Personas', 'User Journey'],
-          resources: ['UX Research Methods', 'Interview Guide', 'Survey Tools'],
-          projects: ['User Research Report', 'Persona Development', 'Journey Mapping']
-        },
-        {
-          phase: 'Prototyping & Testing',
-          duration: '2 months',
-          skills: ['Figma', 'Prototyping', 'Usability Testing', 'Iteration'],
-          resources: ['Figma Tutorial', 'Prototyping Guide', 'Testing Methods'],
-          projects: ['Interactive Prototype', 'Usability Test', 'Design Iteration']
-        }
-      ]
+      } catch (e) {
+        console.error('Fetch streak error:', e);
+      }
+    };
+    fetchStreak();
+  }, []);
+
+  const flatTasks = userRoadmap ? flattenTasks(userRoadmap.phases || []) : [];
+  const topicGroups = userRoadmap ? buildTopicGroups(userRoadmap.phases || []) : [];
+  const weeklyRecaps = userRoadmap?.weeklyRecaps || [];
+  const totalTaskCount = flatTasks.length;
+
+  // Map task id -> flat index for unlock logic (previous task in flat order must be completed)
+  const taskIdToFlatIndex = React.useMemo(() => {
+    const m = new Map();
+    flatTasks.forEach((t, i) => m.set(t.id, i));
+    return m;
+  }, [flatTasks]);
+
+
+  const handleResetRoadmap = async () => {
+    if (!window.confirm('Reset your roadmap? You can create a new one and choose a different domain.')) return;
+    try {
+      await axiosInstance.delete('/user/roadmap');
+      navigate('/', { replace: true });
+      window.location.reload();
+    } catch (e) {
+      console.error('Reset roadmap error:', e);
     }
   };
 
-  const currentPath = careerPaths[selectedPath];
-
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#F6F6F6' }}>
-      <div className="py-8 px-4">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold mb-2" style={{ color: '#000000' }}>Career Roadmaps</h1>
-            <p className="text-gray-600">Choose your path and follow a structured learning journey</p>
+    <div className="min-h-screen bg-white" style={{ backgroundColor: '#ffffff' }}>
+      <div className="flex flex-col min-h-screen max-w-2xl mx-auto">
+        {roadmapLoading && (
+          <div className="flex-1 flex items-center justify-center p-8">
+            <p className="text-sky-300/80">Loading your skill map...</p>
           </div>
-
-          {/* Career Path Selection */}
-          <div className="bg-white rounded-2xl p-6 mb-8 border border-gray-300 shadow-lg">
-            <h2 className="text-xl font-bold mb-4" style={{ color: '#000000' }}>Select Your Career Path</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {Object.entries(careerPaths).map(([key, path]) => (
-                <button
-                  key={key}
-                  onClick={() => setSelectedPath(key)}
-                  className={`p-4 rounded-xl border transition-colors duration-200 text-left ${
-                    selectedPath === key
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-300 bg-white hover:border-gray-400'
-                  }`}
-                >
-                  <h3 className="font-semibold mb-2" style={{ color: '#000000' }}>{path.title}</h3>
-                  <p className="text-sm text-gray-600 mb-2">{path.description}</p>
-                  <div className="flex justify-between text-xs text-gray-500">
-                    <span>{path.duration}</span>
-                    <span>{path.difficulty}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Selected Path Details */}
-          <div className="bg-white rounded-2xl p-6 mb-8 border border-gray-300 shadow-lg">
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold mb-2" style={{ color: '#000000' }}>{currentPath.title}</h2>
-              <p className="text-gray-600 mb-4">{currentPath.description}</p>
-              <div className="flex flex-wrap gap-4">
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-500">Duration:</span>
-                  <span className="font-medium" style={{ color: '#000000' }}>{currentPath.duration}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-500">Difficulty:</span>
-                  <span className="font-medium" style={{ color: '#000000' }}>{currentPath.difficulty}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Skills Overview */}
-            <div className="mb-6">
-              <h3 className="text-lg font-bold mb-3" style={{ color: '#000000' }}>Skills You'll Learn</h3>
-              <div className="flex flex-wrap gap-2">
-                {currentPath.skills.map((skill, index) => (
-                  <span key={index} className="px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-full">
-                    {skill}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Learning Steps */}
-          <div className="space-y-6">
-            {currentPath.steps.map((step, index) => (
-              <div key={index} className="bg-white rounded-2xl p-6 border border-gray-300 shadow-lg">
-                <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                    {index + 1}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-4 mb-4">
-                      <h3 className="text-xl font-bold" style={{ color: '#000000' }}>{step.phase}</h3>
-                      <span className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full">
-                        {step.duration}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                      {/* Skills */}
-                      <div>
-                        <h4 className="font-semibold mb-3" style={{ color: '#000000' }}>Skills</h4>
-                        <div className="space-y-2">
-                          {step.skills.map((skill, skillIndex) => (
-                            <div key={skillIndex} className="flex items-center space-x-2">
-                              <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                              <span className="text-sm text-gray-700">{skill}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Resources */}
-                      <div>
-                        <h4 className="font-semibold mb-3" style={{ color: '#000000' }}>Resources</h4>
-                        <div className="space-y-2">
-                          {step.resources.map((resource, resourceIndex) => (
-                            <div key={resourceIndex} className="flex items-center space-x-2">
-                              <div className="w-2 h-2 bg-green-600 rounded-full"></div>
-                              <span className="text-sm text-gray-700">{resource}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Projects */}
-                      <div>
-                        <h4 className="font-semibold mb-3" style={{ color: '#000000' }}>Projects</h4>
-                        <div className="space-y-2">
-                          {step.projects.map((project, projectIndex) => (
-                            <div key={projectIndex} className="flex items-center space-x-2">
-                              <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
-                              <span className="text-sm text-gray-700">{project}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Call to Action */}
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-center text-white mt-8">
-            <h3 className="text-2xl font-bold mb-4">Ready to Start Your Journey?</h3>
-            <p className="text-blue-100 mb-6">
-              Begin your {currentPath.title.toLowerCase()} journey today and track your progress
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button className="bg-white text-blue-600 hover:bg-gray-100 px-6 py-3 rounded-xl font-semibold transition-colors duration-200">
-                Start Learning
-              </button>
-              <button className="bg-transparent border border-white text-white hover:bg-white hover:text-blue-600 px-6 py-3 rounded-xl font-semibold transition-colors duration-200">
-                View Progress
+        )}
+          {!roadmapLoading && !userRoadmap && (
+            <div className="constellation-card rounded-2xl p-8 text-center max-w-sm">
+              <p className="text-gray-400 mb-4">You don’t have an active roadmap. Create one to unlock levels.</p>
+              <button
+                type="button"
+                onClick={() => navigate('/questionnaire')}
+                className="constellation-btn"
+              >
+                Create roadmap
               </button>
             </div>
+          )}
+          {!roadmapLoading && userRoadmap && flatTasks.length > 0 && (
+          <>
+            <header className="flex-shrink-0 py-4 px-4 border-b border-gray-200 flex items-center justify-between">
+              <div>
+                <h1 className="text-lg font-bold text-gray-900">Learning roadmap</h1>
+                <p className="text-gray-600 text-sm">{userRoadmap.domain}</p>
+              </div>
+              <div className="flex items-center gap-2 text-gray-600 text-sm">
+                <span className="font-semibold text-amber-600">{streak.current_streak}</span>
+                <span>day streak</span>
+              </div>
+            </header>
+
+            <div className="flex-1 overflow-y-auto px-4 py-6">
+              <div className="relative flex flex-col" style={{ paddingLeft: '2rem', borderLeft: '3px solid #cbd5e1' }}>
+                {flatTasks.map((task, index) => {
+                  const isCompleted = completedTasks.includes(task.id);
+                  const isUnlocked = index === 0 || completedTasks.includes(flatTasks[index - 1]?.id);
+                  const canStart = isUnlocked && !isCompleted && (task.mcqs && task.mcqs.length > 0);
+                  const taskNumber = index + 1;
+                  const showTopicHeader = index === 0 || (flatTasks[index - 1] && flatTasks[index - 1].topicTitle !== task.topicTitle);
+                  return (
+                    <React.Fragment key={task.id}>
+                      {showTopicHeader && (
+                        <div className="flex items-center gap-3 py-2" style={{ marginLeft: '-1.5rem' }}>
+                          <div className="w-2.5 h-2.5 rounded-full bg-blue-500 flex-shrink-0" style={{ marginLeft: '0.4rem' }} />
+                          <div>
+                            <h2 className="text-sm font-bold text-gray-800">{task.topicTitle}</h2>
+                            <p className="text-xs text-gray-500">{task.phaseName}</p>
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-4 py-2" style={{ marginLeft: '-1.5rem' }}>
+                        <div
+                          className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center border-2"
+                          style={{
+                            borderColor: !isUnlocked ? '#d1d5db' : isCompleted ? '#22c55e' : canStart ? '#2563eb' : '#d1d5db',
+                            backgroundColor: !isUnlocked ? '#f3f4f6' : isCompleted ? '#dcfce7' : canStart ? '#eff6ff' : '#f3f4f6',
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={canStart ? () => navigate(`/roadmap/task/${task.id}`) : undefined}
+                            disabled={!canStart}
+                            className="w-full h-full rounded-full flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 disabled:cursor-not-allowed"
+                            aria-label={canStart ? task.title : 'Locked'}
+                          >
+                            {!isUnlocked && <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>}
+                            {isCompleted && <span className="text-green-600 font-bold">✓</span>}
+                            {(isUnlocked && !isCompleted) && <span className="text-sm font-bold text-gray-800">{taskNumber}</span>}
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={canStart ? () => navigate(`/roadmap/task/${task.id}`) : undefined}
+                          disabled={!canStart}
+                          className="flex-1 min-w-0 text-left py-2 rounded-lg transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                          <span className="font-medium text-gray-900 block truncate" title={task.title}>{task.title}</span>
+                          <span className="text-xs text-gray-500">Task {taskNumber}</span>
+                        </button>
+                      </div>
+                    </React.Fragment>
+                  );
+                })}
+              </div>
+              {weeklyRecaps.length > 0 && (
+                <div className="mt-8 pt-6 border-t border-gray-200">
+                  <h3 className="text-base font-bold text-gray-900 mb-3">Weekly recaps</h3>
+                  <div className="space-y-2">
+                    {weeklyRecaps.slice(0, 5).map((recap) => (
+                      <div key={recap.weekNumber} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <h4 className="font-semibold text-gray-800 text-sm">Week {recap.weekNumber}</h4>
+                        {recap.importantQuestions?.length > 0 && <p className="text-xs text-gray-600 mt-1">{recap.importantQuestions.join(' · ')}</p>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <footer className="flex-shrink-0 py-3 px-4 border-t border-gray-200 text-center">
+              <button type="button" onClick={handleResetRoadmap} className="text-xs text-gray-500 hover:text-red-600">Reset roadmap</button>
+            </footer>
+          </>
+          )}
+        {!roadmapLoading && userRoadmap && flatTasks.length === 0 && (
+          <div className="flex-1 flex items-center justify-center p-8">
+            <p className="text-gray-500">No tasks in this roadmap yet.</p>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

@@ -125,15 +125,29 @@ export const AuthProvider = ({ children }) => {
                   break;
                 }
 
-                // Try to parse as JSON to catch JSON parsing errors
-                try {
-                  JSON.parse(value);
-                } catch (jsonError) {
-                  console.log(
-                    `Invalid JSON in localStorage key '${key}', clearing all...`
-                  );
-                  hasCorruption = true;
-                  break;
+                // Only validate JSON parse for keys that store JSON objects (not token/JWT)
+                if (key === "user" || key === "auth") {
+                  const trimmed = value.trim();
+                  if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) {
+                    console.log(
+                      `Non-JSON data in localStorage key '${key}', clearing all...`
+                    );
+                    hasCorruption = true;
+                    break;
+                  }
+                  try {
+                    const parsed = JSON.parse(value);
+                    if (key === "user" && (!parsed || typeof parsed !== "object")) {
+                      hasCorruption = true;
+                      break;
+                    }
+                  } catch (jsonError) {
+                    console.log(
+                      `Invalid JSON in localStorage key '${key}', clearing all...`
+                    );
+                    hasCorruption = true;
+                    break;
+                  }
                 }
               }
             } catch (e) {
@@ -269,14 +283,26 @@ export const AuthProvider = ({ children }) => {
           token: token ? "present" : null,
         });
 
-        // Check for the specific corrupted data we're seeing
-        if (
-          storedUser &&
-          storedUser.includes("You need to enable JavaScript")
-        ) {
-          console.log("Found corrupted data, clearing localStorage completely");
-          localStorage.clear();
+        // Check for corrupted / non-JSON data (e.g. HTML or noscript text)
+        const looksLikeJson = (s) =>
+          typeof s === "string" &&
+          s.trim().length > 0 &&
+          (s.trim().startsWith("{") || s.trim().startsWith("["));
+        const isCorruptedUserString = (s) =>
+          !s ||
+          !looksLikeJson(s) ||
+          s.includes("You need to enable JavaScript") ||
+          s.includes("You need t") ||
+          s.startsWith("You need ") ||
+          s.includes("<!DOCTYPE") ||
+          s.includes("<html") ||
+          s.trim().startsWith("<");
+        if (storedUser && isCorruptedUserString(storedUser)) {
+          console.log("Found corrupted user data in localStorage, clearing");
+          localStorage.removeItem("user");
+          localStorage.removeItem("token");
           setUser(null);
+          setLoading(false);
           return;
         }
 
@@ -317,7 +343,8 @@ export const AuthProvider = ({ children }) => {
           storedUser &&
           storedUser !== "null" &&
           storedUser !== "undefined" &&
-          token
+          token &&
+          looksLikeJson(storedUser)
         ) {
           try {
             const parsedUser = JSON.parse(storedUser);
@@ -382,7 +409,8 @@ export const AuthProvider = ({ children }) => {
         } else if (
           storedUser &&
           storedUser !== "null" &&
-          storedUser !== "undefined"
+          storedUser !== "undefined" &&
+          looksLikeJson(storedUser)
         ) {
           // We have user data but no token - try to parse and restore
           try {

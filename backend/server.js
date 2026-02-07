@@ -10,8 +10,8 @@ const passport = require("passport");
 // Import passport configuration
 require("./config/passport");
 
-// MySQL connection
-const connection = require("./config/mysql");
+// PostgreSQL connection
+const connection = require("./config/postgres");
 
 // Routes
 const authRoutes = require("./routes/authRoutes");

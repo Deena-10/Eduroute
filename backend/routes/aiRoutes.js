@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const authMiddleware = require("../middleware/authMiddleware");
 const axios = require("axios");
+const pool = require("../config/postgres");
 
 // AI Service URL
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:5001";
@@ -29,8 +30,13 @@ router.post("/chat", authMiddleware, async (req, res) => {
       engine: engine 
     });
   } catch (error) {
+    const isConnectionRefused = error.code === "ECONNREFUSED" || error.message?.includes("ECONNREFUSED");
     console.error("AI Service error:", error.response?.data || error.message);
-    res.status(500).json({ error: "AI service failed" });
+    res.status(500).json({
+      error: isConnectionRefused
+        ? "AI service is not running. Start it with: cd backend/service && python application.py"
+        : "AI service failed",
+    });
   }
 });
 
@@ -67,6 +73,102 @@ router.delete("/chat-history", authMiddleware, async (req, res) => {
   } catch (error) {
     console.error("Clear chat history error:", error.response?.data || error.message);
     res.status(500).json({ error: "Failed to clear chat history" });
+  }
+});
+
+// =======================
+// Career Chat (conversational roadmap: domain → proficiency → status → generate)
+// =======================
+router.post("/career-chat", authMiddleware, async (req, res) => {
+  const { message, start = false } = req.body;
+  const uid = String(req.user.id);
+
+  try {
+    const response = await axios.post(`${AI_SERVICE_URL}/career_chat`, {
+      uid,
+      message: message || "",
+      start: !!start,
+    });
+
+    const data = response.data;
+    if (data.roadmap) {
+      try {
+        await pool.query(
+          `INSERT INTO user_roadmaps (user_id, roadmap_content, status, progress_percentage, completed_tasks)
+           VALUES ($1, $2, 'active', 0, '[]')`,
+          [req.user.id, JSON.stringify(data.roadmap)]
+        );
+      } catch (err) {
+        console.error("Save roadmap error:", err);
+      }
+    }
+
+    res.json({
+      reply: data.reply,
+      state: data.state,
+      roadmap: data.roadmap || null,
+    });
+  } catch (error) {
+    const isConnectionRefused =
+      error.code === "ECONNREFUSED" || error.message?.includes("ECONNREFUSED");
+    console.error("Career chat error:", error.response?.data || error.message);
+    res.status(500).json({
+      error: isConnectionRefused
+        ? "AI service is not running. Start it with: cd backend/service && python application.py"
+        : "Career chat failed",
+    });
+  }
+});
+
+// =======================
+// Generate career roadmap directly (form: domain, proficiency, status)
+// =======================
+router.post("/generate-career-roadmap", authMiddleware, async (req, res) => {
+  const { domain, proficiency_level, professional_goal, current_status } = req.body;
+  if (!domain || typeof domain !== "string" || !domain.trim()) {
+    return res.status(400).json({ error: "domain is required" });
+  }
+  try {
+    const response = await axios.post(`${AI_SERVICE_URL}/generate_career_roadmap_direct`, {
+      domain: domain.trim(),
+      proficiency_level: proficiency_level || "Beginner",
+      professional_goal: professional_goal || "job-ready",
+      current_status: current_status || "College student",
+    });
+    const roadmap = response.data.roadmap;
+    if (roadmap) {
+      await pool.query(
+        `INSERT INTO user_roadmaps (user_id, roadmap_content, status, progress_percentage, completed_tasks)
+         VALUES ($1, $2, 'active', 0, '[]')`,
+        [req.user.id, JSON.stringify(roadmap)]
+      );
+    }
+    res.json({ success: true, roadmap });
+  } catch (error) {
+    const isConnectionRefused =
+      error.code === "ECONNREFUSED" || error.message?.includes("ECONNREFUSED");
+    console.error("Generate career roadmap error:", error.response?.data || error.message);
+    res.status(500).json({
+      error: isConnectionRefused
+        ? "AI service is not running. Start it with: cd backend/service && python application.py"
+        : "Failed to generate roadmap",
+    });
+  }
+});
+
+// =======================
+// Get Career Onboarding State
+// =======================
+router.get("/career-onboarding-state", authMiddleware, async (req, res) => {
+  const uid = String(req.user.id);
+  try {
+    const response = await axios.get(`${AI_SERVICE_URL}/career_onboarding_state`, {
+      params: { uid },
+    });
+    res.json(response.data);
+  } catch (error) {
+    console.error("Career onboarding state error:", error.response?.data || error.message);
+    res.status(500).json({ error: "Failed to fetch career onboarding state" });
   }
 });
 

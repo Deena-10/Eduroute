@@ -12,6 +12,7 @@
   },
   "scripts": {
     "start": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "start:all": "concurrently \"npm run backend\" \"npm run frontend\" \"npm run ai-service\"",
     "frontend": "cd frontend && npm start",
     "backend": "cd backend && npm start",
     "ai-service": "cd backend/service && python application.py",

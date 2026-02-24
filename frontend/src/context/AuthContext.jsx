@@ -1,5 +1,24 @@
 // frontend/src/context/AuthContext.jsx
 import React, { createContext, useState, useEffect } from "react";
+import { safeJsonParse, safeLocalStorageParse, safeLocalStorageSet, clearCorruptedLocalStorage } from "../utils/safeJsonParser";
+
+// Parse response as JSON safely; avoids parsing HTML error pages (e.g. "You need to enable JavaScript...")
+function safeResponseJson(response) {
+  return response.text().then((text) => {
+    const t = (text || "").trim();
+    if (
+      !t ||
+      t.startsWith("You need") ||
+      t.startsWith("<!") ||
+      t.startsWith("<html")
+    ) {
+      console.warn("Response is not JSON (likely HTML):", t.substring(0, 80));
+      return null;
+    }
+    // Use safeJsonParse with comprehensive error handling
+    return safeJsonParse(t, null, 'safeResponseJson');
+  });
+}
 
 export const AuthContext = createContext();
 
@@ -135,16 +154,8 @@ export const AuthProvider = ({ children }) => {
                     hasCorruption = true;
                     break;
                   }
-                  try {
-                    const parsed = JSON.parse(value);
-                    if (key === "user" && (!parsed || typeof parsed !== "object")) {
-                      hasCorruption = true;
-                      break;
-                    }
-                  } catch (jsonError) {
-                    console.log(
-                      `Invalid JSON in localStorage key '${key}', clearing all...`
-                    );
+                  const parsed = safeJsonParse(value, null, `localStorage-${key}`);
+                  if (key === "user" && (!parsed || typeof parsed !== "object")) {
                     hasCorruption = true;
                     break;
                   }
@@ -237,7 +248,11 @@ export const AuthProvider = ({ children }) => {
             }
 
             console.log("Backend response status:", response.status);
-            const data = await response.json();
+            const data = await safeResponseJson(response);
+            if (!data) {
+              setLoading(false);
+              return;
+            }
             console.log("Backend response data:", data);
 
             if (data.success) {
@@ -318,7 +333,8 @@ export const AuthProvider = ({ children }) => {
           try {
             const tokenParts = token.split(".");
             if (tokenParts.length === 3) {
-              const tokenPayload = JSON.parse(atob(tokenParts[1]));
+              console.log("Raw JWT payload before parse (line 347):", tokenParts[1]);
+              const tokenPayload = safeJsonParse(atob(tokenParts[1]), null, 'JWT-payload');
               if (tokenPayload && tokenPayload.id) {
                 const restoredUser = {
                   id: tokenPayload.id,
@@ -347,7 +363,18 @@ export const AuthProvider = ({ children }) => {
           looksLikeJson(storedUser)
         ) {
           try {
-            const parsedUser = JSON.parse(storedUser);
+            if (
+              storedUser.includes("You need t") ||
+              storedUser.includes("You need to enable")
+            ) {
+              localStorage.removeItem("user");
+              localStorage.removeItem("token");
+              setUser(null);
+              setLoading(false);
+              return;
+            }
+            console.log("Raw value before parse (line 386):", storedUser);
+            const parsedUser = safeJsonParse(storedUser, null, 'localStorage-user');
             // Validate that the parsed user has required fields
             if (
               parsedUser &&
@@ -414,7 +441,17 @@ export const AuthProvider = ({ children }) => {
         ) {
           // We have user data but no token - try to parse and restore
           try {
-            const parsedUser = JSON.parse(storedUser);
+            if (
+              storedUser.includes("You need t") ||
+              storedUser.includes("You need to enable")
+            ) {
+              localStorage.removeItem("user");
+              setUser(null);
+              setLoading(false);
+              return;
+            }
+            console.log("Raw value before parse (line 462):", storedUser);
+            const parsedUser = safeJsonParse(storedUser, null, 'localStorage-user-restore');
             if (
               parsedUser &&
               typeof parsedUser === "object" &&
@@ -467,7 +504,10 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await response.json();
+      const data = await safeResponseJson(response);
+      if (!data) {
+        return { success: false, message: "Login failed. Please try again." };
+      }
 
       if (data.success) {
         const userData = {
@@ -504,7 +544,10 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({ email, password, name }),
       });
 
-      const data = await response.json();
+      const data = await safeResponseJson(response);
+      if (!data) {
+        return { success: false, message: "Signup failed. Please try again." };
+      }
 
       if (data.success) {
         const userData = {

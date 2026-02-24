@@ -1,0 +1,11 @@
+diff --git a/dist/commands/start/runServer.js b/dist/commands/start/runServer.js
+--- a/dist/commands/start/runServer.js
++++ b/dist/commands/start/runServer.js
+@@ -139,7 +139,7 @@
+     unstable_extraMiddleware: [
+       communityMiddleware,
+       _cliServerApi.indexPageMiddleware,
+       middleware,
+-    ],
++    ].filter(Boolean),
+     websocketEndpoints: {

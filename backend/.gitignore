@@ -65,3 +65,9 @@ jspm_packages/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+
+backup.sql
+.env
+backend/.env
+ai_service/.env

@@ -1,15 +1,24 @@
 {
   "short_name": "EduRoute AI",
   "name": "EduRoute AI - Career Roadmap App",
+  "description": "Career guidance and roadmap app",
+  "start_url": "/",
+  "display": "standalone",
+  "scope": "/",
+  "theme_color": "#667eea",
+  "background_color": "#1e293b",
   "icons": [
     {
-      "src": "favicon.ico",
+      "src": "/favicon.ico",
       "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
+      "type": "image/x-icon",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
-  ],
-  "start_url": ".",
-  "display": "standalone",
-  "theme_color": "#667eea",
-  "background_color": "#1e293b"
+  ]
 }

@@ -1,5 +1,6 @@
 // frontend/src/pages/Roadmap.jsx
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { safeJsonParse } from "../utils/safeJsonParser";
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import axiosInstance from '../api/axiosInstance';
@@ -69,11 +70,7 @@ const Roadmap = () => {
           const r = res.data.roadmap;
           let content = r.roadmap_content;
           if (typeof content === 'string') {
-            try {
-              content = JSON.parse(content);
-            } catch {
-              content = null;
-            }
+            content = safeJsonParse(content, null, 'Roadmap-roadmap_content');
           }
           if (content && content.phases) {
             setUserRoadmap(content);

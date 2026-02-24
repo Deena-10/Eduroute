@@ -34,3 +34,16 @@ root.render(
     </Router>
   </React.StrictMode>
 );
+
+// Register PWA service worker in production only (avoids dev cache issues)
+if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('/sw.js').then(
+      function (reg) {
+        // Optional: check for updates
+        reg.update();
+      },
+      function () {}
+    );
+  });
+}

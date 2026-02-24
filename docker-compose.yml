@@ -1,0 +1,118 @@
+# c:\finalyearproject\career-roadmap-app\docker-compose.yml
+services:
+  # Database Service
+  postgres:
+    image: postgres:15-alpine
+    container_name: eduroute-postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-career_roadmap}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - eduroute-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-career_roadmap}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Backend Service (Node.js)
+  backend:
+    build: ./backend
+    container_name: eduroute-backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_NAME=${DB_NAME:-career_roadmap}
+      - AI_SERVICE_URL=http://ai-service:5001
+      - JWT_SECRET=${JWT_SECRET}
+      - FRONTEND_URL=http://localhost:3000
+
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
+      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ai-service:
+        condition: service_healthy
+    networks:
+      - eduroute-network
+    healthcheck:
+      test: [ "CMD", "node", "-e", "const http=require('http');const req=http.get('http://localhost:5000/health',res=>process.exit(res.statusCode===200?0:1));req.on('error',()=>process.exit(1));req.setTimeout(3000,()=>{req.destroy();process.exit(1);});" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  # AI Service (Python)
+  ai-service:
+    build: ./ai_service
+    container_name: eduroute-ai-service
+    restart: unless-stopped
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_NAME=${DB_NAME:-career_roadmap}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - eduroute-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import sys,urllib.request;
+
+
+            try:
+
+            \  r=urllib.request.urlopen('http://localhost:5001/',timeout=3);
+
+            \  sys.exit(0 if r.getcode()==200 else 1)
+
+            except Exception:
+
+            \  sys.exit(1)"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  # Frontend Service (React + Nginx)
+  frontend:
+    build: ./frontend
+    container_name: eduroute-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - eduroute-network
+
+networks:
+  eduroute-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

@@ -4,21 +4,7 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
-const session = require("express-session");
-const passport = require("passport");
-
-// Import passport configuration
-require("./config/passport");
-
-// PostgreSQL connection
-const connection = require("./config/postgres");
-
-// Routes
-const authRoutes = require("./routes/authRoutes");
-const questionsRoute = require("./routes/questions");
-const chatRoutes = require("./routes/chatRoutes");
-const userRoutes = require("./routes/userRoutes");
-const aiRoutes = require("./routes/aiRoutes");
+const { responseHelper, errorHandler } = require("./middleware/apiResponse");
 
 const app = express();
 
@@ -42,16 +28,8 @@ app.options("*", cors());
 // Parse JSON request bodies
 app.use(express.json());
 
-// Session middleware
-app.use(session({
-    secret: process.env.JWT_SECRET || 'your-secret-key',
-    resave: false,
-    saveUninitialized: true
-}));
-
-// Initialize Passport
-app.use(passport.initialize());
-app.use(passport.session());
+// Standardized API response helper
+app.use(responseHelper);
 
 // ==========================
 // ✅ Routes
@@ -62,10 +40,18 @@ app.use("/api/chat", chatRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/ai", aiRoutes);
 
+// Health endpoint for Docker/K8s readiness checks
+app.get("/health", (req, res) => {
+  res.status(200).json({ success: true, status: "ok" });
+});
+
 // Simple welcome route for testing
 app.get("/", (req, res) => {
   res.send("🚀 EduRoute AI Backend is running!");
 });
+
+// Global Error Handler (MUST BE LAST)
+app.use(errorHandler);
 
 // ==========================
 // ✅ Start server

@@ -1,6 +1,7 @@
 // Level gameplay: select option → Submit. Correct → next. Incorrect → re-ask at end. Completion animation.
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { safeJsonParse } from "../utils/safeJsonParser";
 import axiosInstance from '../api/axiosInstance';
 
 function flattenTasks(phases) {
@@ -39,11 +40,7 @@ const TaskPage = () => {
         if (res.data.success && res.data.roadmap) {
           let content = res.data.roadmap.roadmap_content;
           if (typeof content === 'string') {
-            try {
-              content = JSON.parse(content);
-            } catch {
-              content = null;
-            }
+            content = safeJsonParse(content, null, 'TaskPage-roadmap_content');
           }
           if (content && content.phases) {
             const flat = flattenTasks(content.phases);

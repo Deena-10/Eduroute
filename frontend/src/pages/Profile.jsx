@@ -2,6 +2,7 @@ import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import axiosInstance from '../api/axiosInstance';
+import { safeJsonParse, safeLocalStorageParse, safeLocalStorageSet } from "../utils/safeJsonParser";
 
 const Profile = () => {
   const { user } = useContext(AuthContext);
@@ -137,11 +138,7 @@ const Profile = () => {
             {currentRoadmap && (() => {
               let content = currentRoadmap.roadmap_content;
               if (typeof content === 'string') {
-                try {
-                  content = JSON.parse(content);
-                } catch {
-                  content = null;
-                }
+                content = safeJsonParse(content, null, 'Profile-roadmap_content');
               }
               const domainName = content?.domain || 'Your current domain';
               return (

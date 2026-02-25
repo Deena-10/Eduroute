@@ -11,6 +11,7 @@ datasource db {
 
 model User {
   id               Int       @id @default(autoincrement())
+  uid              String?   @unique @db.VarChar(100)
   firebase_uid     String?   @unique
   name             String    @db.VarChar(100)
   email            String    @unique @db.VarChar(255)

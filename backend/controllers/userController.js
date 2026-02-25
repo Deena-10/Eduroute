@@ -3,16 +3,33 @@ const pool = require("../config/postgres");
 
 // Helper to flatten task IDs from roadmap
 const getFlatTaskIds = (roadmapContent) => {
-    if (!roadmapContent || !roadmapContent.phases) return [];
-    const ids = [];
-    (roadmapContent.phases || [])
-        .sort((a, b) => (a.order || 0) - (b.order || 0))
-        .forEach((phase) => {
-            (phase.topics || []).forEach((topic) => {
-                (topic.tasks || []).forEach((t) => ids.push(t.id));
+    if (!roadmapContent) return [];
+
+    // Support for the new "roadmap.units" structure
+    if (roadmapContent.roadmap && Array.isArray(roadmapContent.roadmap.units)) {
+        const ids = [];
+        roadmapContent.roadmap.units.forEach(unit => {
+            (unit.tasks || []).forEach(task => {
+                ids.push(task.task_id || task.id);
             });
         });
-    return ids;
+        return ids;
+    }
+
+    // Support for the old "phases" structure (fallback)
+    if (roadmapContent.phases) {
+        const ids = [];
+        (roadmapContent.phases || [])
+            .sort((a, b) => (a.order || 0) - (b.order || 0))
+            .forEach((phase) => {
+                (phase.topics || []).sort((a, b) => (a.order || 0) - (b.order || 0)).forEach((topic) => {
+                    (topic.tasks || []).forEach((t) => ids.push(t.id));
+                });
+            });
+        return ids;
+    }
+
+    return [];
 };
 
 exports.getProfile = async (req, res, next) => {
@@ -48,7 +65,7 @@ exports.saveProfile = async (req, res, next) => {
 
         if (roadmap) {
             await pool.query(
-                "INSERT INTO user_roadmaps (user_id, roadmap_content, status, progress_percentage) VALUES ($1, $2, 'active', 0)",
+                "INSERT INTO user_roadmaps (user_id, roadmap_content, status, progress_percentage, updated_at) VALUES ($1, $2, 'active', 0, CURRENT_TIMESTAMP)",
                 [userId, JSON.stringify(roadmap)]
             );
         }
@@ -103,7 +120,10 @@ exports.completeTask = async (req, res, next) => {
         let completedTasks = Array.isArray(roadmap.completed_tasks) ? roadmap.completed_tasks : JSON.parse(roadmap.completed_tasks || "[]");
         if (!completedTasks.includes(taskId)) {
             completedTasks.push(taskId);
-            const progress = Math.min(100, Math.round((completedTasks.length / allTaskIds.length) * 100));
+
+            // Recalculate progress based on total tasks in the content
+            const progress = allTaskIds.length > 0 ? Math.min(100, Math.round((completedTasks.length / allTaskIds.length) * 100)) : 0;
+
             await pool.query(
                 "UPDATE user_roadmaps SET progress_percentage = $1, completed_tasks = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3",
                 [progress, JSON.stringify(completedTasks), roadmap.id]

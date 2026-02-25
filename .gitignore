@@ -114,6 +114,10 @@ firebase-config.js
 *.sqlite
 *.sqlite3
 
+# Python artifacts
+__pycache__/
+*.pyc
+
 # Backup files
 *.bak
 *.backup

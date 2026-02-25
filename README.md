@@ -44,7 +44,7 @@ A comprehensive career guidance platform that provides personalized learning roa
 - **Job opening alerts** when ready
 
 ### 6. **Database Integration**
-- MySQL database for data persistence
+- postgresql(prisma) database for data persistence
 - User profiles and roadmaps storage
 - Chat history tracking
 - Progress and notification management
@@ -206,9 +206,9 @@ npm start
 - User can mark tasks as completed
 - Progress percentage is calculated
 - Milestone notifications are triggered:
-  - **40%**: Event suggestions
-  - **60%**: Project recommendations
-  - **80%**: Job opening alerts
+  - Event suggestions
+  - Project recommendations
+  - Job opening alerts
 
 ### 5. **Smart Notifications**
 - **Daily reminders** sent via email

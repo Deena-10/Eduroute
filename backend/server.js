@@ -1,6 +1,10 @@
 // backend/server.js
-// Load environment variables from the .env file as early as possible
 require("dotenv").config();
+const authRoutes = require("./routes/authRoutes");
+const questionsRoute = require("./routes/questions");
+const chatRoutes = require("./routes/chatRoutes");
+const userRoutes = require("./routes/userRoutes");
+const aiRoutes = require("./routes/aiRoutes");
 
 const express = require("express");
 const cors = require("cors");

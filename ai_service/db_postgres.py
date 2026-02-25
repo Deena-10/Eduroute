@@ -251,5 +251,5 @@ class CareerOnboardingState:
 
 # Database tables are now managed by Prisma migrations in the Node.js backend.
 # Do not initialize tables here.
-elif db:
+if not db:
     print("[WARNING] Database not connected. Tables will be created when connection is established.")

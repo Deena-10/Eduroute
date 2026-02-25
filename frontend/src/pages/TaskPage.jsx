@@ -4,18 +4,37 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { safeJsonParse } from "../utils/safeJsonParser";
 import axiosInstance from '../api/axiosInstance';
 
-function flattenTasks(phases) {
-  if (!Array.isArray(phases)) return [];
+function flattenTasks(content) {
+  if (!content) return [];
   const list = [];
-  (phases || [])
-    .sort((a, b) => (a.order || 0) - (b.order || 0))
-    .forEach((phase) => {
-      (phase.topics || [])
-        .sort((a, b) => (a.order || 0) - (b.order || 0))
-        .forEach((topic) => {
-          (topic.tasks || []).forEach((t) => list.push({ ...t, phaseName: phase.name, topicTitle: topic.title }));
+
+  // New structure
+  if (content.roadmap && Array.isArray(content.roadmap.units)) {
+    content.roadmap.units.forEach(unit => {
+      (unit.tasks || []).forEach(task => {
+        list.push({
+          ...task,
+          id: task.task_id || task.id,
+          unitTitle: unit.title,
+          phaseName: unit.title // For display consistency with old UI if needed
         });
+      });
     });
+    return list;
+  }
+
+  // Old structure (fallback)
+  if (Array.isArray(content.phases)) {
+    content.phases
+      .sort((a, b) => (a.order || 0) - (b.order || 0))
+      .forEach((phase) => {
+        (phase.topics || [])
+          .sort((a, b) => (a.order || 0) - (b.order || 0))
+          .forEach((topic) => {
+            (topic.tasks || []).forEach((t) => list.push({ ...t, phaseName: phase.name, topicTitle: topic.title }));
+          });
+      });
+  }
   return list;
 }
 
@@ -42,9 +61,9 @@ const TaskPage = () => {
           if (typeof content === 'string') {
             content = safeJsonParse(content, null, 'TaskPage-roadmap_content');
           }
-          if (content && content.phases) {
-            const flat = flattenTasks(content.phases);
-            const t = flat.find((x) => x.id === taskId);
+          if (content) {
+            const flat = flattenTasks(content);
+            const t = flat.find((x) => (x.task_id || x.id) === taskId);
             setTask(t || null);
           }
         }
@@ -231,11 +250,10 @@ const TaskPage = () => {
                 type="button"
                 onClick={() => !submitting && setSelectedOption(idx)}
                 disabled={submitting}
-                className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all font-medium ${
-                  selectedOption === idx
+                className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all font-medium ${selectedOption === idx
                     ? 'border-amber-500 bg-amber-500/20 text-white'
                     : 'border-gray-600 bg-gray-700/50 text-gray-200 hover:border-gray-500'
-                } disabled:opacity-70`}
+                  } disabled:opacity-70`}
               >
                 {option}
               </button>

@@ -3,6 +3,18 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const pool = require("../config/postgres");
 const admin = require("firebase-admin");
+const { v4: uuidv4 } = require("uuid");
+
+// Standard Response Wrapper
+const sendResponse = (res, statusCode, success, message, data = null) => {
+    return res.status(statusCode).json({
+        success,
+        message,
+        data,
+        error: !success ? message : null
+    });
+};
+
 
 const createToken = (userId) => {
     if (!process.env.JWT_SECRET) {
@@ -13,24 +25,38 @@ const createToken = (userId) => {
 
 exports.signup = async (req, res, next) => {
     const { name, email, password } = req.body;
+
     try {
-        const { rows: existing } = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
+        const { rows: existing } = await pool.query(
+            "SELECT * FROM users WHERE email = $1",
+            [email]
+        );
+
         if (existing.length > 0) {
             return res.error("User already exists", "Signup failed", 400);
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
+        const uid = uuidv4();   // 🔥 generate uid
+
         const { rows: inserted } = await pool.query(
-            "INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING id",
-            [name, email, hashedPassword]
+            "INSERT INTO users (uid, name, email, password) VALUES ($1, $2, $3, $4) RETURNING id",
+            [uid, name, email, hashedPassword]
         );
 
         const token = createToken(inserted[0].id);
-        res.success({ token, user: { id: inserted[0].id, name, email } }, "Signup successful", 201);
+
+        return sendResponse(res, 201, true, "Signup successful", {
+            token,
+            user: { id: inserted[0].id, name, email }
+        });
+
     } catch (error) {
-        next(error);
+        console.error("Signup error:", error);
+        return sendResponse(res, 500, false, error.message || "Signup failed");
     }
 };
+
 
 exports.login = async (req, res, next) => {
     const { email, password } = req.body;
@@ -47,11 +73,16 @@ exports.login = async (req, res, next) => {
         }
 
         const token = createToken(user.id);
-        res.success({ token, user: { id: user.id, name: user.name, email: user.email } }, "Login successful");
+        return sendResponse(res, 200, true, "Login successful", {
+            token,
+            user: { id: user.id, name: user.name, email: user.email }
+        });
     } catch (error) {
-        next(error);
+        console.error("Login error:", error);
+        return sendResponse(res, 500, false, error.message || "Login failed");
     }
 };
+
 
 exports.googleSignin = async (req, res, next) => {
     const { token } = req.body;
@@ -76,8 +107,13 @@ exports.googleSignin = async (req, res, next) => {
         }
 
         const jwtToken = createToken(user.id);
-        res.success({ token: jwtToken, user }, "Google sign-in successful");
+        return sendResponse(res, 200, true, "Google sign-in successful", {
+            token: jwtToken,
+            user
+        });
     } catch (error) {
-        next(error);
+        console.error("Google login error:", error);
+        return sendResponse(res, 500, false, error.message || "Google sign-in failed");
     }
 };
+

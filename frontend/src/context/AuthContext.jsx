@@ -1,5 +1,5 @@
-// frontend/src/context/AuthContext.jsx
 import React, { createContext, useState, useEffect } from "react";
+import axios from "axios";
 import { safeJsonParse, safeLocalStorageParse, safeLocalStorageSet, clearCorruptedLocalStorage } from "../utils/safeJsonParser";
 
 // Parse response as JSON safely; avoids parsing HTML error pages (e.g. "You need to enable JavaScript...")
@@ -225,66 +225,54 @@ export const AuthProvider = ({ children }) => {
             const user = redirectResult.user;
             const idToken = await user.getIdToken();
 
-            // Send the token to your backend
-            const response = await fetch(
-              "http://localhost:5000/api/auth/google-signin",
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ token: idToken }),
+            // Send the token to your backend using axios
+            try {
+              const result = await axios.post(
+                "http://localhost:5000/api/auth/google-signin",
+                { token: idToken }
+              );
+
+              const { data } = result;
+              console.log("Backend response data:", data);
+
+              if (data.success) {
+                console.log(
+                  "Google OAuth successful, setting user data:",
+                  data.data?.user
+                );
+
+                // Correctly destructure from data.data
+                const { user: backendUser, token: backendToken } = data.data;
+
+                const userData = {
+                  id: backendUser.id,
+                  uid: backendUser.id.toString(),
+                  email: backendUser.email,
+                  name: backendUser.name,
+                  photoURL: backendUser.profilePicture || null,
+                  token: backendToken,
+                };
+
+                setUser(userData);
+                localStorage.setItem("user", JSON.stringify(userData));
+                localStorage.setItem("token", backendToken);
+                setLoading(false);
+
+                // Redirect to home page after successful login
+                console.log("Redirecting to home page...");
+                setTimeout(() => {
+                  window.location.href = "/";
+                }, 100);
+                return;
+              } else {
+                console.error("Google OAuth backend error:", data.message);
+                setLoading(false);
               }
-            );
-
-            if (!response.ok) {
-              console.error(
-                "Backend request failed:",
-                response.status,
-                response.statusText
-              );
-              setLoading(false);
-              return;
-            }
-
-            console.log("Backend response status:", response.status);
-            const data = await safeResponseJson(response);
-            if (!data) {
-              setLoading(false);
-              return;
-            }
-            console.log("Backend response data:", data);
-
-            if (data.success) {
-              console.log(
-                "Google OAuth successful, setting user data:",
-                data.user
-              );
-              const userData = {
-                id: data.user.id,
-                uid: data.user.id.toString(),
-                email: data.user.email,
-                name: data.user.name,
-                photoURL: data.user.profilePicture,
-                token: data.token,
-              };
-
-              setUser(userData);
-              localStorage.setItem("user", JSON.stringify(userData));
-              localStorage.setItem("token", data.token);
-              setLoading(false);
-
-              // Redirect to home page after successful login
-              console.log("Redirecting to home page...");
-              // Use a small delay to ensure state is updated before navigation
-              setTimeout(() => {
-                window.location.href = "/";
-              }, 100);
-              return;
-            } else {
-              console.error("Google OAuth backend error:", data.message);
+            } catch (backendError) {
+              console.error("Backend request failed:", backendError.response?.data || backendError.message);
               setLoading(false);
             }
+
           }
         } catch (redirectError) {
           console.log("No redirect result or error:", redirectError);
@@ -496,82 +484,105 @@ export const AuthProvider = ({ children }) => {
   // Email login
   const login = async (email, password) => {
     try {
-      const response = await fetch("http://localhost:5000/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
+      const result = await axios.post("http://localhost:5000/api/auth/login", {
+        email,
+        password,
       });
 
-      const data = await safeResponseJson(response);
-      if (!data) {
-        return { success: false, message: "Login failed. Please try again." };
-      }
-
+      const { data } = result; // result.data is the response body
       if (data.success) {
+        // Correctly destructure user and token from data.data
+        const { user, token } = data.data;
+
         const userData = {
-          id: data.user.id,
-          uid: data.user.id.toString(), // For compatibility
-          email: data.user.email,
-          name: data.user.name,
+          id: user.id,
+          uid: user.id.toString(), // For compatibility
+          email: user.email,
+          name: user.name,
           photoURL: null,
-          token: data.token,
+          token: token,
         };
 
         setUser(userData);
         localStorage.setItem("user", JSON.stringify(userData));
-        localStorage.setItem("token", data.token);
+        localStorage.setItem("token", token);
 
         return { success: true, user: userData };
       } else {
         return { success: false, message: data.message || "Login failed" };
       }
     } catch (error) {
-      console.error("Login error:", error);
-      return { success: false, message: "Login failed. Please try again." };
+      console.error("Login error detail:", error.response?.data);
+      return {
+        success: false,
+        message: error.response?.data?.message || "Login failed. Please try again."
+      };
     }
   };
+
 
   // Email signup
   const signup = async (email, password, name) => {
     try {
-      const response = await fetch("http://localhost:5000/api/auth/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password, name }),
+      const result = await axios.post("http://localhost:5000/api/auth/signup", {
+        email,
+        password,
+        name,
       });
 
-      const data = await safeResponseJson(response);
-      if (!data) {
-        return { success: false, message: "Signup failed. Please try again." };
-      }
+      const { data } = result; // result.data is the response body
+      console.log("Signup API raw response:", data);
 
-      if (data.success) {
+      if (data && data.success) {
+        // Support both wrapped (`data.data`) and flat (`data`) response shapes
+        const payload = data.data || data;
+        const user = payload?.user;
+        const token = payload?.token;
+
+        if (!user || !token) {
+          console.error("Signup response missing user or token:", payload);
+          return {
+            success: false,
+            message: "Signup failed: invalid response from server.",
+          };
+        }
+
         const userData = {
-          id: data.user.id,
-          uid: data.user.id.toString(), // For compatibility
-          email: data.user.email,
-          name: data.user.name,
+          id: user.id,
+          uid: user.id.toString(), // For compatibility
+          email: user.email,
+          name: user.name,
           photoURL: null,
-          token: data.token,
+          token: token,
         };
 
         setUser(userData);
         localStorage.setItem("user", JSON.stringify(userData));
-        localStorage.setItem("token", data.token);
+        localStorage.setItem("token", token);
 
         return { success: true, user: userData };
       } else {
-        return { success: false, message: data.message || "Signup failed" };
+        return {
+          success: false,
+          message:
+            data?.error ||
+            data?.message ||
+            "Signup failed",
+        };
       }
     } catch (error) {
-      console.error("Signup error:", error);
-      return { success: false, message: "Signup failed. Please try again." };
+      // Requirements: Add a try/catch block that logs actual error message from error.response.data
+      console.error("Signup error detail:", error.response?.data || error.message);
+      return {
+        success: false,
+        message:
+          error.response?.data?.error ||
+          error.response?.data?.message ||
+          "Signup failed. Please try again.",
+      };
     }
   };
+
 
   // Google login
   const googleSignIn = async () => {

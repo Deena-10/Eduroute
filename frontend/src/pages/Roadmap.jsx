@@ -1,243 +1,212 @@
-// frontend/src/pages/Roadmap.jsx
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { safeJsonParse } from "../utils/safeJsonParser";
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import axiosInstance from '../api/axiosInstance';
 
-// Flatten phases/topics/tasks into one ordered list for progressive unlock
-function flattenTasks(phases) {
-  if (!Array.isArray(phases)) return [];
-  const list = [];
-  phases
-    .sort((a, b) => (a.order || 0) - (b.order || 0))
-    .forEach((phase) => {
-      (phase.topics || [])
-        .sort((a, b) => (a.order || 0) - (b.order || 0))
-        .forEach((topic) => {
-          (topic.tasks || []).forEach((t) => {
-            list.push({
-              ...t,
-              phaseName: phase.name,
-              topicTitle: topic.title,
-            });
-          });
-        });
-    });
-  return list;
-}
+const RoadmapNode = ({ unit, title, offset, color, status, onClick }) => {
+  const isLocked = status === 'locked';
+  const isCompleted = status === 'completed';
 
-// Build topic-grouped sections for optional headers — exactly as stored in DB
-function buildTopicGroups(phases) {
-  if (!Array.isArray(phases)) return [];
-  const groups = [];
-  phases
-    .sort((a, b) => (a.order || 0) - (b.order || 0))
-    .forEach((phase) => {
-      (phase.topics || [])
-        .sort((a, b) => (a.order || 0) - (b.order || 0))
-        .forEach((topic) => {
-          const tasks = (topic.tasks || []).map((t) => ({
-            ...t,
-            phaseName: phase.name,
-            topicTitle: topic.title,
-          }));
-          if (tasks.length > 0) {
-            groups.push({
-              phaseName: phase.name,
-              topicTitle: topic.title,
-              tasks,
-            });
-          }
-        });
-    });
-  return groups;
-}
+  return (
+    <div className={`flex w-full ${offset === 'left' ? 'justify-start' : offset === 'right' ? 'justify-end' : 'justify-center'} my-12 relative`}>
+      <div className="flex flex-col items-center">
+        <button
+          type="button"
+          onClick={!isLocked ? onClick : undefined}
+          style={{
+            backgroundColor: color,
+            borderBottom: `6px solid rgba(0,0,0,0.2)`,
+            boxShadow: isLocked ? 'none' : '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+          }}
+          className={`w-24 h-24 rounded-full text-white font-bold text-2xl flex items-center justify-center
+                     transition-all duration-300 relative z-10
+                     ${isLocked ? 'grayscale opacity-50 cursor-not-allowed' : 'hover:scale-110 active:translate-y-1 hover:shadow-lg'}`}
+          disabled={isLocked}
+        >
+          {isLocked ? '🔒' : isCompleted ? '✓' : unit}
+        </button>
+        <div className="mt-2 text-center max-w-[150px]">
+          <span className={`text-sm font-bold block ${isLocked ? 'text-gray-400' : 'text-gray-800'}`}>
+            {title}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const Roadmap = () => {
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
-  const [userRoadmap, setUserRoadmap] = useState(null);
+  const [roadmapData, setRoadmapData] = useState(null);
   const [completedTasks, setCompletedTasks] = useState([]);
   const [streak, setStreak] = useState({ current_streak: 0, last_activity_date: null });
-  const [roadmapLoading, setRoadmapLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchRoadmap = async () => {
+    const fetchData = async () => {
       try {
-        const res = await axiosInstance.get('/user/roadmap');
-        if (res.data.success && res.data.roadmap) {
-          const r = res.data.roadmap;
+        const ts = Date.now();
+        const [roadmapRes, streakRes] = await Promise.all([
+          axiosInstance.get(`/user/roadmap?ts=${ts}`),
+          axiosInstance.get(`/user/streak?ts=${ts}`)
+        ]);
+
+        if (roadmapRes.data?.success && (roadmapRes.data.data || roadmapRes.data.roadmap)) {
+          // Support both standardized { success, data } and older { success, roadmap } shapes
+          const r = roadmapRes.data.data || roadmapRes.data.roadmap;
           let content = r.roadmap_content;
+          
           if (typeof content === 'string') {
-            content = safeJsonParse(content, null, 'Roadmap-roadmap_content');
+            content = safeJsonParse(content, null, 'Roadmap-content');
           }
-          if (content && content.phases) {
-            setUserRoadmap(content);
-            setCompletedTasks(Array.isArray(r.completed_tasks) ? r.completed_tasks : []);
+          
+          // --- STRUCTURAL SHIELD START ---
+          // This ensures roadmapData.roadmap.units always exists
+          let normalized = {};
+          if (content?.roadmap?.units) {
+            normalized = content;
+          } else if (content?.units) {
+            normalized = { roadmap: content, ui_metadata: content.ui_metadata };
+          } else {
+            // Fallback for unexpected formats
+            normalized = { roadmap: { units: content || [] } };
           }
+          // --- STRUCTURAL SHIELD END ---
+          
+          setRoadmapData(normalized);
+          setCompletedTasks(Array.isArray(r.completed_tasks) ? r.completed_tasks : []);
         }
-      } catch (e) {
-        console.error('Fetch roadmap error:', e);
-      } finally {
-        setRoadmapLoading(false);
-      }
-    };
-    fetchRoadmap();
-  }, []);
 
-  useEffect(() => {
-    const fetchStreak = async () => {
-      try {
-        const res = await axiosInstance.get('/user/streak');
-        if (res.data.success) {
+        if (streakRes.data.success) {
           setStreak({
-            current_streak: res.data.current_streak ?? 0,
-            last_activity_date: res.data.last_activity_date ?? null,
+            current_streak: streakRes.data.current_streak ?? 0,
+            last_activity_date: streakRes.data.last_activity_date ?? null,
           });
         }
       } catch (e) {
-        console.error('Fetch streak error:', e);
+        console.error('Fetch data error:', e);
+      } finally {
+        setLoading(false);
       }
     };
-    fetchStreak();
+    fetchData();
   }, []);
 
-  const flatTasks = userRoadmap ? flattenTasks(userRoadmap.phases || []) : [];
-  const topicGroups = userRoadmap ? buildTopicGroups(userRoadmap.phases || []) : [];
-  const weeklyRecaps = userRoadmap?.weeklyRecaps || [];
-  const totalTaskCount = flatTasks.length;
+  const units = useMemo(() => {
+    // Check for units in multiple possible locations
+    const unitsArray = roadmapData?.roadmap?.units || roadmapData?.units || [];
+    
+    if (unitsArray.length === 0) return [];
+    
+    const configMap = new Map();
+    const metadata = roadmapData?.ui_metadata || roadmapData?.roadmap?.ui_metadata;
+    if (metadata?.node_config) {
+      metadata.node_config.forEach(cfg => configMap.set(cfg.unit, cfg));
+    }
 
-  // Map task id -> flat index for unlock logic (previous task in flat order must be completed)
-  const taskIdToFlatIndex = React.useMemo(() => {
-    const m = new Map();
-    flatTasks.forEach((t, i) => m.set(t.id, i));
-    return m;
-  }, [flatTasks]);
+    return unitsArray.map((unit, index) => {
+      const config = configMap.get(unit.unit_number) || { 
+        offset: index % 2 === 0 ? 'left' : 'right', 
+        color: '#3B82F6' 
+      };
 
+      const allTasksCompleted = unit.tasks?.length > 0 && unit.tasks.every(t => completedTasks.includes(t.task_id || t.id));
+      const isPreviousCompleted = index === 0 || unitsArray[index - 1].tasks?.every(t => completedTasks.includes(t.task_id || t.id));
 
-  const handleResetRoadmap = async () => {
-    if (!window.confirm('Reset your roadmap? You can create a new one and choose a different domain.')) return;
-    try {
-      await axiosInstance.delete('/user/roadmap');
-      navigate('/', { replace: true });
-      window.location.reload();
-    } catch (e) {
-      console.error('Reset roadmap error:', e);
+      let status = 'locked';
+      if (allTasksCompleted) status = 'completed';
+      else if (isPreviousCompleted) status = 'available';
+
+      return { ...unit, ...config, status };
+    });
+  }, [roadmapData, completedTasks]);
+
+  const handleNodeClick = (unit) => {
+    const tasks = unit.tasks || [];
+    const firstUncompleted = tasks.find(t => !completedTasks.includes(t.task_id || t.id));
+    if (firstUncompleted) {
+      navigate(`/roadmap/task/${firstUncompleted.task_id || firstUncompleted.id}`);
+    } else if (tasks.length > 0) {
+      navigate(`/roadmap/task/${tasks[0].task_id || tasks[0].id}`);
     }
   };
 
+  const handleReset = async () => {
+    if (!window.confirm('Reset your progress and generate a new journey?')) return;
+    try {
+      await axiosInstance.delete('/user/roadmap');
+      setRoadmapData(null);
+      navigate('/questionnaire', { replace: true });
+    } catch (e) {
+      console.error('Reset error:', e);
+    }
+  };
+
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+        <p className="mt-4 text-gray-600 font-medium">Charting your journey...</p>
+      </div>
+    </div>
+  );
+
+  if (!roadmapData || units.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <div className="bg-white rounded-2xl p-8 shadow-xl text-center max-w-md w-full border border-gray-100">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">No active path</h2>
+          <p className="text-gray-500 mb-8">Ready to embark on a new adventure? Start your assessment to generate a map.</p>
+          <button onClick={() => navigate('/questionnaire')} className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 transition-colors">
+            Start Journey
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-white" style={{ backgroundColor: '#ffffff' }}>
-      <div className="flex flex-col min-h-screen max-w-2xl mx-auto">
-        {roadmapLoading && (
-          <div className="flex-1 flex items-center justify-center p-8">
-            <p className="text-sky-300/80">Loading your skill map...</p>
+    <div className="min-h-screen bg-[#F6F6F6] pb-24">
+      <div className="max-w-2xl mx-auto px-6">
+        <header className="py-10 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Your Path</h1>
+            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-bold rounded-full uppercase">
+              {roadmapData.roadmap?.domain || "Career Path"}
+            </span>
           </div>
-        )}
-          {!roadmapLoading && !userRoadmap && (
-            <div className="constellation-card rounded-2xl p-8 text-center max-w-sm">
-              <p className="text-gray-400 mb-4">You don’t have an active roadmap. Create one to unlock levels.</p>
-              <button
-                type="button"
-                onClick={() => navigate('/questionnaire')}
-                className="constellation-btn"
-              >
-                Create roadmap
-              </button>
+          <div className="bg-white px-4 py-2 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-3">
+            <span className="text-2xl">🔥</span>
+            <div className="leading-tight">
+              <p className="text-sm font-bold text-gray-900">{streak.current_streak} Day</p>
+              <p className="text-[10px] text-gray-400 font-bold uppercase">Streak</p>
             </div>
-          )}
-          {!roadmapLoading && userRoadmap && flatTasks.length > 0 && (
-          <>
-            <header className="flex-shrink-0 py-4 px-4 border-b border-gray-200 flex items-center justify-between">
-              <div>
-                <h1 className="text-lg font-bold text-gray-900">Learning roadmap</h1>
-                <p className="text-gray-600 text-sm">{userRoadmap.domain}</p>
-              </div>
-              <div className="flex items-center gap-2 text-gray-600 text-sm">
-                <span className="font-semibold text-amber-600">{streak.current_streak}</span>
-                <span>day streak</span>
-              </div>
-            </header>
-
-            <div className="flex-1 overflow-y-auto px-4 py-6">
-              <div className="relative flex flex-col" style={{ paddingLeft: '2rem', borderLeft: '3px solid #cbd5e1' }}>
-                {flatTasks.map((task, index) => {
-                  const isCompleted = completedTasks.includes(task.id);
-                  const isUnlocked = index === 0 || completedTasks.includes(flatTasks[index - 1]?.id);
-                  const canStart = isUnlocked && !isCompleted && (task.mcqs && task.mcqs.length > 0);
-                  const taskNumber = index + 1;
-                  const showTopicHeader = index === 0 || (flatTasks[index - 1] && flatTasks[index - 1].topicTitle !== task.topicTitle);
-                  return (
-                    <React.Fragment key={task.id}>
-                      {showTopicHeader && (
-                        <div className="flex items-center gap-3 py-2" style={{ marginLeft: '-1.5rem' }}>
-                          <div className="w-2.5 h-2.5 rounded-full bg-blue-500 flex-shrink-0" style={{ marginLeft: '0.4rem' }} />
-                          <div>
-                            <h2 className="text-sm font-bold text-gray-800">{task.topicTitle}</h2>
-                            <p className="text-xs text-gray-500">{task.phaseName}</p>
-                          </div>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-4 py-2" style={{ marginLeft: '-1.5rem' }}>
-                        <div
-                          className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center border-2"
-                          style={{
-                            borderColor: !isUnlocked ? '#d1d5db' : isCompleted ? '#22c55e' : canStart ? '#2563eb' : '#d1d5db',
-                            backgroundColor: !isUnlocked ? '#f3f4f6' : isCompleted ? '#dcfce7' : canStart ? '#eff6ff' : '#f3f4f6',
-                          }}
-                        >
-                          <button
-                            type="button"
-                            onClick={canStart ? () => navigate(`/roadmap/task/${task.id}`) : undefined}
-                            disabled={!canStart}
-                            className="w-full h-full rounded-full flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 disabled:cursor-not-allowed"
-                            aria-label={canStart ? task.title : 'Locked'}
-                          >
-                            {!isUnlocked && <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>}
-                            {isCompleted && <span className="text-green-600 font-bold">✓</span>}
-                            {(isUnlocked && !isCompleted) && <span className="text-sm font-bold text-gray-800">{taskNumber}</span>}
-                          </button>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={canStart ? () => navigate(`/roadmap/task/${task.id}`) : undefined}
-                          disabled={!canStart}
-                          className="flex-1 min-w-0 text-left py-2 rounded-lg transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-70"
-                        >
-                          <span className="font-medium text-gray-900 block truncate" title={task.title}>{task.title}</span>
-                          <span className="text-xs text-gray-500">Task {taskNumber}</span>
-                        </button>
-                      </div>
-                    </React.Fragment>
-                  );
-                })}
-              </div>
-              {weeklyRecaps.length > 0 && (
-                <div className="mt-8 pt-6 border-t border-gray-200">
-                  <h3 className="text-base font-bold text-gray-900 mb-3">Weekly recaps</h3>
-                  <div className="space-y-2">
-                    {weeklyRecaps.slice(0, 5).map((recap) => (
-                      <div key={recap.weekNumber} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                        <h4 className="font-semibold text-gray-800 text-sm">Week {recap.weekNumber}</h4>
-                        {recap.importantQuestions?.length > 0 && <p className="text-xs text-gray-600 mt-1">{recap.importantQuestions.join(' · ')}</p>}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <footer className="flex-shrink-0 py-3 px-4 border-t border-gray-200 text-center">
-              <button type="button" onClick={handleResetRoadmap} className="text-xs text-gray-500 hover:text-red-600">Reset roadmap</button>
-            </footer>
-          </>
-          )}
-        {!roadmapLoading && userRoadmap && flatTasks.length === 0 && (
-          <div className="flex-1 flex items-center justify-center p-8">
-            <p className="text-gray-500">No tasks in this roadmap yet.</p>
           </div>
-        )}
+        </header>
+
+        <div className="relative mt-8">
+          <div className="flex flex-col space-y-4">
+            {units.map((unit) => (
+              <RoadmapNode
+                key={unit.unit_number || Math.random()}
+                unit={unit.unit_number}
+                title={unit.title}
+                offset={unit.offset}
+                color={unit.color}
+                status={unit.status}
+                onClick={() => handleNodeClick(unit)}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-20 text-center">
+          <button onClick={handleReset} className="text-sm font-bold text-gray-400 hover:text-red-500 transition-colors">
+            RESET JOURNEY
+          </button>
+        </div>
       </div>
     </div>
   );

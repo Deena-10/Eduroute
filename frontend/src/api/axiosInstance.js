@@ -32,26 +32,16 @@ axiosInstance.interceptors.response.use(
     }
     
     if (error.response?.status === 401) {
-      console.log('401 error received:', error.config?.url);
-      
-      // Only redirect to login if this is a critical authentication endpoint
-      const criticalAuthEndpoints = ['/auth/verify', '/user/profile'];
-      const requestUrl = error.config?.url;
-      
-      // Check if this is a critical auth endpoint that failed
-      const isCriticalAuthEndpoint = criticalAuthEndpoints.some(endpoint => 
-        requestUrl?.includes(endpoint)
-      );
-      
-      if (isCriticalAuthEndpoint) {
-        console.log('Critical auth endpoint failed, redirecting to login');
-        // Clear auth data and redirect to login
+      console.log('401 error received from API, logging out:', error.config?.url);
+      // For any API 401, clear auth data and redirect to login
+      try {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+      } catch (e) {
+        console.warn('Failed to clear auth storage on 401:', e);
+      }
+      if (typeof window !== 'undefined' && window.location?.pathname !== '/login') {
         window.location.href = '/login';
-      } else {
-        // For non-critical endpoints, just log error but don't redirect
-        console.log('Non-critical 401 error, not redirecting');
       }
     }
     

@@ -1,12 +1,15 @@
-import React, { useState, useEffect, useContext, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { safeJsonParse } from "../utils/safeJsonParser";
 import { useNavigate } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext';
 import axiosInstance from '../api/axiosInstance';
 
-const RoadmapNode = ({ unit, title, offset, color, status, onClick }) => {
+const RoadmapNode = ({ unit, title, offset, color, status, onClick, taskCount, completedCount, isChapterLevel }) => {
   const isLocked = status === 'locked';
   const isCompleted = status === 'completed';
+  const word = isChapterLevel ? 'questions' : 'tasks';
+  const taskLabel = taskCount != null
+    ? (completedCount != null ? `${completedCount} of ${taskCount} ${word}` : `${taskCount} ${word}`)
+    : null;
 
   return (
     <div className={`flex w-full ${offset === 'left' ? 'justify-start' : offset === 'right' ? 'justify-end' : 'justify-center'} my-12 relative`}>
@@ -30,6 +33,11 @@ const RoadmapNode = ({ unit, title, offset, color, status, onClick }) => {
           <span className={`text-sm font-bold block ${isLocked ? 'text-gray-400' : 'text-gray-800'}`}>
             {title}
           </span>
+          {taskLabel && (
+            <span className={`text-xs block mt-0.5 ${isLocked ? 'text-gray-400' : 'text-gray-500'}`}>
+              {taskLabel}
+            </span>
+          )}
         </div>
       </div>
     </div>
@@ -38,7 +46,6 @@ const RoadmapNode = ({ unit, title, offset, color, status, onClick }) => {
 
 const Roadmap = () => {
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
   const [roadmapData, setRoadmapData] = useState(null);
   const [completedTasks, setCompletedTasks] = useState([]);
   const [streak, setStreak] = useState({ current_streak: 0, last_activity_date: null });
@@ -79,10 +86,11 @@ const Roadmap = () => {
           setCompletedTasks(Array.isArray(r.completed_tasks) ? r.completed_tasks : []);
         }
 
-        if (streakRes.data.success) {
+        if (streakRes.data?.success) {
+          const streakPayload = streakRes.data.data ?? streakRes.data;
           setStreak({
-            current_streak: streakRes.data.current_streak ?? 0,
-            last_activity_date: streakRes.data.last_activity_date ?? null,
+            current_streak: streakPayload.current_streak ?? 0,
+            last_activity_date: streakPayload.last_activity_date ?? null,
           });
         }
       } catch (e) {
@@ -106,24 +114,46 @@ const Roadmap = () => {
       metadata.node_config.forEach(cfg => configMap.set(cfg.unit, cfg));
     }
 
+    const isChapterLevel = unitsArray.length > 0 && Array.isArray(unitsArray[0].mcqs);
+
     return unitsArray.map((unit, index) => {
       const config = configMap.get(unit.unit_number) || { 
         offset: index % 2 === 0 ? 'left' : 'right', 
         color: '#3B82F6' 
       };
 
-      const allTasksCompleted = unit.tasks?.length > 0 && unit.tasks.every(t => completedTasks.includes(t.task_id || t.id));
-      const isPreviousCompleted = index === 0 || unitsArray[index - 1].tasks?.every(t => completedTasks.includes(t.task_id || t.id));
+      let allTasksCompleted;
+      let isPreviousCompleted;
+      let taskCount;
+      let completedCount;
+
+      if (isChapterLevel) {
+        const unitId = `u${unit.unit_number}`;
+        allTasksCompleted = completedTasks.includes(unitId);
+        isPreviousCompleted = index === 0 || completedTasks.includes(`u${unitsArray[index - 1].unit_number}`);
+        taskCount = (unit.mcqs || []).length;
+        completedCount = allTasksCompleted ? taskCount : 0;
+      } else {
+        const taskList = unit.tasks || [];
+        completedCount = taskList.filter(t => completedTasks.includes(t.task_id || t.id)).length;
+        allTasksCompleted = taskList.length > 0 && completedCount === taskList.length;
+        isPreviousCompleted = index === 0 || (unitsArray[index - 1].tasks || []).every(t => completedTasks.includes(t.task_id || t.id));
+        taskCount = taskList.length;
+      }
 
       let status = 'locked';
       if (allTasksCompleted) status = 'completed';
       else if (isPreviousCompleted) status = 'available';
 
-      return { ...unit, ...config, status };
+      return { ...unit, ...config, status, taskCount, completedCount, isChapterLevel };
     });
   }, [roadmapData, completedTasks]);
 
   const handleNodeClick = (unit) => {
+    if (unit.isChapterLevel && (unit.mcqs || []).length > 0) {
+      navigate(`/roadmap/chapter/${unit.unit_number}`);
+      return;
+    }
     const tasks = unit.tasks || [];
     const firstUncompleted = tasks.find(t => !completedTasks.includes(t.task_id || t.id));
     if (firstUncompleted) {
@@ -197,6 +227,9 @@ const Roadmap = () => {
                 color={unit.color}
                 status={unit.status}
                 onClick={() => handleNodeClick(unit)}
+                taskCount={unit.taskCount}
+                completedCount={unit.completedCount}
+                isChapterLevel={unit.isChapterLevel}
               />
             ))}
           </div>

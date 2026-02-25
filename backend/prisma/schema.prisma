@@ -47,10 +47,21 @@ model Profile {
   @@map("user_profiles")
 }
 
+model DomainRoadmap {
+  id               Int      @id @default(autoincrement())
+  domain           String   @unique @db.VarChar(255)
+  roadmap_content  Json
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  @@map("domain_roadmaps")
+}
+
 model Roadmap {
   id                  Int      @id @default(autoincrement())
   user_id             Int
-  roadmap_content     Json
+  domain              String?  @db.VarChar(255)
+  roadmap_content     Json?
   status              String   @default("active") @db.VarChar(20)
   progress_percentage Float    @default(0.0)
   completed_tasks     Json     @default("[]")
@@ -101,14 +112,15 @@ model Notification {
 }
 
 model CareerOnboardingState {
-  id               Int      @id @default(autoincrement())
-  uid              String   @unique @db.VarChar(100)
-  step             String   @default("domain") @db.VarChar(30)
-  domain           String?  @db.VarChar(255)
-  proficiency_level String? @db.VarChar(30)
-  current_status   String?  @db.VarChar(50)
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
+  id                Int      @id @default(autoincrement())
+  uid               String   @unique @db.VarChar(100)
+  step              String   @default("domain") @db.VarChar(30)
+  domain            String?  @db.VarChar(255)
+  proficiency_level String?  @db.VarChar(30)
+  professional_goal String?  @db.VarChar(100)
+  current_status    String?  @db.VarChar(50)
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
 
   @@map("career_onboarding_state")
 }

@@ -8,7 +8,18 @@ const axiosInstance = axios.create({
 });
 
 axiosInstance.interceptors.request.use(config => {
-  const token = localStorage.getItem('token');
+  let token;
+  try {
+    token = localStorage.getItem('token');
+    // Never send or trust HTML/noscript stored as token (avoids "You need t"... is not valid JSON)
+    if (token && (token.includes('You need') || token.startsWith('<!') || token.startsWith('<html'))) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      token = null;
+    }
+  } catch (e) {
+    token = null;
+  }
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });

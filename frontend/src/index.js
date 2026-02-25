@@ -1,4 +1,14 @@
 // frontend/src/index.js
+// Clear corrupted localStorage before any code can JSON.parse it (e.g. "You need to enable JavaScript...")
+try {
+  ['user', 'token'].forEach((key) => {
+    const v = localStorage.getItem(key);
+    if (typeof v === 'string' && (v.includes('You need') || v.trim().startsWith('<'))) {
+      localStorage.removeItem(key);
+    }
+  });
+} catch (_) {}
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter as Router } from 'react-router-dom';

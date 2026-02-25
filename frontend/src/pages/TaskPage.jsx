@@ -55,9 +55,10 @@ const TaskPage = () => {
   useEffect(() => {
     const fetchRoadmap = async () => {
       try {
-        const res = await axiosInstance.get('/user/roadmap');
-        if (res.data.success && res.data.roadmap) {
-          let content = res.data.roadmap.roadmap_content;
+        const res = await axiosInstance.get(`/user/roadmap?ts=${Date.now()}`);
+        const row = res.data?.data ?? res.data?.roadmap;
+        if (res.data?.success && row) {
+          let content = row.roadmap_content;
           if (typeof content === 'string') {
             content = safeJsonParse(content, null, 'TaskPage-roadmap_content');
           }
@@ -179,14 +180,36 @@ const TaskPage = () => {
     return (
       <div className="min-h-screen py-12 px-4 flex items-center justify-center" style={{ backgroundColor: '#1a1a2e' }}>
         <div className="max-w-lg w-full bg-gray-800 rounded-2xl p-8 border border-gray-600 text-center">
-          <p className="text-gray-300 mb-4">No questions for this task yet.</p>
-          <button
-            type="button"
-            onClick={() => navigate('/roadmap')}
-            className="px-4 py-2 bg-amber-500 text-gray-900 rounded-xl font-semibold hover:bg-amber-400"
-          >
-            Back to roadmap
-          </button>
+          <h1 className="text-lg font-bold text-white mb-2">{task.task_name || task.title || 'Task'}</h1>
+          <p className="text-gray-400 mb-6">
+            {task.unitTitle ? `${task.unitTitle}` : ''} — No quiz for this task. Mark it complete when done.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              type="button"
+              onClick={() => {
+                setSubmitting(true);
+                axiosInstance
+                  .post('/user/roadmap/complete-task', { taskId })
+                  .then(() => navigate('/roadmap', { replace: true }))
+                  .catch((e) => {
+                    console.error('Complete task error:', e);
+                    setSubmitting(false);
+                  });
+              }}
+              disabled={submitting}
+              className="px-4 py-2 bg-amber-500 text-gray-900 rounded-xl font-semibold hover:bg-amber-400 disabled:opacity-50"
+            >
+              {submitting ? 'Saving…' : 'Mark as complete'}
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/roadmap')}
+              className="px-4 py-2 border border-gray-500 text-gray-300 rounded-xl font-medium hover:bg-gray-700"
+            >
+              Back to roadmap
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -236,9 +259,9 @@ const TaskPage = () => {
         </div>
 
         <div className="bg-gray-800 rounded-2xl border border-gray-600 p-6 md:p-8 shadow-xl">
-          <h1 className="text-lg font-bold text-white mb-1">{task.title}</h1>
+          <h1 className="text-lg font-bold text-white mb-1">{task.task_name || task.title || 'Task'}</h1>
           <p className="text-xs text-gray-500 mb-6">
-            {task.phaseName} · {task.topicTitle}
+            {[task.unitTitle, task.phaseName, task.topicTitle].filter(Boolean).join(' · ') || '—'}
           </p>
 
           <p className="text-base font-medium text-gray-100 mb-6 leading-relaxed">{currentMcq.question}</p>

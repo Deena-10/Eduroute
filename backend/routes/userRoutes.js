@@ -9,6 +9,7 @@ router.use(authMiddleware);
 router.post("/save-profile", userController.saveProfile);
 router.get("/profile", userController.getProfile);
 router.get("/roadmap", userController.getRoadmap);
+router.get("/onboarding-preferences", userController.getOnboardingPreferences);
 router.delete("/roadmap", userController.resetRoadmap);
 router.post("/roadmap/complete-task", userController.completeTask);
 router.get("/streak", userController.getStreak);

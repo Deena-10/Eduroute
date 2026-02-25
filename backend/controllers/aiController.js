@@ -44,46 +44,86 @@ exports.chat = async (req, res, next) => {
 
 /* =========================================
    3. GENERATE CAREER ROADMAP
+   - Domain-level storage: first user for a domain creates domain_roadmap; others reuse it.
+   - User roadmap links via domain; progress tracked per user.
 ========================================= */
 exports.generateRoadmap = async (req, res) => {
     const { domain, proficiency_level, professional_goal, current_status } = req.body;
+    const domainKey = (domain || "General").trim();
 
     try {
-        // 1. Call Python AI Service
-        const response = await aiService.postWithRetry(
-            "/generate-roadmap",
-            { domain, proficiency_level, professional_goal, current_status },
-            { timeout: 60000 }
+        let roadmapPayload;
+
+        // 1. Check domain_roadmaps for existing roadmap
+        const domainResult = await pool.query(
+            "SELECT id, roadmap_content FROM domain_roadmaps WHERE domain = $1",
+            [domainKey]
         );
 
-        // 2. Validate Response (expects units and ui_metadata)
-        if (!response.data || !response.data.roadmap) {
-            return res.status(502).json({
-                success: false,
-                message: "AI service returned invalid structure",
-            });
+        if (domainResult.rows.length > 0) {
+            const content = domainResult.rows[0].roadmap_content;
+            roadmapPayload = typeof content === "string" ? JSON.parse(content) : content;
+        } else {
+            // 2. Generate via AI and store in domain_roadmaps
+            const response = await aiService.postWithRetry(
+                "/generate-roadmap",
+                { domain: domainKey, proficiency_level, professional_goal, current_status },
+                { timeout: 60000 }
+            );
+            if (!response.data || !response.data.roadmap) {
+                return res.status(502).json({
+                    success: false,
+                    message: "AI service returned invalid structure",
+                });
+            }
+            roadmapPayload = response.data;
+            await pool.query(
+                "INSERT INTO domain_roadmaps (domain, roadmap_content, updated_at) VALUES ($1, $2, CURRENT_TIMESTAMP)",
+                [domainKey, JSON.stringify(roadmapPayload)]
+            );
         }
 
-        // 3. Pause existing active roadmaps
+        // 3. Pause existing active roadmaps for this user
         await pool.query(
             "UPDATE user_roadmaps SET status = 'paused' WHERE user_id = $1 AND status = 'active'",
             [req.user.id]
         );
 
-        // 4. Save the FULL payload to JSONB
+        // 4. Create user roadmap (domain-linked; content comes from domain_roadmaps on fetch)
         await pool.query(
             `INSERT INTO user_roadmaps 
-            (user_id, roadmap_content, status, progress_percentage, updated_at)
-            VALUES ($1, $2, 'active', 0, CURRENT_TIMESTAMP)`,
-            [req.user.id, JSON.stringify(response.data)]
+            (user_id, domain, roadmap_content, status, progress_percentage, completed_tasks, updated_at)
+            VALUES ($1, $2, $3, 'active', 0, '[]', CURRENT_TIMESTAMP)`,
+            [req.user.id, domainKey, JSON.stringify(roadmapPayload)]
         );
+
+        // 5. Persist mandatory one-time inputs
+        const uid = String(req.user.id);
+        try {
+            await pool.query(
+                `INSERT INTO career_onboarding_state (uid, step, domain, proficiency_level, professional_goal, current_status, updated_at)
+                 VALUES ($1, 'done', $2, $3, $4, $5, CURRENT_TIMESTAMP)
+                 ON CONFLICT (uid) DO UPDATE SET domain = $2, proficiency_level = $3, professional_goal = $4, current_status = $5, updated_at = CURRENT_TIMESTAMP`,
+                [uid, domainKey, proficiency_level || null, professional_goal || null, current_status || null]
+            );
+        } catch (colError) {
+            if (colError.code === "42703" || (colError.message && colError.message.includes("professional_goal"))) {
+                await pool.query(
+                    `INSERT INTO career_onboarding_state (uid, step, domain, proficiency_level, current_status, updated_at)
+                     VALUES ($1, 'done', $2, $3, $4, CURRENT_TIMESTAMP)
+                     ON CONFLICT (uid) DO UPDATE SET domain = $2, proficiency_level = $3, current_status = $4, updated_at = CURRENT_TIMESTAMP`,
+                    [uid, domainKey, proficiency_level || null, current_status || null]
+                );
+            } else {
+                throw colError;
+            }
+        }
 
         return res.status(200).json({
             success: true,
-            roadmap: response.data,
+            roadmap: roadmapPayload,
             message: "Roadmap generated and saved successfully",
         });
-
     } catch (error) {
         console.error("Generate roadmap error:", error.message);
         return res.status(500).json({

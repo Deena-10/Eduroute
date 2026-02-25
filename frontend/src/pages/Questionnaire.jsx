@@ -1,5 +1,5 @@
 // frontend/src/pages/Questionnaire.jsx – Create your career roadmap (form, no chat)
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import axiosInstance from "../api/axiosInstance";
@@ -13,11 +13,39 @@ const Questionnaire = () => {
   const [currentStatus, setCurrentStatus] = useState("College student");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  useEffect(() => {
+    const loadPrefill = async () => {
+      try {
+        const res = await axiosInstance.get("/user/onboarding-preferences");
+        const prefs = res.data?.data ?? res.data;
+        if (prefs) {
+          if (prefs.domain) setDomain(prefs.domain);
+          if (prefs.proficiency_level) setProficiency(prefs.proficiency_level);
+          if (prefs.professional_goal) setProfessionalGoal(prefs.professional_goal);
+          if (prefs.current_status) setCurrentStatus(prefs.current_status);
+          // Returning user: mandatory inputs already stored → go to roadmap (no re-prompt)
+          const hasAll = prefs.domain && prefs.proficiency_level && prefs.professional_goal;
+          if (hasAll) {
+            const r = await axiosInstance.get("/user/roadmap").catch(() => null);
+            const row = r?.data?.data ?? r?.data?.roadmap;
+            if (row) navigate("/roadmap", { replace: true });
+          }
+        }
+      } catch (e) {
+        console.warn("Could not load onboarding preferences:", e?.message);
+      }
+    };
+    loadPrefill();
+  }, [navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!domain.trim()) {
-      setError("Please enter your primary interest or domain.");
+      setError("Domain is required.");
+      return;
+    }
+    if (!professionalGoal.trim()) {
+      setError("Professional goal is required.");
       return;
     }
     setError("");
@@ -62,7 +90,7 @@ const Questionnaire = () => {
             Create your career roadmap
           </h1>
           <p className="text-gray-600 mb-6">
-            Tell us a bit about yourself and we’ll generate a step-by-step learning path for you.
+            Enter your details once. You won’t be asked again on future logins.
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-5">

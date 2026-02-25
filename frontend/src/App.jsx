@@ -6,11 +6,13 @@ import setupGlobalErrorHandler from "./utils/globalErrorHandler";
 import { clearCorruptedLocalStorage } from "./utils/safeJsonParser";
 import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
+import OnboardingGate from "./components/OnboardingGate";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Questionnaire from "./pages/Questionnaire";
 import Roadmap from "./pages/Roadmap";
+import ChapterQuiz from "./pages/ChapterQuiz";
 import TaskPage from "./pages/TaskPage";
 import Profile from "./pages/Profile";
 
@@ -49,7 +51,19 @@ function App() {
               path="/roadmap"
               element={
                 <ProtectedRoute>
-                  <Roadmap />
+                  <OnboardingGate>
+                    <Roadmap />
+                  </OnboardingGate>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/roadmap/chapter/:unitNumber"
+              element={
+                <ProtectedRoute>
+                  <OnboardingGate>
+                    <ChapterQuiz />
+                  </OnboardingGate>
                 </ProtectedRoute>
               }
             />
@@ -57,7 +71,9 @@ function App() {
               path="/roadmap/task/:taskId"
               element={
                 <ProtectedRoute>
-                  <TaskPage />
+                  <OnboardingGate>
+                    <TaskPage />
+                  </OnboardingGate>
                 </ProtectedRoute>
               }
             />
@@ -65,7 +81,9 @@ function App() {
               path="/profile"
               element={
                 <ProtectedRoute>
-                  <Profile />
+                  <OnboardingGate>
+                    <Profile />
+                  </OnboardingGate>
                 </ProtectedRoute>
               }
             />

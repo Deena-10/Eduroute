@@ -1,12 +1,13 @@
 import hashlib
 from flask import Flask, request, jsonify
-import random
 
 app = Flask(__name__)
 
 LEVELS = ["beginner", "intermediate", "advanced"]
 
-# Interview-style MCQ templates with context and reasoning
+# Interview-style MCQ templates
+# Each tuple: (question_pattern, correct_answer_pattern, distractor_patterns)
+# Placeholders: {domain}, {level}, {chapter}
 _QUESTION_TEMPLATES = [
     (
         "Which of the following best demonstrates a core concept from \"{chapter}\" in {domain}?",
@@ -55,108 +56,162 @@ _QUESTION_TEMPLATES = [
     ),
 ]
 
-def generate_mcqs(unit_title, domain, level, unit_number, repeat_chance=0.1):
+def deterministic_shuffle(items, seed_str):
     """
-    Generate 5 interview-style MCQs per chapter.
-    Deterministic shuffling ensures consistent correctIndex.
-    repeat_chance: fraction of questions that repeat from previous unit
+    Fisher-Yates shuffle with deterministic seed via hashlib
+    """
+    perm = list(range(len(items)))
+    seed = hashlib.md5(seed_str.encode()).hexdigest()
+    for j in range(len(items)-1, 0, -1):
+        idx = int(seed[j*2:j*2+2], 16) % (j+1)
+        perm[j], perm[idx] = perm[idx], perm[j]
+    return [items[i] for i in perm]
+
+# Strict: 4-5 questions per chapter. Use 5 unique questions per unit.
+MCQS_PER_CHAPTER = 5
+
+
+def generate_mcqs(unit_number, unit_title, domain, level):
+    """
+    Generate exactly 4-5 unique MCQs per chapter. STRICT: no repeats from other chapters.
+    Each question is unique to this unit (uses unit_number + unit_title in seed).
     """
     mcqs = []
-    for i in range(5):
+    for i in range(MCQS_PER_CHAPTER):
         tmpl = _QUESTION_TEMPLATES[i]
-
-        # Decide if we reuse a previous question (~10%)
-        if random.random() < repeat_chance and unit_number > 1:
-            prev_unit_num = unit_number - 1
-            seed_unit = prev_unit_num
-        else:
-            seed_unit = unit_number
-
+        # Always use current chapter - no repeat from previous units
         question = tmpl[0].format(chapter=unit_title, domain=domain, level=level)
         correct = tmpl[1].format(chapter=unit_title, domain=domain, level=level)
         distractors = [d.format(chapter=unit_title, domain=domain, level=level) for d in tmpl[2]]
 
-        # Deterministic shuffle of distractors
-        seed = hashlib.md5(f"{domain}:{seed_unit}:{i}".encode()).hexdigest()
-        random.seed(int(seed[:8], 16))
-        random.shuffle(distractors)
+        # Shuffle distractors deterministically (unique per unit)
+        distractors = deterministic_shuffle(distractors, f"{domain}:{unit_number}:{i}:distractors")
 
         options = [correct] + distractors[:3]
-
-        # Deterministic shuffle of all options
-        order_seed = hashlib.md5(f"{domain}:{seed_unit}:{i}:order".encode()).hexdigest()
-        random.seed(int(order_seed[:8], 16))
-        indices = list(range(4))
-        random.shuffle(indices)
-        shuffled = [options[idx] for idx in indices]
+        shuffled = deterministic_shuffle(options, f"{domain}:{unit_number}:{i}:options")
         correct_index = shuffled.index(correct)
 
-        mcqs.append({
-            "question": question,
-            "options": shuffled,
-            "correctIndex": correct_index,
-        })
+        mcqs.append({"question": question, "options": shuffled, "correctIndex": correct_index})
     return mcqs
 
-def build_unit(unit_number, domain):
-    """Build a single unit with 5 interview-style MCQs."""
-    if unit_number <= 3:
-        level = LEVELS[0]
-    elif unit_number <= 6:
-        level = LEVELS[1]
+def get_level_for_unit(unit_number):
+    """Determine level based on unit number (cycles every 9 units for variety)"""
+    idx = (unit_number - 1) % 9
+    if idx < 3:
+        return LEVELS[0]
+    elif idx < 6:
+        return LEVELS[1]
     else:
-        level = LEVELS[2]
+        return LEVELS[2]
 
-    unit_title = f"{level.capitalize()} concepts of {domain} — Unit {unit_number}"
+# Unique chapter title templates - one per "batch" so headings never repeat
+CHAPTER_TITLE_TEMPLATES = [
+    "Getting started with {domain}",
+    "Core foundations of {domain}",
+    "Essential {domain} skills",
+    "Building on {domain} basics",
+    "Intermediate {domain} concepts",
+    "Practical {domain} applications",
+    "Advanced {domain} techniques",
+    "Mastering {domain} patterns",
+    "Expert-level {domain}",
+    "Deep dive into {domain}",
+    "Production-ready {domain}",
+    "Scaling {domain} projects",
+    "Optimizing {domain} performance",
+    "Architecting {domain} solutions",
+    "Enterprise {domain} practices",
+]
+
+
+def get_unique_chapter_title(unit_number, domain):
+    """Generate a unique chapter heading for each unit (1, 2, 3... 50... 100... indefinitely)"""
+    level = get_level_for_unit(unit_number)
+    # Use unit_number to pick template - ensures uniqueness
+    template_idx = (unit_number - 1) % len(CHAPTER_TITLE_TEMPLATES)
+    base_title = CHAPTER_TITLE_TEMPLATES[template_idx].format(domain=domain)
+    # Append unit number so even with same template (after cycling), it's unique
+    return f"{base_title} — Chapter {unit_number}"
+
+
+def build_unit(unit_number, domain):
+    """Build a single roadmap unit. Unit numbers: 1, 2, 3, 4, 5... indefinitely."""
+    level = get_level_for_unit(unit_number)
+    unit_title = get_unique_chapter_title(unit_number, domain)
+
+    # Tasks
     tasks = [{"task_id": f"u{unit_number}_t{i}", "task_name": f"Task {i} in {unit_title}"} for i in range(1, 5)]
-    mcqs = generate_mcqs(unit_title, domain, level, unit_number)
-    return {"unit_number": unit_number, "title": unit_title, "level": level, "tasks": tasks, "mcqs": mcqs}
 
-# Generate roadmap payload
-def build_roadmap_payload(domain):
-    """Build roadmap payload with initial 3 units."""
-    units = [build_unit(i, domain) for i in range(1, 4)]
+    # MCQs
+    mcqs = generate_mcqs(unit_number, unit_title, domain, level)
+
+    return {
+        "unit_number": unit_number,
+        "title": unit_title,
+        "level": level,
+        "tasks": tasks,
+        "mcqs": mcqs
+    }
+
+COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#06B6D4", "#EF4444", "#84CC16", "#6366F1"]
+
+
+def build_node_config(start_unit, count):
+    """Generate node config dynamically for any number of units"""
+    config = []
+    for i in range(start_unit, start_unit + count):
+        offset = "left" if (i - 1) % 2 == 0 else "right"
+        color = COLORS[(i - 1) % len(COLORS)]
+        config.append({"unit": i, "offset": offset, "color": color})
+    return config
+
+def build_roadmap_payload(domain, start_unit=1, count=3):
+    """Build roadmap payload. Each unit has 4-5 unique MCQs."""
+    units = [build_unit(i, domain) for i in range(start_unit, start_unit + count)]
+    node_config = build_node_config(start_unit, count)
     return {
         "roadmap": {"domain": domain, "units": units},
-        "ui_metadata": {
-            "node_config": [
-                {"unit": 1, "offset": "left", "color": "#4024f6"},
-                {"unit": 2, "offset": "right", "color": "#021710"},
-                {"unit": 3, "offset": "left", "color": "#ffffff"},
-            ]
-        },
+        "ui_metadata": {"node_config": node_config},
         "gamification": {"daily_streak_goal_xp": 50},
     }
 
-# API Endpoints
+# ========== API Endpoints ==========
+
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "ok", "service": "ai-service"}), 200
 
 @app.route("/generate-roadmap", methods=["POST"])
 def generate_roadmap():
+    """
+    Generate initial roadmap for a domain (3 units by default)
+    """
     data = request.get_json() or {}
     domain = (data.get("domain") or "General").strip()
-    payload = build_roadmap_payload(domain)
+    payload = build_roadmap_payload(domain, start_unit=1, count=3)
     return jsonify(payload), 200
 
 @app.route("/generate-next-chapter", methods=["POST"])
 def generate_next_chapter():
     """
-    Generate the next 3 units dynamically.
-    Returns {"units": [unit4, unit5, unit6]}
+    STRICT: When one chapter is finished, generate the next TWO chapters only.
+    Each chapter has 4-5 unique questions (no repeats).
+    Expects: {"domain": "Python", "last_unit_number": 3}
+    Returns: {"units": [unit4, unit5]}
     """
     data = request.get_json() or {}
     domain = (data.get("domain") or "General").strip()
-    last_unit_number = data.get("last_unit_number", 3)
+    last_unit_number = int(data.get("last_unit_number", 0))
+    if last_unit_number < 1:
+        last_unit_number = 0
 
-    new_units = []
-    for i in range(1, 4):  # next 3 chapters
-        next_num = last_unit_number + i
-        unit = build_unit(next_num, domain)
-        new_units.append(unit)
+    # Strict: next 2 chapters only
+    new_units = [build_unit(last_unit_number + i, domain) for i in range(1, 3)]
+    node_config = build_node_config(last_unit_number + 1, 2)
 
-    return jsonify({"units": new_units}), 200
+    return jsonify({"units": new_units, "ui_metadata": {"node_config": node_config}}), 200
+
+# ========== Run App ==========
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=True)

@@ -43,53 +43,103 @@ exports.chat = async (req, res, next) => {
 };
 
 /* =========================================
+   FALLBACK: Generate roadmap when AI service is down
+========================================= */
+function buildFallbackRoadmap(domain) {
+    const colors = ["#3B82F6", "#10B981", "#F59E0B"];
+    const units = [];
+    for (let i = 1; i <= 3; i++) {
+        const level = i <= 1 ? "beginner" : i <= 2 ? "intermediate" : "advanced";
+        const titles = [
+            `Getting started with ${domain}`,
+            `Core skills in ${domain}`,
+            `Advanced ${domain} mastery`,
+        ];
+        units.push({
+            unit_number: i,
+            title: titles[i - 1],
+            level,
+            tasks: [
+                { task_id: `u${i}_t1`, task_name: `Task 1` },
+                { task_id: `u${i}_t2`, task_name: `Task 2` },
+                { task_id: `u${i}_t3`, task_name: `Task 3` },
+                { task_id: `u${i}_t4`, task_name: `Task 4` },
+            ],
+            mcqs: [
+                { question: `What is the main focus of "${titles[i - 1]}" in ${domain}?`, options: ["Building foundational skills", "Memorizing only", "Skipping practice", "Avoiding hands-on work"], correctIndex: 0 },
+                { question: `In "${titles[i - 1]}", which approach best supports progress?`, options: ["Applying concepts through exercises", "Reading only", "Copying blindly", "Skipping"], correctIndex: 0 },
+                { question: `How does "${titles[i - 1]}" fit into your ${domain} path?`, options: ["Establishes skills for next level", "Optional", "Replaces others", "No connection"], correctIndex: 0 },
+                { question: `After "${titles[i - 1]}", what should you be able to do?`, options: ["Explain and apply key concepts", "Only recall definitions", "Move on without practice", "Ignore next chapter"], correctIndex: 0 },
+                { question: `Why is "${titles[i - 1]}" at the ${level} stage?`, options: ["Matches complexity and builds on prior learning", "Random", "Hardest", "Unrelated"], correctIndex: 0 },
+            ],
+        });
+    }
+    return {
+        roadmap: { domain, units },
+        ui_metadata: { node_config: units.map((u, idx) => ({ unit: u.unit_number, offset: idx % 2 ? "right" : "left", color: colors[idx] })) },
+        gamification: { daily_streak_goal_xp: 50 },
+    };
+}
+
+/* =========================================
    3. GENERATE CAREER ROADMAP
-   - Domain-level storage: first user for a domain creates domain_roadmap; others reuse it.
-   - User roadmap links via domain; progress tracked per user.
+   - AI-first: always calls AI service for new domains; uses cache only when domain exists.
+   - forceRegenerate: when true, always calls AI and updates domain_roadmaps.
+   - Domain-level storage: domain_roadmaps stores AI content; user_roadmaps stores per-user progress.
+   - Fallback: if AI service fails, uses buildFallbackRoadmap and still stores in DB.
 ========================================= */
 exports.generateRoadmap = async (req, res) => {
-    const { domain, proficiency_level, professional_goal, current_status } = req.body;
+    const { domain, proficiency_level, professional_goal, current_status, forceRegenerate } = req.body;
     const domainKey = (domain || "General").trim();
 
     try {
         let roadmapPayload;
 
-        // 1. Check domain_roadmaps for existing roadmap
+        // 1. Check domain_roadmaps for existing roadmap (skip cache if forceRegenerate)
         const domainResult = await pool.query(
             "SELECT id, roadmap_content FROM domain_roadmaps WHERE domain = $1",
             [domainKey]
         );
 
-        if (domainResult.rows.length > 0) {
+        const useCache = domainResult.rows.length > 0 && !forceRegenerate;
+
+        if (useCache) {
             const content = domainResult.rows[0].roadmap_content;
             roadmapPayload = typeof content === "string" ? JSON.parse(content) : content;
         } else {
-            // 2. Generate via AI and store in domain_roadmaps
-            const response = await aiService.postWithRetry(
-                "/generate-roadmap",
-                { domain: domainKey, proficiency_level, professional_goal, current_status },
-                { timeout: 60000 }
-            );
-            if (!response.data || !response.data.roadmap) {
-                return res.status(502).json({
-                    success: false,
-                    message: "AI service returned invalid structure",
-                });
+            // 2. Generate via AI (or fallback if AI down)
+            try {
+                const response = await aiService.postWithRetry(
+                    "/generate-roadmap",
+                    { domain: domainKey, proficiency_level, professional_goal, current_status },
+                    { timeout: 60000 }
+                );
+                if (response.data && response.data.roadmap) {
+                    roadmapPayload = response.data;
+                } else {
+                    throw new Error("AI returned invalid structure");
+                }
+            } catch (aiErr) {
+                console.warn("AI service unavailable, using fallback roadmap:", aiErr.message);
+                roadmapPayload = buildFallbackRoadmap(domainKey);
             }
-            roadmapPayload = response.data;
+
+            // 3. Store in domain_roadmaps (upsert: insert new or update existing)
             await pool.query(
-                "INSERT INTO domain_roadmaps (domain, roadmap_content, updated_at) VALUES ($1, $2, CURRENT_TIMESTAMP)",
+                `INSERT INTO domain_roadmaps (domain, roadmap_content, updated_at)
+                 VALUES ($1, $2, CURRENT_TIMESTAMP)
+                 ON CONFLICT (domain) DO UPDATE SET roadmap_content = $2, updated_at = CURRENT_TIMESTAMP`,
                 [domainKey, JSON.stringify(roadmapPayload)]
             );
         }
 
-        // 3. Pause existing active roadmaps for this user
+        // 4. Pause existing active roadmaps for this user
         await pool.query(
             "UPDATE user_roadmaps SET status = 'paused' WHERE user_id = $1 AND status = 'active'",
             [req.user.id]
         );
 
-        // 4. Create user roadmap (domain-linked; content comes from domain_roadmaps on fetch)
+        // 5. Create user roadmap (domain-linked; content comes from domain_roadmaps on fetch)
         await pool.query(
             `INSERT INTO user_roadmaps 
             (user_id, domain, roadmap_content, status, progress_percentage, completed_tasks, updated_at)
@@ -97,7 +147,7 @@ exports.generateRoadmap = async (req, res) => {
             [req.user.id, domainKey, JSON.stringify(roadmapPayload)]
         );
 
-        // 5. Persist mandatory one-time inputs
+        // 6. Persist mandatory one-time inputs
         const uid = String(req.user.id);
         try {
             await pool.query(

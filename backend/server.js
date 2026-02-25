@@ -5,6 +5,8 @@ const questionsRoute = require("./routes/questions");
 const chatRoutes = require("./routes/chatRoutes");
 const userRoutes = require("./routes/userRoutes");
 const aiRoutes = require("./routes/aiRoutes");
+const eventsRoutes = require("./routes/eventsRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 
 const express = require("express");
 const cors = require("cors");
@@ -43,10 +45,17 @@ app.use("/api/questions", questionsRoute);
 app.use("/api/chat", chatRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/events", eventsRoutes);
+app.use("/api/admin", adminRoutes);
 
 // Health endpoint for Docker/K8s readiness checks
 app.get("/health", (req, res) => {
   res.status(200).json({ success: true, status: "ok" });
+});
+
+// VAPID public key for PWA push (no auth required)
+app.get("/api/vapid-public", (req, res) => {
+  res.json({ publicKey: process.env.VAPID_PUBLIC_KEY || null });
 });
 
 // Simple welcome route for testing

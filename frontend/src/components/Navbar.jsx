@@ -3,6 +3,7 @@ import React, { useState, useContext, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import axiosInstance from "../api/axiosInstance";
+import NotificationBell from "./NotificationBell";
 
 const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
@@ -19,7 +20,7 @@ const Navbar = () => {
     const check = async () => {
       try {
         const res = await axiosInstance.get("/user/roadmap");
-        setHasRoadmap(!!(res.data.success && res.data.roadmap));
+        setHasRoadmap(!!(res.data.success && (res.data.data || res.data.roadmap)));
       } catch {
         setHasRoadmap(false);
       }
@@ -84,6 +85,15 @@ const Navbar = () => {
             )}
             {user && (
               <Link
+                to="/events"
+                className="px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 hover:bg-gray-100"
+                style={{ color: "#000000" }}
+              >
+                Events
+              </Link>
+            )}
+            {user && (
+              <Link
                 to="/profile"
                 className="px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 hover:bg-gray-100"
                 style={{ color: "#000000" }}
@@ -96,7 +106,8 @@ const Navbar = () => {
           {/* User Profile / Auth - Right Side */}
           <div className="flex items-center space-x-3">
             {user ? (
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2">
+                <NotificationBell />
                 <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
                   <span className="text-white text-sm font-bold">
                     {user.name?.charAt(0)?.toUpperCase() || "U"}
@@ -181,6 +192,16 @@ const Navbar = () => {
                     Create roadmap
                   </Link>
                 )
+              )}
+              {user && (
+                <Link
+                  to="/events"
+                  className="px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 hover:bg-gray-100"
+                  style={{ color: "#000000" }}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Events
+                </Link>
               )}
               {user && (
                 <Link

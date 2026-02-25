@@ -169,19 +169,22 @@ exports.completeTask = async (req, res, next) => {
                     { domain: roadmap.domain, last_unit_number: lastUnitNum },
                     { timeout: 30000 }
                 );
-                if (data?.unit) {
-                    const updatedUnits = [...units, data.unit];
+                const newUnits = data?.units || (data?.unit ? [data.unit] : []);
+                if (newUnits.length > 0) {
+                    const updatedUnits = [...units, ...newUnits];
                     const base = content.roadmap || content;
-                    const nodeConfig = content.ui_metadata?.node_config || [];
+                    const nodeConfig = [...(content.ui_metadata?.node_config || [])];
                     const colors = ["#3B82F6", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#06B6D4"];
                     const offsets = ["left", "right"];
-                    if (!nodeConfig.find((c) => c.unit === data.unit.unit_number)) {
-                        nodeConfig.push({
-                            unit: data.unit.unit_number,
-                            offset: offsets[(data.unit.unit_number - 1) % 2],
-                            color: colors[(data.unit.unit_number - 1) % colors.length],
-                        });
-                    }
+                    newUnits.forEach((nu) => {
+                        if (!nodeConfig.find((c) => c.unit === nu.unit_number)) {
+                            nodeConfig.push({
+                                unit: nu.unit_number,
+                                offset: offsets[(nu.unit_number - 1) % 2],
+                                color: colors[(nu.unit_number - 1) % colors.length],
+                            });
+                        }
+                    });
                     const updatedPayload = {
                         roadmap: { ...base, units: updatedUnits },
                         ui_metadata: { ...(content.ui_metadata || {}), node_config: nodeConfig },
@@ -222,6 +225,32 @@ exports.completeTask = async (req, res, next) => {
             [userId, currentStreak, today]
         );
 
+        // Store streak snapshot in profile (day-based: one snapshot per day)
+        try {
+            const { rows: profRows } = await pool.query(
+                "SELECT streak_snapshots FROM user_profiles WHERE user_id = $1",
+                [userId]
+            );
+            let snapshots = [];
+            if (profRows.length > 0 && profRows[0].streak_snapshots != null) {
+                const raw = profRows[0].streak_snapshots;
+                snapshots = Array.isArray(raw) ? raw : (typeof raw === "string" ? JSON.parse(raw || "[]") : []);
+            }
+            const withoutToday = snapshots.filter((s) => s && s.date !== today);
+            snapshots = [...withoutToday, { date: today, streak: currentStreak }].sort(
+                (a, b) => (b?.date || "").localeCompare(a?.date || "")
+            );
+            const snapJson = JSON.stringify(snapshots.slice(0, 90));
+            if (profRows.length > 0) {
+                await pool.query(
+                    "UPDATE user_profiles SET streak_snapshots = $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2",
+                    [snapJson, userId]
+                );
+            }
+        } catch (snapErr) {
+            if (snapErr.code !== "42703") console.warn("Streak snapshot update failed:", snapErr.message);
+        }
+
         res.success({ progress_percentage: progress, completed_tasks: completedTasks, streak: currentStreak }, "Task completed");
     } catch (error) {
         next(error);
@@ -232,6 +261,47 @@ exports.getStreak = async (req, res, next) => {
     try {
         const { rows } = await pool.query("SELECT * FROM user_learning_streak WHERE user_id = $1", [req.user.id]);
         res.success(rows.length > 0 ? rows[0] : { current_streak: 0, last_activity_date: null }, "Streak fetched");
+    } catch (error) {
+        next(error);
+    }
+};
+
+exports.savePushSubscription = async (req, res, next) => {
+    try {
+        const { endpoint, keys } = req.body;
+        if (!endpoint) return res.error("endpoint required", "Invalid subscription", 400);
+        const userId = req.user.id;
+        const p256dh = keys?.p256dh || null;
+        const auth = keys?.auth || null;
+        await pool.query(
+            `INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth)
+             VALUES ($1, $2, $3, $4)
+             ON CONFLICT (user_id, endpoint) DO UPDATE SET p256dh = $3, auth = $4`,
+            [userId, endpoint, p256dh, auth]
+        );
+        res.success(null, "Push subscription saved");
+    } catch (error) {
+        next(error);
+    }
+};
+
+exports.getNotifications = async (req, res, next) => {
+    try {
+        const { rows } = await pool.query(
+            "SELECT id, type, title, message, is_read, created_at FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50",
+            [req.user.id]
+        );
+        res.success(rows, "Notifications fetched");
+    } catch (error) {
+        next(error);
+    }
+};
+
+exports.markNotificationRead = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        await pool.query("UPDATE notifications SET is_read = true WHERE id = $1 AND user_id = $2", [id, req.user.id]);
+        res.success(null, "Marked as read");
     } catch (error) {
         next(error);
     }

@@ -40,11 +40,22 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- User Roadmaps table
+-- Domain Roadmaps table (AI-generated content per domain; shared across users)
+CREATE TABLE IF NOT EXISTS domain_roadmaps (
+    id SERIAL PRIMARY KEY,
+    domain VARCHAR(255) NOT NULL UNIQUE,
+    roadmap_content JSONB NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_domain_roadmaps_domain ON domain_roadmaps(domain);
+
+-- User Roadmaps table (links to domain; stores user progress)
 CREATE TABLE IF NOT EXISTS user_roadmaps (
     id SERIAL PRIMARY KEY,
     user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    roadmap_content TEXT,
+    domain VARCHAR(255),
+    roadmap_content JSONB,
     status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'completed', 'paused')),
     progress_percentage DECIMAL(5,2) DEFAULT 0.00,
     completed_tasks JSONB DEFAULT '[]'::jsonb,

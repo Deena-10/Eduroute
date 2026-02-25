@@ -81,12 +81,27 @@ async function setupDatabase() {
     console.log('✅ User Profiles table created');
 
     await client.query(`
+      CREATE TABLE IF NOT EXISTS domain_roadmaps (
+        id SERIAL PRIMARY KEY,
+        domain VARCHAR(255) NOT NULL UNIQUE,
+        roadmap_content JSONB NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('✅ Domain Roadmaps table created');
+
+    await client.query(`
       CREATE TABLE IF NOT EXISTS user_roadmaps (
         id SERIAL PRIMARY KEY,
         user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        roadmap_content TEXT, status VARCHAR(20) DEFAULT 'active',
-        progress_percentage DECIMAL(5,2) DEFAULT 0.00, completed_tasks JSONB DEFAULT '[]'::jsonb,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        domain VARCHAR(255),
+        roadmap_content JSONB,
+        status VARCHAR(20) DEFAULT 'active',
+        progress_percentage DECIMAL(5,2) DEFAULT 0.00,
+        completed_tasks JSONB DEFAULT '[]'::jsonb,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
     console.log('✅ User Roadmaps table created');

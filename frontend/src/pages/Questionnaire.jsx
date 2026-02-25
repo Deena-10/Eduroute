@@ -65,8 +65,8 @@ const Questionnaire = () => {
     } catch (err) {
       const msg = err.response?.data?.error || err.message;
       setError(
-        msg?.includes("not running")
-          ? "AI service is offline. Start it with: cd backend/service && python application.py"
+        msg?.includes("not running") || msg?.includes("ECONNREFUSED")
+          ? "AI service is offline. Start it with: cd ai_service && python application.py (or use start-dev.bat)"
           : msg || "Failed to generate roadmap. Please try again."
       );
     } finally {

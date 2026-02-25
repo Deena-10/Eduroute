@@ -29,18 +29,19 @@ model User {
 }
 
 model Profile {
-  id                   Int      @id @default(autoincrement())
-  user_id              Int      @unique
-  education_grade      String?  @db.VarChar(100)
-  education_department String?  @db.VarChar(100)
-  education_year       String?  @db.VarChar(50)
-  interests            Json     @default("[]")
-  skills_learned       Json     @default("[]")
-  skills_to_learn      Json     @default("[]")
-  planning_days        Int      @default(30)
-  phone                String?  @db.VarChar(20)
-  created_at           DateTime @default(now())
-  updated_at           DateTime @updatedAt
+  id                Int      @id @default(autoincrement())
+  user_id           Int      @unique
+  education_grade   String?  @db.VarChar(100)
+  education_department String? @db.VarChar(100)
+  education_year    String?  @db.VarChar(50)
+  interests         Json     @default("[]")
+  skills_learned    Json     @default("[]")
+  skills_to_learn   Json     @default("[]")
+  planning_days     Int      @default(30)
+  phone             String?  @db.VarChar(20)
+  streak_snapshots  Json?    @default("[]")
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
 
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
@@ -123,4 +124,30 @@ model CareerOnboardingState {
   updated_at        DateTime @updatedAt
 
   @@map("career_onboarding_state")
+}
+
+model CareerEvent {
+  id          Int      @id @default(autoincrement())
+  type        String   @db.VarChar(30)
+  title       String   @db.VarChar(255)
+  description String?  @db.Text
+  url         String?  @db.VarChar(500)
+  domain      String?  @db.VarChar(255)
+  level       String?  @db.VarChar(30)
+  event_date  DateTime? @db.Timestamp
+  created_at DateTime @default(now())
+
+  @@map("career_events")
+}
+
+model PushSubscription {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  endpoint   String   @db.Text
+  p256dh     String?  @db.Text
+  auth       String?  @db.Text
+  created_at DateTime @default(now())
+
+  @@unique([user_id, endpoint])
+  @@map("push_subscriptions")
 }

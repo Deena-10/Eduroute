@@ -3,7 +3,7 @@ import { safeJsonParse } from "../utils/safeJsonParser";
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../api/axiosInstance';
 
-const RoadmapNode = ({ unit, title, offset, color, status, onClick, taskCount, completedCount, isChapterLevel }) => {
+const RoadmapNode = ({ unit, title, offset, color, status, onClick, taskCount, completedCount, isChapterLevel, unitPct }) => {
   const isLocked = status === 'locked';
   const isCompleted = status === 'completed';
   const word = isChapterLevel ? 'questions' : 'tasks';
@@ -38,6 +38,11 @@ const RoadmapNode = ({ unit, title, offset, color, status, onClick, taskCount, c
               {taskLabel}
             </span>
           )}
+          {unitPct != null && (
+            <div className="mt-1 w-full max-w-[80px] h-1.5 bg-gray-200 rounded-full overflow-hidden">
+              <div className="h-full rounded-full transition-all" style={{ width: `${unitPct}%`, backgroundColor: color, opacity: isLocked ? 0.5 : 1 }} />
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -48,6 +53,7 @@ const Roadmap = () => {
   const navigate = useNavigate();
   const [roadmapData, setRoadmapData] = useState(null);
   const [completedTasks, setCompletedTasks] = useState([]);
+  const [progressPct, setProgressPct] = useState(0);
   const [streak, setStreak] = useState({ current_streak: 0, last_activity_date: null });
   const [loading, setLoading] = useState(true);
 
@@ -84,6 +90,7 @@ const Roadmap = () => {
           
           setRoadmapData(normalized);
           setCompletedTasks(Array.isArray(r.completed_tasks) ? r.completed_tasks : []);
+          setProgressPct(r.progress_percentage ?? 0);
         }
 
         if (streakRes.data?.success) {
@@ -145,7 +152,8 @@ const Roadmap = () => {
       if (allTasksCompleted) status = 'completed';
       else if (isPreviousCompleted) status = 'available';
 
-      return { ...unit, ...config, status, taskCount, completedCount, isChapterLevel };
+      const unitPct = taskCount > 0 ? Math.round((completedCount / taskCount) * 100) : (allTasksCompleted ? 100 : 0);
+      return { ...unit, ...config, status, taskCount, completedCount, isChapterLevel, unitPct };
     });
   }, [roadmapData, completedTasks]);
 
@@ -200,18 +208,29 @@ const Roadmap = () => {
   return (
     <div className="min-h-screen bg-[#F6F6F6] pb-24">
       <div className="max-w-2xl mx-auto px-6">
-        <header className="py-10 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Your Path</h1>
-            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-bold rounded-full uppercase">
-              {roadmapData.roadmap?.domain || "Career Path"}
-            </span>
-          </div>
-          <div className="bg-white px-4 py-2 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-3">
+        <header className="py-10">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Your Path</h1>
+              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-bold rounded-full uppercase">
+                {roadmapData.roadmap?.domain || "Career Path"}
+              </span>
+            </div>
+            <div className="bg-white px-4 py-2 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-3">
             <span className="text-2xl">🔥</span>
             <div className="leading-tight">
               <p className="text-sm font-bold text-gray-900">{streak.current_streak} Day</p>
               <p className="text-[10px] text-gray-400 font-bold uppercase">Streak</p>
+            </div>
+          </div>
+          </div>
+          <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+            <div className="flex justify-between text-sm mb-1">
+              <span className="font-medium text-gray-700">Domain progress</span>
+              <span className="font-bold text-blue-600">{progressPct}%</span>
+            </div>
+            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div className="h-full bg-blue-600 rounded-full transition-all duration-500" style={{ width: `${progressPct}%` }} />
             </div>
           </div>
         </header>
@@ -230,6 +249,7 @@ const Roadmap = () => {
                 taskCount={unit.taskCount}
                 completedCount={unit.completedCount}
                 isChapterLevel={unit.isChapterLevel}
+                unitPct={unit.unitPct}
               />
             ))}
           </div>

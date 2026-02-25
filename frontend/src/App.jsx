@@ -15,6 +15,7 @@ import Roadmap from "./pages/Roadmap";
 import ChapterQuiz from "./pages/ChapterQuiz";
 import TaskPage from "./pages/TaskPage";
 import Profile from "./pages/Profile";
+import Events from "./pages/Events";
 
 function App() {
   // Setup global error handler on app mount
@@ -74,6 +75,14 @@ function App() {
                   <OnboardingGate>
                     <TaskPage />
                   </OnboardingGate>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/events"
+              element={
+                <ProtectedRoute>
+                  <Events />
                 </ProtectedRoute>
               }
             />

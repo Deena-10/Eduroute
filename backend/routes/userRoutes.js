@@ -13,5 +13,8 @@ router.get("/onboarding-preferences", userController.getOnboardingPreferences);
 router.delete("/roadmap", userController.resetRoadmap);
 router.post("/roadmap/complete-task", userController.completeTask);
 router.get("/streak", userController.getStreak);
+router.post("/push-subscription", userController.savePushSubscription);
+router.get("/notifications", userController.getNotifications);
+router.put("/notifications/:id/read", userController.markNotificationRead);
 
 module.exports = router;

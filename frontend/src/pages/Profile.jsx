@@ -11,14 +11,17 @@ const Profile = () => {
   const [streak, setStreak] = useState({ current_streak: 0, last_activity_date: null });
   const [currentRoadmap, setCurrentRoadmap] = useState(null);
 
+  const [streakSnapshots, setStreakSnapshots] = useState([]);
+
   useEffect(() => {
     const fetchStreak = async () => {
       try {
         const res = await axiosInstance.get('/user/streak');
-        if (res.data.success) {
+        const d = res.data?.data ?? res.data;
+        if (res.data?.success) {
           setStreak({
-            current_streak: res.data.current_streak ?? 0,
-            last_activity_date: res.data.last_activity_date ?? null,
+            current_streak: d.current_streak ?? 0,
+            last_activity_date: d.last_activity_date ?? null,
           });
         }
       } catch (e) {
@@ -29,11 +32,27 @@ const Profile = () => {
   }, []);
 
   useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await axiosInstance.get('/user/profile');
+        const p = res.data?.data ?? res.data;
+        if (p?.streak_snapshots) {
+          setStreakSnapshots(Array.isArray(p.streak_snapshots) ? p.streak_snapshots : []);
+        }
+      } catch (e) {
+        console.error('Fetch profile error:', e);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  useEffect(() => {
     const fetchRoadmap = async () => {
       try {
         const res = await axiosInstance.get('/user/roadmap');
-        if (res.data.success && res.data.roadmap) {
-          setCurrentRoadmap(res.data.roadmap);
+        const r = res.data?.data ?? res.data?.roadmap;
+        if (res.data?.success && r) {
+          setCurrentRoadmap(r);
         } else {
           setCurrentRoadmap(null);
         }
@@ -136,11 +155,11 @@ const Profile = () => {
               You learn one domain at a time. To start another domain, add it here. Your current roadmap stays until you reset it.
             </p>
             {currentRoadmap && (() => {
-              let content = currentRoadmap.roadmap_content;
+              let content = currentRoadmap.roadmap_content ?? currentRoadmap.roadmap;
               if (typeof content === 'string') {
                 content = safeJsonParse(content, null, 'Profile-roadmap_content');
               }
-              const domainName = content?.domain || 'Your current domain';
+              const domainName = content?.roadmap?.domain || content?.domain || 'Your current domain';
               return (
                 <div className="mb-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
                   <p className="text-sm text-gray-600 mb-1">Current active roadmap</p>
@@ -248,6 +267,18 @@ const Profile = () => {
                       <span className="text-gray-600">Current Streak</span>
                       <span className="font-bold" style={{ color: '#000000' }}>{userData.currentStreak} days</span>
                     </div>
+                    {streakSnapshots.length > 0 && (
+                      <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                        <h4 className="text-sm font-semibold text-amber-800 mb-2">Streak history</h4>
+                        <div className="flex gap-1 flex-wrap">
+                          {streakSnapshots.slice(0, 7).map((s, i) => (
+                            <span key={i} className="px-2 py-0.5 bg-white rounded text-xs">
+                              {s.date}: {s.streak}d
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">Completion Rate</span>
                       <span className="font-bold" style={{ color: '#000000' }}>{Math.round((userData.lessonsCompleted / userData.totalLessons) * 100)}%</span>

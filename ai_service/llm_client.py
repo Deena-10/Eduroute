@@ -296,7 +296,7 @@ Levels for these chapters: {levels_desc}.
 For EACH chapter, provide:
 1. A unique, specific title (e.g. "Variables and Data Types in {domain}", "Functions and Modularity in {domain}") - NOT generic like "Getting started".
 2. Four concrete learning tasks (task_name only, short).
-3. Exactly 4 or 5 UNIQUE multiple-choice questions (MCQs) that test understanding of THAT chapter's content. Each question must be DIFFERENT from other chapters - no repeated question patterns. Focus on {domain}-specific concepts.
+3. Exactly 4 or 5 UNIQUE multiple-choice questions (MCQs) - NO MORE THAN 5 per chapter. Each question must be DIFFERENT from other chapters. Focus on {domain}-specific concepts.
 
 Output ONLY valid JSON in this exact format (no markdown, no extra text):
 {{

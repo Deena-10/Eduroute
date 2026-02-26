@@ -21,15 +21,17 @@ function normalizeRoadmapUnits(payload, domain) {
         }
         result.push(unitCopy);
     }
-    if (overflow.length > 0) {
+    while (overflow.length > 0) {
         const last = result[result.length - 1];
         const newUnitNum = (last?.unit_number ?? result.length) + 1;
+        const take = Math.min(MAX_MCQS_PER_CHAPTER, overflow.length);
+        const mcqsForUnit = overflow.splice(0, take);
         result.push({
             unit_number: newUnitNum,
             title: `${domainKey} — Chapter ${newUnitNum}`,
             level: "intermediate",
             tasks: [{ task_id: `u${newUnitNum}_t1`, task_name: "Task 1" }, { task_id: `u${newUnitNum}_t2`, task_name: "Task 2" }, { task_id: `u${newUnitNum}_t3`, task_name: "Task 3" }, { task_id: `u${newUnitNum}_t4`, task_name: "Task 4" }],
-            mcqs: overflow,
+            mcqs: mcqsForUnit,
         });
     }
     const base = payload.roadmap || payload;
@@ -140,7 +142,10 @@ exports.getRoadmap = async (req, res, next) => {
                 content = typeof content === "string" ? JSON.parse(content) : content;
                 row.roadmap_content = normalizeRoadmapUnits(content, row.domain);
             }
-            // If domain_roadmaps missing (edge case), keep stored roadmap_content
+        }
+        if (!row.domain && row.roadmap_content) {
+            let content = typeof row.roadmap_content === "string" ? JSON.parse(row.roadmap_content) : row.roadmap_content;
+            row.roadmap_content = normalizeRoadmapUnits(content, content?.roadmap?.domain || "General");
         }
         res.success(row, "Roadmap fetched successfully");
     } catch (error) {

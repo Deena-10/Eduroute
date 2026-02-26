@@ -58,14 +58,35 @@ const ChapterQuiz = () => {
       });
   };
 
+  const advanceQuestion = () => {
+    setFeedback(null);
+    setSelectedOption(null);
+    setSubmitting(false);
+    if (phase === 'main') {
+      if (mainIndex + 1 >= totalMain) {
+        if (replayQueue.length > 0) {
+          setPhase('replay');
+          setReplayIndex(0);
+        } else {
+          completeChapter();
+        }
+      } else {
+        setMainIndex(i => i + 1);
+      }
+    } else {
+      if (replayIndex + 1 >= replayQueue.length) completeChapter();
+      else setReplayIndex(i => i + 1);
+    }
+  };
+
   const handleSubmit = () => {
     if (submitting || selectedOption === null || !currentMcq) return;
     const correct = currentMcq.correctIndex === selectedOption;
     setSubmitting(true);
     setFeedback(correct ? 'correct' : 'incorrect');
 
-    if (phase === 'main') {
-      if (correct) {
+    if (correct) {
+      if (phase === 'main') {
         if (mainIndex + 1 >= totalMain) {
           if (replayQueue.length > 0) {
             setPhase('replay');
@@ -77,26 +98,15 @@ const ChapterQuiz = () => {
           setMainIndex(i => i + 1);
         }
       } else {
-        setReplayQueue(q => [...q, currentMcq]);
-        if (mainIndex + 1 >= totalMain) {
-          setPhase('replay');
-          setReplayIndex(0);
-        } else {
-          setMainIndex(i => i + 1);
-        }
-      }
-    } else {
-      if (correct) {
         if (replayIndex + 1 >= replayQueue.length) completeChapter();
         else setReplayIndex(i => i + 1);
-      } else {
-        setReplayQueue(q => [...q, currentMcq]);
-        setReplayIndex(i => i + 1);
       }
+      setFeedback(null);
+      setSelectedOption(null);
+      setSubmitting(false);
+    } else {
+      setReplayQueue(q => [...q, currentMcq]);
     }
-    setSelectedOption(null);
-    setFeedback(null);
-    setSubmitting(false);
   };
 
   if (loading) {
@@ -187,7 +197,20 @@ const ChapterQuiz = () => {
             Submit
           </button>
           {feedback === 'incorrect' && (
-            <p className="mt-4 text-red-400 text-sm font-medium">Incorrect. This question will appear again at the end.</p>
+            <div className="mt-4 p-3 rounded-xl bg-red-900/30 border border-red-500/50">
+              <p className="text-red-400 text-sm font-medium mb-1">Incorrect. This question will appear again at the end.</p>
+              <p className="text-green-400 text-sm mb-3">
+                <span className="text-gray-400">Correct answer:</span>{' '}
+                {(currentMcq.options || [])[currentMcq.correctIndex ?? 0]}
+              </p>
+              <button
+                type="button"
+                onClick={advanceQuestion}
+                className="w-full py-2 rounded-xl font-semibold bg-amber-500/80 text-gray-900 hover:bg-amber-400"
+              >
+                Continue
+              </button>
+            </div>
           )}
         </div>
       </div>

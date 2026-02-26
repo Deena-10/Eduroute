@@ -67,16 +67,17 @@ function normalizeRoadmapUnits(roadmapPayload, domain) {
         result.push(unitCopy);
     }
 
-    if (overflow.length > 0) {
+    while (overflow.length > 0) {
         const last = result[result.length - 1];
         const newUnitNum = (last?.unit_number ?? result.length) + 1;
-        const colors = ["#3B82F6", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#06B6D4"];
+        const take = Math.min(MAX_MCQS_PER_CHAPTER, overflow.length);
+        const mcqsForUnit = overflow.splice(0, take);
         result.push({
             unit_number: newUnitNum,
             title: `${domainKey} — Chapter ${newUnitNum}`,
             level: "intermediate",
             tasks: [{ task_id: `u${newUnitNum}_t1`, task_name: "Task 1" }, { task_id: `u${newUnitNum}_t2`, task_name: "Task 2" }, { task_id: `u${newUnitNum}_t3`, task_name: "Task 3" }, { task_id: `u${newUnitNum}_t4`, task_name: "Task 4" }],
-            mcqs: overflow,
+            mcqs: mcqsForUnit,
         });
     }
 

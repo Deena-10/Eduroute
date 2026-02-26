@@ -79,15 +79,18 @@ def normalize_units_mcqs(units, domain="General"):
             overflow = unit_copy["mcqs"][MAX_MCQS_PER_CHAPTER:]
             unit_copy["mcqs"] = unit_copy["mcqs"][:MAX_MCQS_PER_CHAPTER]
         result.append(unit_copy)
-    if overflow:
+    while overflow:
         last = result[-1] if result else {}
         n = (last.get("unit_number") or 0) + 1
+        take = min(MAX_MCQS_PER_CHAPTER, len(overflow))
+        mcqs_for_unit = overflow[:take]
+        overflow = overflow[take:]
         result.append({
             "unit_number": n,
             "title": _fallback_title(n, domain),
             "level": _get_level(n),
             "tasks": [{"task_id": f"u{n}_t{j}", "task_name": f"Task {j}"} for j in range(1, 5)],
-            "mcqs": overflow,
+            "mcqs": mcqs_for_unit,
         })
     return result
 

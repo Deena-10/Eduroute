@@ -40,7 +40,7 @@ const ChapterQuiz = () => {
     fetchRoadmap();
   }, [unitNumber]);
 
-  const mainQuestions = unit?.mcqs || [];
+  const mainQuestions = (unit?.mcqs || []).slice(0, 5);
   const currentMcq = phase === 'main' ? mainQuestions[mainIndex] || null : replayQueue[replayIndex] || null;
   const totalMain = mainQuestions.length;
   const progressLabel = phase === 'replay' ? `Review ${replayIndex + 1} of ${replayQueue.length}` : `Question ${mainIndex + 1} of ${totalMain}`;
@@ -163,7 +163,7 @@ const ChapterQuiz = () => {
         </div>
         <div className="bg-gray-800 rounded-2xl border border-gray-600 p-6 md:p-8 shadow-xl">
           <h1 className="text-lg font-bold text-white mb-1">{unit.title}</h1>
-          <p className="text-xs text-gray-500 mb-6">{unit.level || ''} · 5 questions</p>
+          <p className="text-xs text-gray-500 mb-6">{unit.level || ''} · {mainQuestions.length} questions</p>
           <p className="text-base font-medium text-gray-100 mb-6 leading-relaxed">{currentMcq.question}</p>
           <div className="space-y-3 mb-6">
             {(currentMcq.options || []).map((option, idx) => (

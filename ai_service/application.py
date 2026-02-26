@@ -69,6 +69,42 @@ def deterministic_shuffle(items, seed_str):
 
 # Strict: 4-5 questions per chapter. Use 5 unique questions per unit.
 MCQS_PER_CHAPTER = 5
+MAX_MCQS_PER_CHAPTER = 5
+
+
+def normalize_units_mcqs(units, domain="General"):
+    """
+    Ensure each unit has at most MAX_MCQS_PER_CHAPTER (5) MCQs.
+    Excess questions are moved to the next unit. Creates new unit if needed for last unit's excess.
+    """
+    if not units:
+        return units
+    result = []
+    overflow = []
+    for u in units:
+        mcqs = list(u.get("mcqs") or [])
+        unit_copy = {**u, "mcqs": mcqs}
+        # Prepend any overflow from previous unit
+        if overflow:
+            unit_copy["mcqs"] = overflow + unit_copy["mcqs"]
+            overflow = []
+        # If this unit has >5, keep first 5, move rest to overflow
+        if len(unit_copy["mcqs"]) > MAX_MCQS_PER_CHAPTER:
+            overflow = unit_copy["mcqs"][MAX_MCQS_PER_CHAPTER:]
+            unit_copy["mcqs"] = unit_copy["mcqs"][:MAX_MCQS_PER_CHAPTER]
+        result.append(unit_copy)
+    # If overflow remains, create a new unit for it
+    if overflow:
+        last = result[-1] if result else {}
+        new_unit_num = (last.get("unit_number") or 0) + 1
+        result.append({
+            "unit_number": new_unit_num,
+            "title": get_unique_chapter_title(new_unit_num, domain),
+            "level": get_level_for_unit(new_unit_num),
+            "tasks": [{"task_id": f"u{new_unit_num}_t{j}", "task_name": f"Task {j}"} for j in range(1, 5)],
+            "mcqs": overflow,
+        })
+    return result
 
 
 def generate_mcqs(unit_number, unit_title, domain, level):
@@ -166,9 +202,10 @@ def build_node_config(start_unit, count):
     return config
 
 def build_roadmap_payload(domain, start_unit=1, count=3):
-    """Build roadmap payload. Each unit has 4-5 unique MCQs."""
+    """Build roadmap payload. Each unit has 4-5 unique MCQs. Normalized to max 5 per unit."""
     units = [build_unit(i, domain) for i in range(start_unit, start_unit + count)]
-    node_config = build_node_config(start_unit, count)
+    units = normalize_units_mcqs(units, domain)
+    node_config = build_node_config(start_unit, len(units))
     return {
         "roadmap": {"domain": domain, "units": units},
         "ui_metadata": {"node_config": node_config},
@@ -205,9 +242,10 @@ def generate_next_chapter():
     if last_unit_number < 1:
         last_unit_number = 0
 
-    # Strict: next 2 chapters only
+    # Strict: next 2 chapters only; normalize to max 5 MCQs per unit
     new_units = [build_unit(last_unit_number + i, domain) for i in range(1, 3)]
-    node_config = build_node_config(last_unit_number + 1, 2)
+    new_units = normalize_units_mcqs(new_units, domain)
+    node_config = build_node_config(last_unit_number + 1, len(new_units))
 
     return jsonify({"units": new_units, "ui_metadata": {"node_config": node_config}}), 200
 

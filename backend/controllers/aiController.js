@@ -43,6 +43,57 @@ exports.chat = async (req, res, next) => {
 };
 
 /* =========================================
+   NORMALIZE: Max 4-5 MCQs per chapter; move excess to next chapter
+========================================= */
+const MAX_MCQS_PER_CHAPTER = 5;
+
+function normalizeRoadmapUnits(roadmapPayload, domain) {
+    const units = roadmapPayload?.roadmap?.units || roadmapPayload?.units || [];
+    if (units.length === 0) return roadmapPayload;
+
+    const domainKey = domain || roadmapPayload?.roadmap?.domain || "General";
+    const result = [];
+    let overflow = [];
+
+    for (const u of units) {
+        const mcqs = Array.isArray(u.mcqs) ? [...u.mcqs] : [];
+        const unitCopy = { ...u, mcqs: overflow.length ? [...overflow, ...mcqs] : mcqs };
+        overflow = [];
+
+        if (unitCopy.mcqs.length > MAX_MCQS_PER_CHAPTER) {
+            overflow = unitCopy.mcqs.slice(MAX_MCQS_PER_CHAPTER);
+            unitCopy.mcqs = unitCopy.mcqs.slice(0, MAX_MCQS_PER_CHAPTER);
+        }
+        result.push(unitCopy);
+    }
+
+    if (overflow.length > 0) {
+        const last = result[result.length - 1];
+        const newUnitNum = (last?.unit_number ?? result.length) + 1;
+        const colors = ["#3B82F6", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#06B6D4"];
+        result.push({
+            unit_number: newUnitNum,
+            title: `${domainKey} — Chapter ${newUnitNum}`,
+            level: "intermediate",
+            tasks: [{ task_id: `u${newUnitNum}_t1`, task_name: "Task 1" }, { task_id: `u${newUnitNum}_t2`, task_name: "Task 2" }, { task_id: `u${newUnitNum}_t3`, task_name: "Task 3" }, { task_id: `u${newUnitNum}_t4`, task_name: "Task 4" }],
+            mcqs: overflow,
+        });
+    }
+
+    const base = roadmapPayload.roadmap || roadmapPayload;
+    const nodeConfig = (roadmapPayload.ui_metadata?.node_config || []).slice(0, result.length);
+    for (let i = nodeConfig.length; i < result.length; i++) {
+        nodeConfig.push({ unit: result[i].unit_number, offset: i % 2 ? "right" : "left", color: ["#3B82F6", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899"][i % 5] });
+    }
+
+    return {
+        ...roadmapPayload,
+        roadmap: { ...base, units: result },
+        ui_metadata: { ...(roadmapPayload.ui_metadata || {}), node_config: nodeConfig },
+    };
+}
+
+/* =========================================
    FALLBACK: Generate roadmap when AI service is down
 ========================================= */
 function buildFallbackRoadmap(domain) {
@@ -106,6 +157,7 @@ exports.generateRoadmap = async (req, res) => {
         if (useCache) {
             const content = domainResult.rows[0].roadmap_content;
             roadmapPayload = typeof content === "string" ? JSON.parse(content) : content;
+            roadmapPayload = normalizeRoadmapUnits(roadmapPayload, domainKey);
         } else {
             // 2. Generate via AI (or fallback if AI down)
             try {
@@ -123,6 +175,7 @@ exports.generateRoadmap = async (req, res) => {
                 console.warn("AI service unavailable, using fallback roadmap:", aiErr.message);
                 roadmapPayload = buildFallbackRoadmap(domainKey);
             }
+            roadmapPayload = normalizeRoadmapUnits(roadmapPayload, domainKey);
 
             // 3. Store in domain_roadmaps (upsert: insert new or update existing)
             await pool.query(

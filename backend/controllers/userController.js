@@ -2,6 +2,44 @@
 const pool = require("../config/postgres");
 const aiService = require("../services/aiService");
 
+const MAX_MCQS_PER_CHAPTER = 5;
+
+// Normalize: max 5 MCQs per unit; move excess to next chapter
+function normalizeRoadmapUnits(payload, domain) {
+    const units = payload?.roadmap?.units || payload?.units || [];
+    if (units.length === 0) return payload;
+    const domainKey = domain || payload?.roadmap?.domain || "General";
+    const result = [];
+    let overflow = [];
+    for (const u of units) {
+        const mcqs = Array.isArray(u.mcqs) ? [...u.mcqs] : [];
+        const unitCopy = { ...u, mcqs: overflow.length ? [...overflow, ...mcqs] : mcqs };
+        overflow = [];
+        if (unitCopy.mcqs.length > MAX_MCQS_PER_CHAPTER) {
+            overflow = unitCopy.mcqs.slice(MAX_MCQS_PER_CHAPTER);
+            unitCopy.mcqs = unitCopy.mcqs.slice(0, MAX_MCQS_PER_CHAPTER);
+        }
+        result.push(unitCopy);
+    }
+    if (overflow.length > 0) {
+        const last = result[result.length - 1];
+        const newUnitNum = (last?.unit_number ?? result.length) + 1;
+        result.push({
+            unit_number: newUnitNum,
+            title: `${domainKey} — Chapter ${newUnitNum}`,
+            level: "intermediate",
+            tasks: [{ task_id: `u${newUnitNum}_t1`, task_name: "Task 1" }, { task_id: `u${newUnitNum}_t2`, task_name: "Task 2" }, { task_id: `u${newUnitNum}_t3`, task_name: "Task 3" }, { task_id: `u${newUnitNum}_t4`, task_name: "Task 4" }],
+            mcqs: overflow,
+        });
+    }
+    const base = payload.roadmap || payload;
+    const nodeConfig = (payload.ui_metadata?.node_config || []).slice(0, result.length);
+    for (let i = nodeConfig.length; i < result.length; i++) {
+        nodeConfig.push({ unit: result[i].unit_number, offset: i % 2 ? "right" : "left", color: ["#3B82F6", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899"][i % 5] });
+    }
+    return { ...payload, roadmap: { ...base, units: result }, ui_metadata: { ...(payload.ui_metadata || {}), node_config: nodeConfig } };
+}
+
 // Helper: get completable IDs from roadmap (unit-level "u1","u2" when chapter MCQs, else task-level)
 const getFlatTaskIds = (roadmapContent) => {
     if (!roadmapContent) return [];
@@ -98,8 +136,9 @@ exports.getRoadmap = async (req, res, next) => {
                 [row.domain]
             );
             if (dmResult.rows.length > 0) {
-                const content = dmResult.rows[0].roadmap_content;
-                row.roadmap_content = typeof content === "string" ? JSON.parse(content) : content;
+                let content = dmResult.rows[0].roadmap_content;
+                content = typeof content === "string" ? JSON.parse(content) : content;
+                row.roadmap_content = normalizeRoadmapUnits(content, row.domain);
             }
             // If domain_roadmaps missing (edge case), keep stored roadmap_content
         }
@@ -138,10 +177,13 @@ exports.completeTask = async (req, res, next) => {
         if (roadmap.domain) {
             const dmRes = await pool.query("SELECT roadmap_content FROM domain_roadmaps WHERE domain = $1", [roadmap.domain]);
             if (dmRes.rows.length > 0) {
-                content = dmRes.rows[0].roadmap_content;
+                let raw = dmRes.rows[0].roadmap_content;
+                raw = typeof raw === "string" ? JSON.parse(raw) : raw;
+                content = normalizeRoadmapUnits(raw, roadmap.domain);
             }
         }
-        content = typeof content === "string" ? JSON.parse(content) : content;
+        if (typeof content === "string") content = JSON.parse(content);
+        content = normalizeRoadmapUnits(content, roadmap.domain || content?.roadmap?.domain);
         const allTaskIds = getFlatTaskIds(content);
 
         if (!allTaskIds.includes(taskId)) return res.error("Task not found in roadmap", "Task completion failed", 400);
@@ -185,11 +227,12 @@ exports.completeTask = async (req, res, next) => {
                             });
                         }
                     });
-                    const updatedPayload = {
+                    let updatedPayload = {
                         roadmap: { ...base, units: updatedUnits },
                         ui_metadata: { ...(content.ui_metadata || {}), node_config: nodeConfig },
                         gamification: content.gamification || {},
                     };
+                    updatedPayload = normalizeRoadmapUnits(updatedPayload, roadmap.domain);
                     await pool.query(
                         "UPDATE domain_roadmaps SET roadmap_content = $1, updated_at = CURRENT_TIMESTAMP WHERE domain = $2",
                         [JSON.stringify(updatedPayload), roadmap.domain]

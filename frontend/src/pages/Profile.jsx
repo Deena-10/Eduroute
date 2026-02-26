@@ -2,7 +2,7 @@ import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import axiosInstance from '../api/axiosInstance';
-import { safeJsonParse, safeLocalStorageParse, safeLocalStorageSet } from "../utils/safeJsonParser";
+import { safeJsonParse } from "../utils/safeJsonParser";
 
 const Profile = () => {
   const { user } = useContext(AuthContext);
@@ -10,8 +10,9 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [streak, setStreak] = useState({ current_streak: 0, last_activity_date: null });
   const [currentRoadmap, setCurrentRoadmap] = useState(null);
-
+  const [profile, setProfile] = useState(null);
   const [streakSnapshots, setStreakSnapshots] = useState([]);
+  const [dashboard, setDashboard] = useState(null);
 
   useEffect(() => {
     const fetchStreak = async () => {
@@ -36,7 +37,8 @@ const Profile = () => {
       try {
         const res = await axiosInstance.get('/user/profile');
         const p = res.data?.data ?? res.data;
-        if (p?.streak_snapshots) {
+        if (p) {
+          setProfile(p);
           setStreakSnapshots(Array.isArray(p.streak_snapshots) ? p.streak_snapshots : []);
         }
       } catch (e) {
@@ -64,37 +66,65 @@ const Profile = () => {
     fetchRoadmap();
   }, []);
 
-  // Mock user data (streak from API above)
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      try {
+        const res = await axiosInstance.get('/user/profile/dashboard');
+        const d = res.data?.data ?? res.data;
+        if (res.data?.success && d) {
+          setDashboard(d);
+          if (d.profile?.streak_snapshots?.length) {
+            setStreakSnapshots(Array.isArray(d.profile.streak_snapshots) ? d.profile.streak_snapshots : []);
+          }
+        }
+      } catch (e) {
+        console.error('Fetch dashboard error:', e);
+      }
+    };
+    fetchDashboard();
+  }, []);
+
+  // Progress from active roadmap only (no roadmap = 0)
+  const lessonsCompleted = currentRoadmap?.completed_tasks?.length ?? 0;
+  const totalLessons = currentRoadmap?.total_task_count ?? 0;
+  const totalHours = Number(currentRoadmap?.completed_hours) ?? 0;
+  const completionRatePct = totalLessons > 0 ? Math.round((lessonsCompleted / totalLessons) * 100) : 0;
+
+  const interestsList = (() => {
+    const raw = profile?.interests ?? user?.interests;
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === 'string') {
+      try { const arr = JSON.parse(raw); return Array.isArray(arr) ? arr : []; } catch { return []; }
+    }
+    return [];
+  })();
+
+  const domainName = (() => {
+    if (currentRoadmap?.domain) return currentRoadmap.domain;
+    const content = currentRoadmap?.roadmap_content ?? currentRoadmap?.roadmap;
+    const c = typeof content === 'string' ? safeJsonParse(content, null, 'Profile-domain') : content;
+    return c?.roadmap?.domain || c?.domain || null;
+  })();
+
+  const ov = dashboard?.overview;
+  const skillsList = dashboard?.skills ?? [];
+  const achievementsList = dashboard?.achievements ?? [];
+  const recentActivityList = dashboard?.recentActivity ?? [];
+
   const userData = {
-    username: user?.name || 'John Doe',
-    email: user?.email || 'john.doe@example.com',
-    interests: ['Software Development', 'Web Development', 'React', 'Node.js'],
-    lessonsCompleted: 24,
-    totalLessons: 50,
-    currentStreak: streak.current_streak,
-    totalHours: 156,
-    skills: [
-      { name: 'JavaScript', level: 85, category: 'Programming' },
-      { name: 'React', level: 72, category: 'Frontend' },
-      { name: 'Node.js', level: 68, category: 'Backend' },
-      { name: 'HTML/CSS', level: 90, category: 'Frontend' },
-      { name: 'Python', level: 45, category: 'Programming' },
-      { name: 'SQL', level: 60, category: 'Database' },
-      { name: 'Git', level: 75, category: 'Tools' },
-      { name: 'Docker', level: 30, category: 'DevOps' }
-    ],
-    achievements: [
-      { title: 'First Lesson', description: 'Completed your first lesson', date: '2024-01-15', icon: '🎯' },
-      { title: 'Week Warrior', description: '7 days learning streak', date: '2024-01-22', icon: '🔥' },
-      { title: 'JavaScript Master', description: 'Completed JavaScript fundamentals', date: '2024-01-28', icon: '⚡' },
-      { title: 'React Explorer', description: 'Built your first React app', date: '2024-02-01', icon: '⚛️' }
-    ],
-    recentActivity: [
-      { action: 'Completed lesson', title: 'React Hooks', time: '2 hours ago' },
-      { action: 'Started lesson', title: 'Node.js Basics', time: '1 day ago' },
-      { action: 'Earned badge', title: 'JavaScript Master', time: '2 days ago' },
-      { action: 'Completed quiz', title: 'HTML Fundamentals', time: '3 days ago' }
-    ]
+    username: dashboard?.profile?.name ?? profile?.name ?? profile?.user_name ?? user?.name ?? 'User',
+    email: dashboard?.profile?.email ?? profile?.email ?? profile?.user_email ?? user?.email ?? '',
+    domain: domainName,
+    interests: dashboard?.profile?.interests ?? interestsList,
+    lessonsCompleted: ov?.lessonsCompleted ?? lessonsCompleted,
+    totalLessons: ov?.totalLessons ?? totalLessons,
+    totalHours: ov?.totalHours ?? totalHours,
+    completionRatePct: ov?.completionRatePct ?? completionRatePct,
+    skillsCount: ov?.skillsCount ?? skillsList.length,
+    quizAccuracy: ov?.quizAccuracy ?? 0,
+    skills: skillsList,
+    achievements: achievementsList,
+    recentActivity: recentActivityList,
   };
 
   const getSkillCategoryColor = (category) => {
@@ -104,7 +134,10 @@ const Profile = () => {
       'Backend': 'from-purple-500 to-purple-600',
       'Database': 'from-orange-500 to-orange-600',
       'Tools': 'from-red-500 to-red-600',
-      'DevOps': 'from-indigo-500 to-indigo-600'
+      'DevOps': 'from-indigo-500 to-indigo-600',
+      'Learned': 'from-teal-500 to-teal-600',
+      'Learning': 'from-amber-500 to-amber-600',
+      'Domain': 'from-indigo-500 to-indigo-600',
     };
     return colors[category] || 'from-gray-500 to-gray-600';
   };
@@ -129,20 +162,16 @@ const Profile = () => {
               </div>
               <div className="flex-1">
                 <h2 className="text-2xl font-bold mb-1" style={{ color: '#000000' }}>{userData.username}</h2>
-                <p className="text-gray-600 mb-2">{userData.email}</p>
+                <p className="text-gray-600 mb-1">{userData.email}</p>
+                {userData.domain && (
+                  <p className="text-sm text-blue-600 mb-2 font-medium">Domain: {userData.domain}</p>
+                )}
                 <div className="flex flex-wrap gap-2">
                   {userData.interests.map((interest, index) => (
                     <span key={index} className="px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-full">
                       {interest}
                     </span>
                   ))}
-                </div>
-              </div>
-              <div className="text-right flex items-center gap-2">
-                <span className="text-2xl">🔥</span>
-                <div>
-                  <div className="text-2xl font-bold text-amber-600">{userData.currentStreak}</div>
-                  <div className="text-sm text-gray-600">Day Streak</div>
                 </div>
               </div>
             </div>
@@ -174,15 +203,35 @@ const Profile = () => {
                 </div>
               );
             })()}
-            <button
-              type="button"
-              onClick={() => navigate('/questionnaire')}
-              className="px-4 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors"
-            >
-              Add new domain
-            </button>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => navigate('/questionnaire')}
+                className="px-4 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors"
+              >
+                Add new domain
+              </button>
+              {currentRoadmap && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!window.confirm('Reset your progress and generate a new journey?')) return;
+                    try {
+                      await axiosInstance.delete('/user/roadmap');
+                      setCurrentRoadmap(null);
+                      navigate('/questionnaire', { replace: true });
+                    } catch (e) {
+                      console.error('Reset error:', e);
+                    }
+                  }}
+                  className="px-4 py-3 bg-white text-red-600 border border-red-200 rounded-xl font-medium hover:bg-red-50 transition-colors"
+                >
+                  Reset journey
+                </button>
+              )}
+            </div>
             <p className="text-xs text-gray-500 mt-2">
-              Creating a new roadmap will replace your current one unless you reset from the roadmap page first.
+              Reset journey clears your current roadmap and progress. Add new domain creates a fresh roadmap.
             </p>
           </div>
 
@@ -244,7 +293,7 @@ const Profile = () => {
                       <div className="mt-2 bg-gray-200 rounded-full h-2">
                         <div 
                           className="bg-blue-600 h-2 rounded-full" 
-                          style={{ width: `${(userData.lessonsCompleted / userData.totalLessons) * 100}%` }}
+                          style={{ width: `${userData.completionRatePct}%` }}
                         ></div>
                       </div>
                     </div>
@@ -253,7 +302,7 @@ const Profile = () => {
                       <div className="text-sm text-gray-600">Hours Learned</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-3xl font-bold text-purple-600 mb-2">{userData.skills.length}</div>
+                      <div className="text-3xl font-bold text-purple-600 mb-2">{userData.skillsCount}</div>
                       <div className="text-sm text-gray-600">Skills Tracked</div>
                     </div>
                   </div>
@@ -265,8 +314,11 @@ const Profile = () => {
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">Current Streak</span>
-                      <span className="font-bold" style={{ color: '#000000' }}>{userData.currentStreak} days</span>
+                      <span className="font-bold" style={{ color: '#000000' }}>{streak.current_streak} days</span>
                     </div>
+                    {streak.current_streak === 0 && (
+                      <p className="text-xs text-gray-500">Complete a task today to start your streak.</p>
+                    )}
                     {streakSnapshots.length > 0 && (
                       <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
                         <h4 className="text-sm font-semibold text-amber-800 mb-2">Streak history</h4>
@@ -281,15 +333,15 @@ const Profile = () => {
                     )}
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">Completion Rate</span>
-                      <span className="font-bold" style={{ color: '#000000' }}>{Math.round((userData.lessonsCompleted / userData.totalLessons) * 100)}%</span>
+                      <span className="font-bold" style={{ color: '#000000' }}>{userData.completionRatePct}%</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Avg. Daily Hours</span>
-                      <span className="font-bold" style={{ color: '#000000' }}>2.3 hrs</span>
+                      <span className="text-gray-600">Quiz Accuracy</span>
+                      <span className="font-bold" style={{ color: '#000000' }}>{userData.quizAccuracy}%</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">Skills Mastered</span>
-                      <span className="font-bold" style={{ color: '#000000' }}>3</span>
+                      <span className="font-bold" style={{ color: '#000000' }}>{userData.skills.filter(s => s.level >= 80).length}</span>
                     </div>
                   </div>
                 </div>
@@ -301,6 +353,9 @@ const Profile = () => {
                 {/* Skills Grid */}
                 <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-gray-300 shadow-lg">
                   <h3 className="text-xl font-bold mb-6" style={{ color: '#000000' }}>Skills Analytics</h3>
+                  {userData.skills.length === 0 ? (
+                    <p className="text-gray-500">Complete the questionnaire and your roadmap to see skills tracked from your profile and domain.</p>
+                  ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {userData.skills.map((skill, index) => (
                       <div key={index} className="border border-gray-200 rounded-lg p-4">
@@ -323,6 +378,7 @@ const Profile = () => {
                       </div>
                     ))}
                   </div>
+                  )}
                 </div>
 
                 {/* Skills Summary */}
@@ -331,19 +387,19 @@ const Profile = () => {
                   <div className="space-y-4">
                     <div className="text-center p-4 bg-blue-50 rounded-lg">
                       <div className="text-2xl font-bold text-blue-600 mb-1">
-                        {userData.skills.filter(s => s.level >= 80).length}
+                        {userData.skills.filter(s => (s.level || 0) >= 80).length}
                       </div>
                       <div className="text-sm text-gray-600">Mastered Skills</div>
                     </div>
                     <div className="text-center p-4 bg-green-50 rounded-lg">
                       <div className="text-2xl font-bold text-green-600 mb-1">
-                        {userData.skills.filter(s => s.level >= 60 && s.level < 80).length}
+                        {userData.skills.filter(s => (s.level || 0) >= 60 && (s.level || 0) < 80).length}
                       </div>
                       <div className="text-sm text-gray-600">Advanced Skills</div>
                     </div>
                     <div className="text-center p-4 bg-yellow-50 rounded-lg">
                       <div className="text-2xl font-bold text-yellow-600 mb-1">
-                        {userData.skills.filter(s => s.level < 60).length}
+                        {userData.skills.filter(s => (s.level || 0) < 60).length}
                       </div>
                       <div className="text-sm text-gray-600">Learning Skills</div>
                     </div>
@@ -355,30 +411,36 @@ const Profile = () => {
             {activeTab === 'achievements' && (
               <div className="lg:col-span-3 bg-white rounded-2xl p-6 border border-gray-300 shadow-lg">
                 <h3 className="text-xl font-bold mb-6" style={{ color: '#000000' }}>Achievements</h3>
+                {userData.achievements.length === 0 ? (
+                  <p className="text-gray-500">Complete tasks to earn achievements. First task, 50% roadmap, and full roadmap completion unlock badges.</p>
+                ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   {userData.achievements.map((achievement, index) => (
                     <div key={index} className="text-center p-6 border border-gray-200 rounded-lg hover:border-blue-300 transition-colors duration-200">
-                      <div className="text-4xl mb-3">{achievement.icon}</div>
-                      <h4 className="font-bold mb-2" style={{ color: '#000000' }}>{achievement.title}</h4>
-                      <p className="text-sm text-gray-600 mb-2">{achievement.description}</p>
-                      <p className="text-xs text-gray-500">{achievement.date}</p>
+                      <div className="text-4xl mb-3">{achievement.icon || '🏅'}</div>
+                      <h4 className="font-bold mb-2" style={{ color: '#000000' }}>{achievement.title || achievement.achievement_type}</h4>
+                      <p className="text-sm text-gray-600 mb-2">{achievement.desc}</p>
+                      <p className="text-xs text-gray-500">{achievement.achieved_at ? new Date(achievement.achieved_at).toLocaleDateString() : ''}</p>
                     </div>
                   ))}
                 </div>
+                )}
               </div>
             )}
 
             {activeTab === 'activity' && (
               <div className="lg:col-span-3 bg-white rounded-2xl p-6 border border-gray-300 shadow-lg">
                 <h3 className="text-xl font-bold mb-6" style={{ color: '#000000' }}>Recent Activity</h3>
+                {userData.recentActivity.length === 0 ? (
+                  <p className="text-gray-500">Complete tasks and earn achievements to see your activity here.</p>
+                ) : (
                 <div className="space-y-4">
                   {userData.recentActivity.map((activity, index) => (
                     <div key={index} className="flex items-center space-x-4 p-4 border border-gray-200 rounded-lg">
                       <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                         <span className="text-blue-600 text-lg">
-                          {activity.action.includes('Completed') ? '✅' : 
-                           activity.action.includes('Started') ? '🚀' : 
-                           activity.action.includes('Earned') ? '🏆' : '📝'}
+                          {activity.action?.includes('Completed') ? '✅' :
+                           activity.action?.includes('Earned') ? '🏆' : '📝'}
                         </span>
                       </div>
                       <div className="flex-1">
@@ -389,6 +451,7 @@ const Profile = () => {
                     </div>
                   ))}
                 </div>
+                )}
               </div>
             )}
           </div>

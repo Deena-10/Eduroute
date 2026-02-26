@@ -155,7 +155,7 @@ def generate_roadmap():
 
     # Try AI first
     from llm_client import generate_roadmap_via_ai
-    ai_result = generate_roadmap_via_ai(domain, proficiency, goal, status, start_unit=1, count=3)
+    ai_result = generate_roadmap_via_ai(domain, proficiency, goal, status, start_unit=1, count=8)
 
     if ai_result and ai_result.get("units"):
         payload = _build_payload_from_ai(ai_result, domain)
@@ -164,7 +164,7 @@ def generate_roadmap():
 
     # Fallback: template-based (no API keys or all APIs failed)
     print(f"[AI] Fallback: using templates for '{domain}' (add API keys to .env for AI generation)")
-    units = [_fallback_unit(i, domain) for i in range(1, 4)]
+    units = [_fallback_unit(i, domain) for i in range(1, 9)]
     units = normalize_units_mcqs(units, domain)
     colors = ["#3B82F6", "#10B981", "#F59E0B"]
     node_config = [{"unit": u["unit_number"], "offset": "left" if (u["unit_number"] - 1) % 2 == 0 else "right", "color": colors[i]} for i, u in enumerate(units)]

@@ -35,7 +35,8 @@ export const safeJsonParse = (jsonString, fallback = null, context = 'Unknown') 
     '<head',
     'SyntaxError',
     'Unexpected token',
-    'is not valid JSON'
+    'is not valid JSON',
+    'Sign in wi',  // e.g. "Sign in with Google" from auth redirect/HTML
   ];
 
   for (const pattern of invalidPatterns) {
@@ -78,7 +79,8 @@ export const safeLocalStorageParse = (key, fallback = null) => {
       '<!DOCTYPE',
       '<html',
       'SyntaxError',
-      'Unexpected token'
+      'Unexpected token',
+      'Sign in wi',
     ];
 
     for (const pattern of corruptedPatterns) {
@@ -136,7 +138,8 @@ export const clearCorruptedLocalStorage = () => {
         item.includes('<!DOCTYPE') ||
         item.includes('<html') ||
         item.includes('SyntaxError') ||
-        item.includes('Unexpected token')
+        item.includes('Unexpected token') ||
+        item.includes('Sign in wi')
       )) {
         corruptedKeys.push(key);
       }
@@ -155,7 +158,8 @@ export const clearCorruptedLocalStorage = () => {
           item.includes('You need to enable JavaScript') ||
           item.includes('You need t') ||
           item.includes('<!DOCTYPE') ||
-          item.includes('<html')
+          item.includes('<html') ||
+          item.includes('Sign in wi')
         )) {
           corruptedKeys.push(key);
         }
@@ -198,10 +202,11 @@ export const safeResponseParse = async (response, fallback = null) => {
   }
 };
 
-export default {
+const safeJsonParser = {
   safeJsonParse,
   safeLocalStorageParse,
   safeLocalStorageSet,
   clearCorruptedLocalStorage,
   safeResponseParse
 };
+export default safeJsonParser;

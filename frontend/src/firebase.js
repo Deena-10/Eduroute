@@ -1,9 +1,8 @@
-// frontend/src/firebaseConfig.js
+// c:\finalyearproject\career-roadmap-app\frontend\src\firebase.js
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, setPersistence, browserSessionPersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-// Firebase configuration - using environment variables for security
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY || "AIzaSyDxUVPzrdr8ZAC7A9qvG_5REDXWxc2EcX8",
   authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || "upteduroute.firebaseapp.com",
@@ -11,13 +10,16 @@ const firebaseConfig = {
   storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || "upteduroute.firebasestorage.app",
   messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID || "175309370242",
   appId: process.env.REACT_APP_FIREBASE_APP_ID || "1:175309370242:web:3c3e24fe9834029848159b",
-  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID || "G-GRECR0BMY5",
 };
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
-export const googleProvider = new GoogleAuthProvider();
+// FIX: Ensure the user stays logged in within the current tab session
+setPersistence(auth, browserSessionPersistence);
 
-// ✅ Firestore DB
+export const googleProvider = new GoogleAuthProvider();
+// Pre-set parameters to avoid extra re-renders during popup
+googleProvider.setCustomParameters({ prompt: 'select_account' });
+
 export const db = getFirestore(app);

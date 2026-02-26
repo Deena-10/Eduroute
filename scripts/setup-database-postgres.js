@@ -100,11 +100,15 @@ async function setupDatabase() {
         status VARCHAR(20) DEFAULT 'active',
         progress_percentage DECIMAL(5,2) DEFAULT 0.00,
         completed_tasks JSONB DEFAULT '[]'::jsonb,
+        completed_hours DECIMAL(6,2) DEFAULT 0.00,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
     console.log('✅ User Roadmaps table created');
+    await client.query(`
+      ALTER TABLE user_roadmaps ADD COLUMN IF NOT EXISTS completed_hours DECIMAL(6,2) DEFAULT 0.00
+    `).catch(() => {});
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS notifications (
@@ -116,7 +120,56 @@ async function setupDatabase() {
     `);
     console.log('✅ Notifications table created');
 
-    console.log('🎉 PostgreSQL database setup completed!');
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_learning_streak (
+        user_id INT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        current_streak INT NOT NULL DEFAULT 0,
+        last_activity_date DATE,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('✅ User learning streak table created');
+
+    await client.query(`
+      ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS streak_snapshots JSONB DEFAULT '[]'::jsonb
+    `).catch(() => {});
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_scores (
+        user_id INT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        total_correct INT NOT NULL DEFAULT 0,
+        total_questions INT NOT NULL DEFAULT 0,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('User scores table created');
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_achievements (
+        id SERIAL PRIMARY KEY,
+        user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        achievement_type VARCHAR(50) NOT NULL,
+        achieved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `).catch(() => {});
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_user_achievements_unique ON user_achievements(user_id, achievement_type)
+    `).catch(() => {});
+    console.log('User achievements table created');
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_activity_log (
+        id SERIAL PRIMARY KEY,
+        user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        activity_type VARCHAR(50) NOT NULL,
+        title VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `).catch(() => {});
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_user_activity_log_user_id ON user_activity_log(user_id)`).catch(() => {});
+    console.log('User activity log table created');
+
+    console.log('PostgreSQL database setup completed!');
   } catch (error) {
     console.error('❌ Setup error:', error);
   } finally {

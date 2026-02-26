@@ -51,6 +51,8 @@ const TaskPage = () => {
   const [feedback, setFeedback] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [showCompletion, setShowCompletion] = useState(false);
+  const [correctCount, setCorrectCount] = useState(0);
+  const [replayStartSize, setReplayStartSize] = useState(0);
 
   useEffect(() => {
     const fetchRoadmap = async () => {
@@ -92,10 +94,10 @@ const TaskPage = () => {
       ? totalMain ? ((mainIndex + 1) / totalMain) * 100 : 0
       : replayQueue.length ? ((replayIndex + 1) / replayQueue.length) * 100 : 0;
 
-  const completeLevel = () => {
+  const completeLevel = (quizCorrect, quizTotal) => {
     setShowCompletion(true);
     axiosInstance
-      .post('/user/roadmap/complete-task', { taskId })
+      .post('/user/roadmap/complete-task', { taskId, quizCorrect: quizCorrect ?? 0, quizTotal: quizTotal ?? 0 })
       .then(() => {
         setTimeout(() => navigate('/roadmap', { replace: true }), 2000);
       })
@@ -141,17 +143,21 @@ const TaskPage = () => {
       if (phase === 'main') {
         if (mainIndex + 1 >= totalMain) {
           if (replayQueue.length > 0) {
+            setCorrectCount(totalMain - replayQueue.length);
+            setReplayStartSize(replayQueue.length);
             setPhase('replay');
             setReplayIndex(0);
           } else {
-            completeLevel();
+            completeLevel(totalMain, totalMain);
           }
         } else {
+          setCorrectCount((c) => c + 1);
           setMainIndex((i) => i + 1);
         }
       } else {
+        setCorrectCount((c) => c + 1);
         if (replayIndex + 1 >= replayQueue.length) {
-          completeLevel();
+          completeLevel(correctCount + 1, totalMain + replayStartSize);
         } else {
           setReplayIndex((i) => i + 1);
         }
@@ -203,7 +209,7 @@ const TaskPage = () => {
               onClick={() => {
                 setSubmitting(true);
                 axiosInstance
-                  .post('/user/roadmap/complete-task', { taskId })
+                  .post('/user/roadmap/complete-task', { taskId, quizCorrect: 0, quizTotal: 0 })
                   .then(() => navigate('/roadmap', { replace: true }))
                   .catch((e) => {
                     console.error('Complete task error:', e);

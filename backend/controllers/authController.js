@@ -2,7 +2,7 @@
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const pool = require("../config/postgres");
-const admin = require("firebase-admin");
+const admin = require("../config/firebaseAdmin");
 const { v4: uuidv4 } = require("uuid");
 
 // Standard Response Wrapper
@@ -94,16 +94,17 @@ exports.googleSignin = async (req, res, next) => {
         let user;
 
         if (existing.length > 0) {
-            user = existing[0];
-            if (!user.firebase_uid) {
-                await pool.query("UPDATE users SET firebase_uid = $1, profile_picture = $2 WHERE id = $3", [uid, picture, user.id]);
+            const row = existing[0];
+            if (!row.firebase_uid) {
+                await pool.query("UPDATE users SET firebase_uid = $1, profile_picture = $2 WHERE id = $3", [uid, picture, row.id]);
             }
+            user = { id: row.id, name: row.name, email: row.email, profilePicture: row.profile_picture || picture };
         } else {
             const { rows: inserted } = await pool.query(
                 "INSERT INTO users (name, email, firebase_uid, profile_picture) VALUES ($1, $2, $3, $4) RETURNING id",
                 [name || "Google User", email, uid, picture]
             );
-            user = { id: inserted[0].id, name, email };
+            user = { id: inserted[0].id, name: name || "Google User", email, profilePicture: picture };
         }
 
         const jwtToken = createToken(user.id);

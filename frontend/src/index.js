@@ -1,30 +1,36 @@
-// frontend/src/index.js
-// Clear corrupted localStorage before any code can JSON.parse it (e.g. "You need to enable JavaScript...")
+// c:\finalyearproject\career-roadmap-app\frontend\src\index.js
+import "./bootstrap";
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { BrowserRouter as Router } from "react-router-dom";
+import { ThemeProvider, createTheme } from "@mui/material/styles";
+import CssBaseline from "@mui/material/CssBaseline";
+import App from "./App";
+import "./index.css";
+
+// Clear corrupted localStorage before any code can JSON.parse it
 try {
-  ['user', 'token'].forEach((key) => {
+  ["user", "token"].forEach((key) => {
     const v = localStorage.getItem(key);
-    if (typeof v === 'string' && (v.includes('You need') || v.trim().startsWith('<'))) {
+    if (
+      typeof v === "string" &&
+      (v.includes("You need") ||
+        v.includes("Sign in wi") ||
+        v.trim().startsWith("<"))
+    ) {
       localStorage.removeItem(key);
     }
   });
 } catch (_) {}
 
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { BrowserRouter as Router } from 'react-router-dom';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
-import App from './App';
-import './index.css';
-
 // Create a custom theme
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#1976d2',
+      main: "#1976d2",
     },
     secondary: {
-      main: '#dc004e',
+      main: "#dc004e",
     },
   },
   typography: {
@@ -32,25 +38,26 @@ const theme = createTheme({
   },
 });
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
+const root = ReactDOM.createRoot(document.getElementById("root"));
+
+/*
+  🚀 StrictMode removed to prevent Firebase Google Auth
+  getContext undefined error in development mode
+*/
 root.render(
-  <React.StrictMode>
-    {/* The one and only router for the entire app */}
-    <Router>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <App />
-      </ThemeProvider>
-    </Router>
-  </React.StrictMode>
+  <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <App />
+    </ThemeProvider>
+  </Router>
 );
 
-// Register PWA service worker in production only (avoids dev cache issues)
-if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
-  window.addEventListener('load', function () {
-    navigator.serviceWorker.register('/sw.js').then(
+// Register PWA service worker in production only
+if (process.env.NODE_ENV === "production" && "serviceWorker" in navigator) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("/sw.js").then(
       function (reg) {
-        // Optional: check for updates
         reg.update();
       },
       function () {}

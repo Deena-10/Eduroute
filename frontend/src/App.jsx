@@ -1,6 +1,6 @@
 //C:\finalyearproject\career-roadmap-app\frontend\src\App.jsx
 import React, { useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import setupGlobalErrorHandler from "./utils/globalErrorHandler";
 import { clearCorruptedLocalStorage } from "./utils/safeJsonParser";

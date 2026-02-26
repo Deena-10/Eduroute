@@ -11,8 +11,8 @@ axiosInstance.interceptors.request.use(config => {
   let token;
   try {
     token = localStorage.getItem('token');
-    // Never send or trust HTML/noscript stored as token (avoids "You need t"... is not valid JSON)
-    if (token && (token.includes('You need') || token.startsWith('<!') || token.startsWith('<html'))) {
+    // Never send or trust HTML/noscript stored as token (avoids JSON parse errors)
+    if (token && (token.includes('You need') || token.includes('Sign in wi') || token.startsWith('<!') || token.startsWith('<html'))) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       token = null;
@@ -64,7 +64,7 @@ axiosInstance.interceptors.response.use(
       keysToCheck.forEach(key => {
         try {
           const value = localStorage.getItem(key);
-          if (value && value.includes('You need t')) {
+          if (value && (value.includes('You need t') || value.includes('Sign in wi'))) {
             localStorage.removeItem(key);
             console.log(`Removed corrupted key: ${key}`);
           }

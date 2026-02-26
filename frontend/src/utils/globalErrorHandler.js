@@ -19,6 +19,8 @@ export const setupGlobalErrorHandler = () => {
         errorMessage.includes('JSON') ||
         errorMessage.includes('Unexpected token') ||
         errorMessage.includes('You need t') ||
+        errorMessage.includes('"JavaScript"') ||
+        errorMessage.includes('Sign in wi') ||
         errorMessage.includes('is not valid JSON') ||
         errorMessage.includes('SyntaxError')
       ) {
@@ -63,7 +65,9 @@ export const setupGlobalErrorHandler = () => {
       if (error.message && (
         error.message.includes('JSON') ||
         error.message.includes('Unexpected token') ||
-        error.message.includes('You need t')
+        error.message.includes('You need t') ||
+        error.message.includes('Sign in wi') ||
+        error.message.includes('"JavaScript"')
       )) {
         console.warn('🛡️ window.onload JSON error caught:', error.message);
         clearCorruptedLocalStorage();

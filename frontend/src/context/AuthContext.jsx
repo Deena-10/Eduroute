@@ -1,24 +1,8 @@
-import React, { createContext, useState, useEffect } from "react";
-import axios from "axios";
-import { safeJsonParse, safeLocalStorageParse, safeLocalStorageSet, clearCorruptedLocalStorage } from "../utils/safeJsonParser";
-
-// Parse response as JSON safely; avoids parsing HTML error pages (e.g. "You need to enable JavaScript...")
-function safeResponseJson(response) {
-  return response.text().then((text) => {
-    const t = (text || "").trim();
-    if (
-      !t ||
-      t.startsWith("You need") ||
-      t.startsWith("<!") ||
-      t.startsWith("<html")
-    ) {
-      console.warn("Response is not JSON (likely HTML):", t.substring(0, 80));
-      return null;
-    }
-    // Use safeJsonParse with comprehensive error handling
-    return safeJsonParse(t, null, 'safeResponseJson');
-  });
-}
+// c:\finalyearproject\career-roadmap-app\frontend\src\context\AuthContext.jsx
+import React, { createContext, useState, useEffect, useCallback } from "react";
+import axiosInstance from "../api/axiosInstance";
+import { auth, googleProvider } from "../firebase";
+import { signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "firebase/auth";
 
 export const AuthContext = createContext();
 
@@ -26,703 +10,100 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Global error handler for JSON parsing
   useEffect(() => {
-    const handleGlobalError = (event) => {
-      if (
-        event.error &&
-        event.error.message &&
-        (event.error.message.includes("JSON") ||
-          event.error.message.includes("Unexpected token") ||
-          event.error.message.includes("You need t"))
-      ) {
-        console.warn("Global JSON parsing error caught:", event.error.message);
-        // Only clear specific corrupted keys, not everything
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      const storedUser = localStorage.getItem("user");
+      if (firebaseUser && storedUser) {
         try {
-          const corruptedKeys = ["user", "token"];
-          corruptedKeys.forEach((key) => {
-            try {
-              const value = localStorage.getItem(key);
-              if (
-                value &&
-                (value.includes("You need t") ||
-                  value.includes("Unexpected token"))
-              ) {
-                localStorage.removeItem(key);
-                console.log(`Removed corrupted key: ${key}`);
-              }
-            } catch (e) {
-              localStorage.removeItem(key);
-            }
-          });
-        } catch (e) {
-          console.log("Error clearing corrupted storage:", e);
-        }
-        // Don't let JSON parsing errors crash the app
-        event.preventDefault();
-      }
-    };
-
-    const handleUnhandledRejection = (event) => {
-      if (
-        event.reason &&
-        event.reason.message &&
-        (event.reason.message.includes("JSON") ||
-          event.reason.message.includes("Unexpected token"))
-      ) {
-        console.warn("Unhandled JSON parsing error:", event.reason.message);
-        // Only clear specific corrupted keys, not everything
-        try {
-          const corruptedKeys = ["user", "token"];
-          corruptedKeys.forEach((key) => {
-            try {
-              const value = localStorage.getItem(key);
-              if (
-                value &&
-                (value.includes("You need t") ||
-                  value.includes("Unexpected token"))
-              ) {
-                localStorage.removeItem(key);
-                console.log(`Removed corrupted key: ${key}`);
-              }
-            } catch (e) {
-              localStorage.removeItem(key);
-            }
-          });
-        } catch (e) {
-          console.log("Error clearing corrupted storage:", e);
-        }
-        event.preventDefault();
-      }
-    };
-
-    window.addEventListener("error", handleGlobalError);
-    window.addEventListener("unhandledrejection", handleUnhandledRejection);
-
-    return () => {
-      window.removeEventListener("error", handleGlobalError);
-      window.removeEventListener(
-        "unhandledrejection",
-        handleUnhandledRejection
-      );
-    };
-  }, []);
-
-  // Check for existing user on app load
-  useEffect(() => {
-    const loadUser = async () => {
-      try {
-        // Check authentication state
-        // First, clear any corrupted localStorage data
-        try {
-          // Check all localStorage keys for corruption
-          const keysToCheck = ["user", "token", "auth", "firebase"];
-          let hasCorruption = false;
-
-          // Check each key for corruption
-          for (const key of keysToCheck) {
-            try {
-              const value = localStorage.getItem(key);
-              if (value) {
-                // Check for common corruption patterns
-                if (
-                  value.includes("You need to enable JavaScript") ||
-                  value.includes("<!DOCTYPE") ||
-                  value.includes("<html") ||
-                  value.includes("SyntaxError") ||
-                  value.includes("Unexpected token") ||
-                  value.includes("You need t") ||
-                  value.startsWith("<") ||
-                  value.includes("script") ||
-                  value.includes("body") ||
-                  value.includes("head")
-                ) {
-                  console.log(
-                    `Found corrupted data in localStorage key '${key}', clearing all...`
-                  );
-                  hasCorruption = true;
-                  break;
-                }
-
-                // Only validate JSON parse for keys that store JSON objects (not token/JWT)
-                if (key === "user" || key === "auth") {
-                  const trimmed = value.trim();
-                  if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) {
-                    console.log(
-                      `Non-JSON data in localStorage key '${key}', clearing all...`
-                    );
-                    hasCorruption = true;
-                    break;
-                  }
-                  const parsed = safeJsonParse(value, null, `localStorage-${key}`);
-                  if (key === "user" && (!parsed || typeof parsed !== "object")) {
-                    hasCorruption = true;
-                    break;
-                  }
-                }
-              }
-            } catch (e) {
-              console.log(
-                `Error checking localStorage key '${key}', clearing all...`
-              );
-              hasCorruption = true;
-              break;
-            }
-          }
-
-          // Also check all localStorage keys for any corruption
-          try {
-            for (let i = 0; i < localStorage.length; i++) {
-              const key = localStorage.key(i);
-              if (key) {
-                const value = localStorage.getItem(key);
-                if (
-                  value &&
-                  (value.includes("You need to enable JavaScript") ||
-                    value.includes("<!DOCTYPE") ||
-                    value.includes("<html") ||
-                    value.includes("SyntaxError") ||
-                    value.includes("Unexpected token") ||
-                    value.includes("You need t"))
-                ) {
-                  console.log(
-                    `Found corrupted data in localStorage key '${key}', clearing all...`
-                  );
-                  hasCorruption = true;
-                  break;
-                }
-              }
-            }
-          } catch (e) {
-            console.log(
-              "Error checking all localStorage keys, clearing all..."
-            );
-            hasCorruption = true;
-          }
-
-          if (hasCorruption) {
-            localStorage.clear();
-            // Also clear sessionStorage to be safe
-            sessionStorage.clear();
-            console.log(
-              "Cleared all corrupted localStorage and sessionStorage data"
-            );
-          }
-        } catch (e) {
-          console.log("Error checking localStorage, clearing all...");
-          localStorage.clear();
-          sessionStorage.clear();
-        }
-
-        // Check for Google OAuth redirect result first
-        try {
-          const { getRedirectResult } = await import("firebase/auth");
-          const { auth } = await import("../firebase");
-          const redirectResult = await getRedirectResult(auth);
-
-          if (redirectResult) {
-            console.log("Google OAuth redirect result found, processing...");
-            const user = redirectResult.user;
-            const idToken = await user.getIdToken();
-
-            // Send the token to your backend using axios
-            try {
-              const result = await axios.post(
-                "http://localhost:5000/api/auth/google-signin",
-                { token: idToken }
-              );
-
-              const { data } = result;
-              console.log("Backend response data:", data);
-
-              if (data.success) {
-                console.log(
-                  "Google OAuth successful, setting user data:",
-                  data.data?.user
-                );
-
-                // Correctly destructure from data.data
-                const { user: backendUser, token: backendToken } = data.data;
-
-                const userData = {
-                  id: backendUser.id,
-                  uid: backendUser.id.toString(),
-                  email: backendUser.email,
-                  name: backendUser.name,
-                  photoURL: backendUser.profilePicture || null,
-                  token: backendToken,
-                };
-
-                setUser(userData);
-                localStorage.setItem("user", JSON.stringify(userData));
-                localStorage.setItem("token", backendToken);
-                setLoading(false);
-
-                // Redirect to home page after successful login
-                console.log("Redirecting to home page...");
-                setTimeout(() => {
-                  window.location.href = "/";
-                }, 100);
-                return;
-              } else {
-                console.error("Google OAuth backend error:", data.message);
-                setLoading(false);
-              }
-            } catch (backendError) {
-              console.error("Backend request failed:", backendError.response?.data || backendError.message);
-              setLoading(false);
-            }
-
-          }
-        } catch (redirectError) {
-          console.log("No redirect result or error:", redirectError);
-        }
-
-        const storedUser = localStorage.getItem("user");
-        const token = localStorage.getItem("token");
-
-        console.log("Loading user from localStorage:", {
-          storedUser: storedUser ? storedUser.substring(0, 50) + "..." : null,
-          token: token ? "present" : null,
-        });
-
-        // Check for corrupted / non-JSON data (e.g. HTML or noscript text)
-        const looksLikeJson = (s) =>
-          typeof s === "string" &&
-          s.trim().length > 0 &&
-          (s.trim().startsWith("{") || s.trim().startsWith("["));
-        const isCorruptedUserString = (s) =>
-          !s ||
-          !looksLikeJson(s) ||
-          s.includes("You need to enable JavaScript") ||
-          s.includes("You need t") ||
-          s.startsWith("You need ") ||
-          s.includes("<!DOCTYPE") ||
-          s.includes("<html") ||
-          s.trim().startsWith("<");
-        if (storedUser && isCorruptedUserString(storedUser)) {
-          console.log("Found corrupted user data in localStorage, clearing");
-          localStorage.removeItem("user");
-          localStorage.removeItem("token");
-          setUser(null);
-          setLoading(false);
-          return;
-        }
-
-        // If we have a token but no user, try to restore user from token
-        if (
-          token &&
-          (!storedUser || storedUser === "null" || storedUser === "undefined")
-        ) {
-          console.log(
-            "Token exists but no user data, attempting to restore..."
-          );
-          // Try to decode basic user info from token (if it's a JWT)
-          try {
-            const tokenParts = token.split(".");
-            if (tokenParts.length === 3) {
-              console.log("Raw JWT payload before parse (line 347):", tokenParts[1]);
-              const tokenPayload = safeJsonParse(atob(tokenParts[1]), null, 'JWT-payload');
-              if (tokenPayload && tokenPayload.id) {
-                const restoredUser = {
-                  id: tokenPayload.id,
-                  uid: tokenPayload.id.toString(),
-                  email: tokenPayload.email || "user@example.com",
-                  name: tokenPayload.name || "User",
-                  photoURL: null,
-                  token: token,
-                };
-                setUser(restoredUser);
-                localStorage.setItem("user", JSON.stringify(restoredUser));
-                console.log("User restored from token");
-                return;
-              }
-            }
-          } catch (tokenError) {
-            console.log("Could not decode token, proceeding with normal flow");
-          }
-        }
-
-        if (
-          storedUser &&
-          storedUser !== "null" &&
-          storedUser !== "undefined" &&
-          token &&
-          looksLikeJson(storedUser)
-        ) {
-          try {
-            if (
-              storedUser.includes("You need t") ||
-              storedUser.includes("You need to enable")
-            ) {
-              localStorage.removeItem("user");
-              localStorage.removeItem("token");
-              setUser(null);
-              setLoading(false);
-              return;
-            }
-            console.log("Raw value before parse (line 386):", storedUser);
-            const parsedUser = safeJsonParse(storedUser, null, 'localStorage-user');
-            // Validate that the parsed user has required fields
-            if (
-              parsedUser &&
-              typeof parsedUser === "object" &&
-              parsedUser.email
-            ) {
-              console.log("Setting user from localStorage:", parsedUser);
-              setUser(parsedUser);
-              // Ensure token is stored
-              if (parsedUser.token && !localStorage.getItem("token")) {
-                localStorage.setItem("token", parsedUser.token);
-                console.log("Restored token from user object");
-              }
-            } else {
-              console.warn(
-                "Invalid user data structure in localStorage, clearing..."
-              );
-              localStorage.removeItem("user");
-              localStorage.removeItem("token");
-              setUser(null);
-            }
-          } catch (parseError) {
-            console.error(
-              "Error parsing user JSON from localStorage:",
-              parseError
-            );
-            console.log("Raw storedUser value:", storedUser);
-            // Don't clear everything on parse error, try to keep token
-            if (token) {
-              console.log("Keeping token despite user parse error");
-              setUser({
-                id: "temp",
-                uid: "temp",
-                email: "user@example.com",
-                name: "User",
-                photoURL: null,
-                token: token,
-              });
-            } else {
-              localStorage.removeItem("user");
-              localStorage.removeItem("token");
-              setUser(null);
-            }
-          }
-        } else if (
-          token &&
-          (!storedUser || storedUser === "null" || storedUser === "undefined")
-        ) {
-          // We have a token but no user data - create a temporary user
-          console.log("Found token without user data, creating temporary user");
-          setUser({
-            id: "temp",
-            uid: "temp",
-            email: "user@example.com",
-            name: "User",
-            photoURL: null,
-            token: token,
-          });
-        } else if (
-          storedUser &&
-          storedUser !== "null" &&
-          storedUser !== "undefined" &&
-          looksLikeJson(storedUser)
-        ) {
-          // We have user data but no token - try to parse and restore
-          try {
-            if (
-              storedUser.includes("You need t") ||
-              storedUser.includes("You need to enable")
-            ) {
-              localStorage.removeItem("user");
-              setUser(null);
-              setLoading(false);
-              return;
-            }
-            console.log("Raw value before parse (line 462):", storedUser);
-            const parsedUser = safeJsonParse(storedUser, null, 'localStorage-user-restore');
-            if (
-              parsedUser &&
-              typeof parsedUser === "object" &&
-              parsedUser.email &&
-              parsedUser.token
-            ) {
-              console.log(
-                "Found user data without token, restoring token from user object"
-              );
-              setUser(parsedUser);
-              localStorage.setItem("token", parsedUser.token);
-            } else {
-              console.warn("User data exists but no token found, clearing...");
-              localStorage.removeItem("user");
-              setUser(null);
-            }
-          } catch (parseError) {
-            console.error("Error parsing user JSON:", parseError);
-            localStorage.removeItem("user");
-            setUser(null);
-          }
-        } else {
-          // Clear any invalid data
-          console.log("No valid user data in localStorage, clearing...");
-          localStorage.removeItem("user");
-          localStorage.removeItem("token");
+          setUser(JSON.parse(storedUser));
+        } catch (_) {
           setUser(null);
         }
-      } catch (error) {
-        console.error("Error in loadUser:", error);
-        localStorage.removeItem("user");
-        localStorage.removeItem("token");
-        setUser(null);
       }
-    };
-
-    loadUser().finally(() => {
       setLoading(false);
     });
+    return () => unsubscribe();
   }, []);
 
-  // Email login
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      await new Promise((r) => setTimeout(r, 400));
+      if (cancelled) return;
+      try {
+        const result = await getRedirectResult(auth);
+        if (!result) return;
+        const idToken = await result.user.getIdToken();
+        const response = await axiosInstance.post("/auth/google-signin", { token: idToken });
+        if (response.data?.success && response.data?.data) {
+          const { user: backendUser, token } = response.data.data;
+          const userData = {
+            id: backendUser.id,
+            email: backendUser.email,
+            name: backendUser.name,
+            photoURL: backendUser.profilePicture || null,
+            token,
+          };
+          setUser(userData);
+          localStorage.setItem("user", JSON.stringify(userData));
+          localStorage.setItem("token", token);
+          window.location.replace("/");
+        }
+      } catch (err) {
+        console.error("Google redirect result error:", err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const login = async (email, password) => {
     try {
-      const result = await axios.post("http://localhost:5000/api/auth/login", {
-        email,
-        password,
-      });
-
-      const { data } = result; // result.data is the response body
-      if (data.success) {
-        // Correctly destructure user and token from data.data
-        const { user, token } = data.data;
-
+      const { data } = await axiosInstance.post("/auth/login", { email, password });
+      if (data?.success && data?.data) {
+        const { user: backendUser, token } = data.data;
         const userData = {
-          id: user.id,
-          uid: user.id.toString(), // For compatibility
-          email: user.email,
-          name: user.name,
-          photoURL: null,
-          token: token,
+          id: backendUser.id,
+          email: backendUser.email,
+          name: backendUser.name,
+          token,
         };
-
         setUser(userData);
         localStorage.setItem("user", JSON.stringify(userData));
         localStorage.setItem("token", token);
-
-        return { success: true, user: userData };
-      } else {
-        return { success: false, message: data.message || "Login failed" };
+        return { success: true };
       }
-    } catch (error) {
-      console.error("Login error detail:", error.response?.data);
-      return {
-        success: false,
-        message: error.response?.data?.message || "Login failed. Please try again."
-      };
+      return { success: false, message: data?.message || "Login failed" };
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || "Login failed";
+      return { success: false, message: msg };
     }
   };
 
-
-  // Email signup
-  const signup = async (email, password, name) => {
-    try {
-      const result = await axios.post("http://localhost:5000/api/auth/signup", {
-        email,
-        password,
-        name,
-      });
-
-      const { data } = result; // result.data is the response body
-      console.log("Signup API raw response:", data);
-
-      if (data && data.success) {
-        // Support both wrapped (`data.data`) and flat (`data`) response shapes
-        const payload = data.data || data;
-        const user = payload?.user;
-        const token = payload?.token;
-
-        if (!user || !token) {
-          console.error("Signup response missing user or token:", payload);
-          return {
-            success: false,
-            message: "Signup failed: invalid response from server.",
-          };
-        }
-
-        const userData = {
-          id: user.id,
-          uid: user.id.toString(), // For compatibility
-          email: user.email,
-          name: user.name,
-          photoURL: null,
-          token: token,
-        };
-
-        setUser(userData);
-        localStorage.setItem("user", JSON.stringify(userData));
-        localStorage.setItem("token", token);
-
-        return { success: true, user: userData };
-      } else {
-        return {
-          success: false,
-          message:
-            data?.error ||
-            data?.message ||
-            "Signup failed",
-        };
-      }
-    } catch (error) {
-      // Requirements: Add a try/catch block that logs actual error message from error.response.data
-      console.error("Signup error detail:", error.response?.data || error.message);
-      return {
-        success: false,
-        message:
-          error.response?.data?.error ||
-          error.response?.data?.message ||
-          "Signup failed. Please try again.",
-      };
-    }
-  };
-
-
-  // Google login
   const googleSignIn = async () => {
     try {
-      // Import Firebase auth dynamically to avoid SSR issues
-      const { getAuth, signInWithRedirect, GoogleAuthProvider } = await import(
-        "firebase/auth"
-      );
-      const { auth, googleProvider } = await import("../firebase");
-
-      // Start the redirect flow
-      console.log("Starting Google OAuth redirect...");
+      sessionStorage.setItem("googleRedirectInProgress", "1");
       await signInWithRedirect(auth, googleProvider);
       return { success: true, message: "Redirecting to Google..." };
     } catch (error) {
-      console.error("Google login error:", error);
-      if (error.code === "auth/popup-closed-by-user") {
-        return { success: false, message: "Sign in was cancelled" };
-      }
-      return {
-        success: false,
-        message: "Google login failed. Please try again.",
-      };
+      sessionStorage.removeItem("googleRedirectInProgress");
+      console.error("Google sign-in error:", error);
+      return { success: false, message: error.message || "Google sign-in failed" };
     }
   };
 
-  // Logout
   const logout = async () => {
     try {
-      // Import Firebase auth dynamically
-      const { getAuth, signOut } = await import("firebase/auth");
-      const { auth } = await import("../firebase");
-
-      // Sign out from Firebase
       await signOut(auth);
-    } catch (error) {
-      console.log("Firebase logout error (non-critical):", error);
-    }
-
-    // Clear local state
+    } catch (_) {}
     setUser(null);
     localStorage.removeItem("user");
     localStorage.removeItem("token");
   };
 
-  // Check if user is authenticated
-  const isAuthenticated = () => {
-    const hasUser = user !== null;
-    const hasToken = localStorage.getItem("token") !== null;
-    const token = localStorage.getItem("token");
-
-    console.log("Auth check:", {
-      hasUser,
-      hasToken,
-      user: user ? { id: user.id, email: user.email, name: user.name } : null,
-      token: token ? token.substring(0, 20) + "..." : null,
-    });
-
-    // If we have a user but no token, try to get token from user object
-    if (hasUser && !hasToken && user.token) {
-      console.log("Found token in user object, restoring to localStorage");
-      localStorage.setItem("token", user.token);
-      return true;
-    }
-
-    // If we have a token but no user, try to restore user
-    if (!hasUser && hasToken) {
-      console.log("Have token but no user, attempting to restore...");
-      // This will trigger the useEffect to run again
-      setUser({
-        id: "temp",
-        uid: "temp",
-        email: "user@example.com",
-        name: "User",
-        photoURL: null,
-        token: token,
-      });
-      return true;
-    }
-
-    // During loading, assume user is authenticated if we have a token
-    if (loading && hasToken) {
-      return true;
-    }
-
-    // If we're still loading and have a token, give it a chance
-    if (loading) {
-      return hasToken;
-    }
-
-    // If we have a token but no user, still consider authenticated
-    if (hasToken && !hasUser) {
-      return true;
-    }
-
-    return hasUser && hasToken;
-  };
-
-  // Clear corrupted localStorage data
-  const clearCorruptedData = () => {
-    console.log("Clearing corrupted localStorage data...");
-    try {
-      localStorage.clear();
-      sessionStorage.clear();
-      setUser(null);
-      console.log("Successfully cleared all storage data");
-    } catch (error) {
-      console.error("Error clearing storage:", error);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div
-        className="flex justify-center items-center h-screen"
-        style={{ backgroundColor: "#F6F6F6" }}
-      >
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-lg" style={{ color: "#000000" }}>
-            Loading...
-          </p>
-        </div>
-      </div>
-    );
-  }
+  const isAuthenticated = useCallback(() => Boolean(user || localStorage.getItem("token")), [user]);
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        login,
-        signup,
-        googleSignIn,
-        logout,
-        loading,
-        isAuthenticated,
-        clearCorruptedData,
-      }}
-    >
+    <AuthContext.Provider value={{ user, login, googleSignIn, logout, loading, isAuthenticated }}>
       {children}
     </AuthContext.Provider>
   );

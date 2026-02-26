@@ -118,7 +118,7 @@ const Home = () => {
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F6F6F6' }}>
       {/* Quick Login Section for Non-Authenticated Users */}
-      {!isAuthenticated && (
+      {!isAuthenticated() && (
         <section className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white py-8">
           <div className="container mx-auto px-4 text-center">
             <div className="max-w-2xl mx-auto">

@@ -18,10 +18,24 @@ const app = express();
 // ✅ Middleware
 // ==========================
 
-// CORS setup (allow React frontend)
+// CORS: allow both localhost and ngrok (so switching between them works)
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:5173",
+];
+if (process.env.FRONTEND_URL) {
+  const url = process.env.FRONTEND_URL.replace(/\/$/, "");
+  if (!allowedOrigins.includes(url)) allowedOrigins.push(url);
+}
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: (origin, cb) => {
+      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+      if (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:")) return cb(null, true);
+      cb(null, false);
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,

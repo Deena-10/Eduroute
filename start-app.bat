@@ -1,4 +1,3 @@
-#C:\finalyearproject\career-roadmap-app\start-app.bat
 @echo off
 echo Starting Career Roadmap App...
 echo.
@@ -6,7 +5,7 @@ echo.
 start "Backend" cmd /k "cd /d %~dp0backend && npm start"
 timeout /t 2 /nobreak >nul
 
-start "AI Service" cmd /k "cd ai_service && python application.py"
+start "AI Service" cmd /k "cd /d %~dp0ai_service && python application.py"
 timeout /t 2 /nobreak >nul
 
 start "Frontend" cmd /k "cd /d %~dp0frontend && npm start"

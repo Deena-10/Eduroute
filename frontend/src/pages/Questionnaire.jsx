@@ -56,6 +56,7 @@ const Questionnaire = () => {
         proficiency_level: proficiency,
         professional_goal: professionalGoal,
         current_status: currentStatus,
+        forceRegenerate: true,
       });
       if (res.data.success) {
         navigate("/roadmap");

@@ -184,6 +184,7 @@ exports.generateRoadmap = async (req, res) => {
                  ON CONFLICT (domain) DO UPDATE SET roadmap_content = $2, updated_at = CURRENT_TIMESTAMP`,
                 [domainKey, JSON.stringify(roadmapPayload)]
             );
+            console.log(`[DB] Stored roadmap for domain "${domainKey}" in domain_roadmaps`);
         }
 
         // 4. Pause existing active roadmaps for this user
@@ -199,6 +200,7 @@ exports.generateRoadmap = async (req, res) => {
             VALUES ($1, $2, $3, 'active', 0, '[]', CURRENT_TIMESTAMP)`,
             [req.user.id, domainKey, JSON.stringify(roadmapPayload)]
         );
+        console.log(`[DB] Stored user roadmap for user ${req.user.id}, domain "${domainKey}" in user_roadmaps`);
 
         // 6. Persist mandatory one-time inputs
         const uid = String(req.user.id);

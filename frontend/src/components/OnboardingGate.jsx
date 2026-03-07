@@ -31,8 +31,8 @@ const OnboardingGate = ({ children }) => {
 
   if (!checked || status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F6F6F6' }}>
-        <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="w-12 h-12 border-4 border-[#1C74D9] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }

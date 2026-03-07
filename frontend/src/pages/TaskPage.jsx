@@ -172,21 +172,21 @@ const TaskPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#1a1a2e' }}>
-        <div className="w-12 h-12 border-4 border-amber-400 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="w-12 h-12 border-4 border-[#1C74D9] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   if (!task) {
     return (
-      <div className="min-h-screen py-12 px-4 flex items-center justify-center" style={{ backgroundColor: '#1a1a2e' }}>
-        <div className="max-w-lg w-full bg-gray-800 rounded-2xl p-8 border border-gray-600 text-center">
-          <p className="text-gray-300 mb-4">Task not found or no questions available.</p>
+      <div className="min-h-screen py-12 px-4 flex items-center justify-center bg-slate-50">
+        <div className="max-w-lg w-full bg-white rounded-2xl p-8 border border-slate-200 text-center">
+          <p className="text-slate-600 mb-4">Task not found or no questions available.</p>
           <button
             type="button"
             onClick={() => navigate('/roadmap')}
-            className="px-4 py-2 bg-amber-500 text-gray-900 rounded-xl font-semibold hover:bg-amber-400"
+            className="px-4 py-2 bg-[#1C74D9] text-white rounded-xl font-semibold hover:bg-[#1557b0]"
           >
             Back to roadmap
           </button>
@@ -197,10 +197,10 @@ const TaskPage = () => {
 
   if (mainQuestions.length === 0) {
     return (
-      <div className="min-h-screen py-12 px-4 flex items-center justify-center" style={{ backgroundColor: '#1a1a2e' }}>
-        <div className="max-w-lg w-full bg-gray-800 rounded-2xl p-8 border border-gray-600 text-center">
-          <h1 className="text-lg font-bold text-white mb-2">{task.task_name || task.title || 'Task'}</h1>
-          <p className="text-gray-400 mb-6">
+      <div className="min-h-screen py-12 px-4 flex items-center justify-center bg-slate-50">
+        <div className="max-w-lg w-full bg-white rounded-2xl p-8 border border-slate-200 text-center">
+          <h1 className="text-lg font-bold text-slate-900 mb-2">{task.task_name || task.title || 'Task'}</h1>
+          <p className="text-slate-600 mb-6">
             {task.unitTitle ? `${task.unitTitle}` : ''} — No quiz for this task. Mark it complete when done.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -217,14 +217,14 @@ const TaskPage = () => {
                   });
               }}
               disabled={submitting}
-              className="px-4 py-2 bg-amber-500 text-gray-900 rounded-xl font-semibold hover:bg-amber-400 disabled:opacity-50"
+              className="px-4 py-2 bg-[#1C74D9] text-white rounded-xl font-semibold hover:bg-[#1557b0] disabled:opacity-50"
             >
               {submitting ? 'Saving…' : 'Mark as complete'}
             </button>
             <button
               type="button"
               onClick={() => navigate('/roadmap')}
-              className="px-4 py-2 border border-gray-500 text-gray-300 rounded-xl font-medium hover:bg-gray-700"
+              className="px-4 py-2 border border-slate-200 text-slate-700 rounded-xl font-medium hover:bg-slate-50"
             >
               Back to roadmap
             </button>
@@ -236,12 +236,12 @@ const TaskPage = () => {
 
   if (showCompletion) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#1a1a2e' }}>
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center animate-[pulse_0.6s_ease-in-out]">
           <div className="text-6xl mb-4">⭐</div>
           <div className="text-5xl mb-2">🎉</div>
-          <h2 className="text-2xl font-bold text-amber-400 mb-2">Level Complete!</h2>
-          <p className="text-gray-400">Returning to your roadmap...</p>
+          <h2 className="text-2xl font-bold text-[#1C74D9] mb-2">Level Complete!</h2>
+          <p className="text-slate-600">Returning to your roadmap...</p>
         </div>
       </div>
     );
@@ -249,41 +249,41 @@ const TaskPage = () => {
 
   if (!currentMcq) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#1a1a2e' }}>
-        <div className="w-12 h-12 border-4 border-amber-400 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="w-12 h-12 border-4 border-[#1C74D9] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen py-6 px-4" style={{ backgroundColor: '#1a1a2e' }}>
+    <div className="min-h-screen py-6 px-4 bg-slate-50">
       <div className="max-w-2xl mx-auto">
         <div className="mb-4 flex items-center justify-between gap-2">
           <button
             type="button"
             onClick={() => navigate('/roadmap')}
-            className="text-amber-400 hover:text-amber-300 font-medium text-sm shrink-0"
+            className="text-[#1C74D9] hover:text-[#1557b0] font-medium text-sm shrink-0"
           >
             ← Back
           </button>
           <div className="flex items-center gap-2 flex-1 min-w-0">
-            <div className="h-2 flex-1 max-w-[120px] bg-gray-700 rounded-full overflow-hidden">
+            <div className="h-2 flex-1 max-w-[120px] bg-slate-200 rounded-full overflow-hidden">
               <div
-                className="h-full bg-amber-500 rounded-full transition-all duration-300"
+                className="h-full bg-[#1C74D9] rounded-full transition-all duration-300"
                 style={{ width: `${Math.min(100, progressPct)}%` }}
               />
             </div>
-            <span className="text-xs text-gray-400 tabular-nums shrink-0">{progressLabel}</span>
+            <span className="text-xs text-slate-600 tabular-nums shrink-0">{progressLabel}</span>
           </div>
         </div>
 
-        <div className="bg-gray-800 rounded-2xl border border-gray-600 p-6 md:p-8 shadow-xl">
-          <h1 className="text-lg font-bold text-white mb-1">{task.task_name || task.title || 'Task'}</h1>
-          <p className="text-xs text-gray-500 mb-6">
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 md:p-8 shadow-xl">
+          <h1 className="text-lg font-bold text-slate-900 mb-1">{task.task_name || task.title || 'Task'}</h1>
+          <p className="text-xs text-slate-500 mb-6">
             {[task.unitTitle, task.phaseName, task.topicTitle].filter(Boolean).join(' · ') || '—'}
           </p>
 
-          <p className="text-base font-medium text-gray-100 mb-6 leading-relaxed">{currentMcq.question}</p>
+          <p className="text-base font-medium text-slate-800 mb-6 leading-relaxed">{currentMcq.question}</p>
 
           <div className="space-y-3 mb-6">
             {(currentMcq.options || []).map((option, idx) => (
@@ -293,8 +293,8 @@ const TaskPage = () => {
                 onClick={() => !submitting && setSelectedOption(idx)}
                 disabled={submitting}
                 className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all font-medium ${selectedOption === idx
-                    ? 'border-amber-500 bg-amber-500/20 text-white'
-                    : 'border-gray-600 bg-gray-700/50 text-gray-200 hover:border-gray-500'
+                    ? 'border-[#1C74D9] bg-[#1C74D9]/10 text-slate-900'
+                    : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-slate-300'
                   } disabled:opacity-70`}
               >
                 {option}
@@ -306,29 +306,29 @@ const TaskPage = () => {
             type="button"
             onClick={handleSubmit}
             disabled={selectedOption === null || submitting}
-            className="w-full py-3 rounded-xl font-bold bg-amber-500 text-gray-900 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full py-3 rounded-xl font-bold bg-[#1C74D9] text-white hover:bg-[#1557b0] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Submit
           </button>
 
           {feedback === 'incorrect' && (
-            <div className="mt-4 p-3 rounded-xl bg-red-900/30 border border-red-500/50">
-              <p className="text-red-400 text-sm font-medium mb-1">Incorrect. This question will appear again at the end.</p>
-              <p className="text-green-400 text-sm mb-3">
-                <span className="text-gray-400">Correct answer:</span>{' '}
+            <div className="mt-4 p-3 rounded-xl bg-red-50 border border-red-200">
+              <p className="text-red-600 text-sm font-medium mb-1">Incorrect. This question will appear again at the end.</p>
+              <p className="text-[#1C74D9] text-sm mb-3">
+                <span className="text-slate-500">Correct answer:</span>{' '}
                 {(currentMcq.options || [])[currentMcq.correctIndex ?? 0]}
               </p>
               <button
                 type="button"
                 onClick={advanceQuestion}
-                className="w-full py-2 rounded-xl font-semibold bg-amber-500/80 text-gray-900 hover:bg-amber-400"
+                className="w-full py-2 rounded-xl font-semibold bg-[#1C74D9] text-white hover:bg-[#1557b0]"
               >
                 Continue
               </button>
             </div>
           )}
           {feedback === 'error' && (
-            <p className="mt-4 text-red-400 text-sm">Could not save progress. Try again.</p>
+            <p className="mt-4 text-red-600 text-sm">Could not save progress. Try again.</p>
           )}
         </div>
       </div>

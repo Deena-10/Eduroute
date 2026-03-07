@@ -41,12 +41,10 @@ const NotificationBell = () => {
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="p-2 rounded-lg hover:bg-gray-100 transition-colors relative"
+        className="px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors relative text-sm font-medium text-slate-700"
         aria-label="Notifications"
       >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-        </svg>
+        Notifications
         {unreadCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
             {unreadCount > 9 ? '9+' : unreadCount}
@@ -56,23 +54,23 @@ const NotificationBell = () => {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} aria-hidden="true" />
-          <div className="absolute right-0 mt-1 w-80 max-h-96 overflow-y-auto bg-white rounded-xl shadow-xl border border-gray-200 z-50">
-            <div className="p-3 border-b border-gray-100 flex justify-between items-center">
-              <span className="font-semibold text-gray-900">Notifications</span>
+          <div className="absolute right-0 mt-1 w-80 max-h-96 overflow-y-auto bg-white rounded-xl shadow-xl border border-slate-200 z-50">
+            <div className="p-3 border-b border-slate-200 flex justify-between items-center">
+              <span className="font-semibold text-slate-900">Notifications</span>
               {('Notification' in window && Notification.permission !== 'granted') && (
                 <button
                   type="button"
                   onClick={handleEnablePush}
                   disabled={loading}
-                  className="text-xs text-blue-600 hover:underline"
+                  className="text-xs text-[#1C74D9] hover:underline"
                 >
                   {loading ? 'Enabling...' : 'Enable push'}
                 </button>
               )}
             </div>
-            <div className="max-h-64 overflow-y-auto">
+              <div className="max-h-64 overflow-y-auto">
               {notifications.length === 0 ? (
-                <p className="p-4 text-sm text-gray-500 text-center">No notifications yet</p>
+                <p className="p-4 text-sm text-slate-500 text-center">No notifications yet</p>
               ) : (
                 notifications.slice(0, 10).map((n) => (
                   <Link
@@ -82,10 +80,10 @@ const NotificationBell = () => {
                       setOpen(false);
                       axiosInstance.put(`/user/notifications/${n.id}/read`).catch(() => {});
                     }}
-                    className={`block p-3 border-b border-gray-50 hover:bg-gray-50 ${!n.is_read ? 'bg-blue-50/50' : ''}`}
+                    className={`block p-3 border-b border-slate-100 hover:bg-slate-50 ${!n.is_read ? 'bg-[#1C74D9]/5' : ''}`}
                   >
-                    <p className="font-medium text-sm text-gray-900">{n.title}</p>
-                    <p className="text-xs text-gray-600 truncate">{n.message}</p>
+                    <p className="font-medium text-sm text-slate-900">{n.title}</p>
+                    <p className="text-xs text-slate-600 truncate">{n.message}</p>
                   </Link>
                 ))
               )}
@@ -94,7 +92,7 @@ const NotificationBell = () => {
               <Link
                 to="/events"
                 onClick={() => setOpen(false)}
-                className="block p-2 text-center text-sm text-blue-600 hover:bg-gray-50 rounded-b-xl"
+                className="block p-2 text-center text-sm text-[#1C74D9] hover:bg-slate-50 rounded-b-xl"
               >
                 View all
               </Link>

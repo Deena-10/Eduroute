@@ -1,8 +1,7 @@
 // c:\finalyearproject\career-roadmap-app\frontend\src\context\AuthContext.jsx
 import React, { createContext, useState, useEffect, useCallback } from "react";
 import axiosInstance from "../api/axiosInstance";
-import { auth, googleProvider } from "../firebase";
-import { signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "firebase/auth";
+import { getFirebaseAuth, isFirebaseLoaded } from "../firebaseAuth";
 
 export const AuthContext = createContext();
 
@@ -10,50 +9,21 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Initial state from localStorage only - NO Firebase import to avoid gapi errors on load
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    try {
       const storedUser = localStorage.getItem("user");
-      if (firebaseUser && storedUser) {
-        try {
-          setUser(JSON.parse(storedUser));
-        } catch (_) {
-          setUser(null);
+      const token = localStorage.getItem("token");
+      if (storedUser && token) {
+        const parsed = JSON.parse(storedUser);
+        if (parsed && typeof parsed === "object" && parsed.email) {
+          setUser(parsed);
         }
       }
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      await new Promise((r) => setTimeout(r, 400));
-      if (cancelled) return;
-      try {
-        const result = await getRedirectResult(auth);
-        if (!result) return;
-        const idToken = await result.user.getIdToken();
-        const response = await axiosInstance.post("/auth/google-signin", { token: idToken });
-        if (response.data?.success && response.data?.data) {
-          const { user: backendUser, token } = response.data.data;
-          const userData = {
-            id: backendUser.id,
-            email: backendUser.email,
-            name: backendUser.name,
-            photoURL: backendUser.profilePicture || null,
-            token,
-          };
-          setUser(userData);
-          localStorage.setItem("user", JSON.stringify(userData));
-          localStorage.setItem("token", token);
-          window.location.replace("/");
-        }
-      } catch (err) {
-        console.error("Google redirect result error:", err);
-      }
-    })();
-    return () => { cancelled = true; };
+    } catch (_) {
+      setUser(null);
+    }
+    setLoading(false);
   }, []);
 
   const login = async (email, password) => {
@@ -81,11 +51,28 @@ export const AuthProvider = ({ children }) => {
 
   const googleSignIn = async () => {
     try {
-      sessionStorage.setItem("googleRedirectInProgress", "1");
-      await signInWithRedirect(auth, googleProvider);
-      return { success: true, message: "Redirecting to Google..." };
+      // Lazy-load Firebase only when user clicks - avoids gapi errors on initial page load
+      const { auth, googleProvider } = await getFirebaseAuth();
+      const { signInWithPopup } = await import("firebase/auth");
+      const result = await signInWithPopup(auth, googleProvider);
+      const idToken = await result.user.getIdToken();
+      const response = await axiosInstance.post("/auth/google-signin", { token: idToken });
+      if (response.data?.success && response.data?.data) {
+        const { user: backendUser, token } = response.data.data;
+        const userData = {
+          id: backendUser.id,
+          email: backendUser.email,
+          name: backendUser.name,
+          photoURL: backendUser.profilePicture || null,
+          token,
+        };
+        setUser(userData);
+        localStorage.setItem("user", JSON.stringify(userData));
+        localStorage.setItem("token", token);
+        return { success: true };
+      }
+      return { success: false, message: response.data?.message || "Google sign-in failed" };
     } catch (error) {
-      sessionStorage.removeItem("googleRedirectInProgress");
       console.error("Google sign-in error:", error);
       return { success: false, message: error.message || "Google sign-in failed" };
     }
@@ -93,7 +80,12 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      await signOut(auth);
+      // Only call Firebase signOut if we've already loaded it (user used Google sign-in)
+      if (isFirebaseLoaded()) {
+        const { auth } = await getFirebaseAuth();
+        const { signOut } = await import("firebase/auth");
+        await signOut(auth);
+      }
     } catch (_) {}
     setUser(null);
     localStorage.removeItem("user");

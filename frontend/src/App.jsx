@@ -2,7 +2,6 @@
 import React, { useEffect } from "react";
 import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
-import setupGlobalErrorHandler from "./utils/globalErrorHandler";
 import { clearCorruptedLocalStorage } from "./utils/safeJsonParser";
 import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -18,24 +17,23 @@ import Profile from "./pages/Profile";
 import Events from "./pages/Events";
 
 function App() {
-  // Setup global error handler on app mount
   useEffect(() => {
-    const cleanup = setupGlobalErrorHandler();
-    
     // Preventive: Clear any existing corrupted data on startup
     const clearedKeys = clearCorruptedLocalStorage();
     if (clearedKeys > 0) {
       console.log(`🧹 Preventively cleared ${clearedKeys} corrupted localStorage keys on startup`);
     }
-    
-    return cleanup;
   }, []);
 
   return (
     <AuthProvider>
-      <div className="min-h-screen" style={{ backgroundColor: "#F6F6F6" }}>
+      <div
+        className="min-h-screen"
+        className="min-h-screen bg-slate-50"
+        style={{ minHeight: "100dvh" }}
+      >
         <Navbar />
-        <main className="pt-16">
+        <main className="pt-20 sm:pt-24">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />

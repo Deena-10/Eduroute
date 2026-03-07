@@ -118,20 +118,22 @@ const ChapterQuiz = () => {
     }
   };
 
+  const lightBg = "bg-slate-50";
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="w-12 h-12 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+      <div className={`min-h-screen flex items-center justify-center ${lightBg}`}>
+        <div className="w-12 h-12 border-2 border-[#1C74D9] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   if (!unit) {
     return (
-      <div className="min-h-screen py-12 px-4 flex items-center justify-center bg-slate-50">
+      <div className={`min-h-screen py-12 px-4 flex items-center justify-center ${lightBg}`}>
         <div className="max-w-lg w-full bg-white rounded-2xl p-8 border border-slate-200 shadow-lg text-center">
           <p className="text-slate-600 mb-4">Chapter not found.</p>
-          <button type="button" onClick={() => navigate('/roadmap')} className="px-4 py-2 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700">Back to roadmap</button>
+          <button type="button" onClick={() => navigate('/roadmap')} className="px-4 py-2 bg-[#1C74D9] text-white rounded-xl font-semibold hover:bg-[#1557b0]">Back to roadmap</button>
         </div>
       </div>
     );
@@ -139,10 +141,10 @@ const ChapterQuiz = () => {
 
   if (mainQuestions.length === 0) {
     return (
-      <div className="min-h-screen py-12 px-4 flex items-center justify-center bg-slate-50">
+      <div className={`min-h-screen py-12 px-4 flex items-center justify-center ${lightBg}`}>
         <div className="max-w-lg w-full bg-white rounded-2xl p-8 border border-slate-200 shadow-lg text-center">
           <p className="text-slate-600 mb-4">No questions for this chapter.</p>
-          <button type="button" onClick={() => navigate('/roadmap')} className="px-4 py-2 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700">Back to roadmap</button>
+          <button type="button" onClick={() => navigate('/roadmap')} className="px-4 py-2 bg-[#1C74D9] text-white rounded-xl font-semibold hover:bg-[#1557b0]">Back to roadmap</button>
         </div>
       </div>
     );
@@ -150,11 +152,10 @@ const ChapterQuiz = () => {
 
   if (showCompletion) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className={`min-h-screen flex items-center justify-center ${lightBg}`}>
         <div className="text-center animate-[pulse_0.6s_ease-in-out]">
-          <div className="text-6xl mb-4">⭐</div>
-          <h2 className="text-2xl font-bold text-indigo-600 mb-2">Chapter complete!</h2>
-          <p className="text-slate-500">Returning to your roadmap...</p>
+          <h2 className="text-2xl font-bold text-[#1C74D9] mb-2">Chapter complete!</h2>
+          <p className="text-slate-600">Returning to your roadmap...</p>
         </div>
       </div>
     );
@@ -162,29 +163,29 @@ const ChapterQuiz = () => {
 
   if (!currentMcq) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="w-12 h-12 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+      <div className={`min-h-screen flex items-center justify-center ${lightBg}`}>
+        <div className="w-12 h-12 border-2 border-[#1C74D9] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
+    <div className={`min-h-screen flex flex-col ${lightBg}`}>
       {/* Top bar - compact */}
       <div className="flex-shrink-0 px-4 pt-4 pb-2 sm:pt-6 sm:pb-4">
         <div className="max-w-xl mx-auto flex items-center justify-between gap-3">
           <button
             type="button"
             onClick={() => navigate('/roadmap')}
-            className="text-indigo-600 hover:text-indigo-700 font-medium text-sm py-2 -ml-1 min-w-[44px]"
+            className="text-[#1C74D9] hover:text-[#1557b0] font-medium text-sm py-2 -ml-1 min-w-[44px]"
           >
             ← Back
           </button>
           <div className="flex items-center gap-2 flex-1 min-w-0 max-w-[200px] sm:max-w-[240px]">
             <div className="h-2 flex-1 bg-slate-200 rounded-full overflow-hidden">
-              <div className="h-full bg-indigo-500 rounded-full transition-all duration-300" style={{ width: `${Math.min(100, progressPct)}%` }} />
+              <div className="h-full bg-[#1C74D9] rounded-full transition-all duration-300" style={{ width: `${Math.min(100, progressPct)}%` }} />
             </div>
-            <span className="text-xs text-slate-500 tabular-nums shrink-0">{progressLabel}</span>
+            <span className="text-xs text-slate-600 tabular-nums shrink-0">{progressLabel}</span>
           </div>
         </div>
       </div>
@@ -193,9 +194,9 @@ const ChapterQuiz = () => {
       <div className="flex-1 flex items-center justify-center px-4 py-4 sm:py-6 pb-8">
         <div className="w-full max-w-xl">
           <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 md:p-8 shadow-lg">
-            <h1 className="text-base sm:text-lg font-bold text-slate-800 mb-1">{unit.title}</h1>
+            <h1 className="text-base sm:text-lg font-bold text-slate-900 mb-1">{unit.title}</h1>
             <p className="text-xs text-slate-500 mb-4 sm:mb-6">{unit.level || ''} · {mainQuestions.length} questions</p>
-            <p className="text-sm sm:text-base font-medium text-slate-700 mb-4 sm:mb-6 leading-relaxed">{currentMcq.question}</p>
+            <p className="text-sm sm:text-base font-medium text-slate-800 mb-4 sm:mb-6 leading-relaxed">{currentMcq.question}</p>
             <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
               {(currentMcq.options || []).map((option, idx) => (
                 <button
@@ -203,7 +204,7 @@ const ChapterQuiz = () => {
                   type="button"
                   onClick={() => !submitting && setSelectedOption(idx)}
                   disabled={submitting}
-                  className={`w-full text-left px-4 py-3 sm:py-3.5 rounded-xl border-2 transition-all font-medium text-sm sm:text-base min-h-[48px] sm:min-h-[52px] flex items-center ${selectedOption === idx ? 'border-indigo-500 bg-indigo-50 text-indigo-800' : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-slate-100 active:scale-[0.99]'} disabled:opacity-70`}
+                  className={`w-full text-left px-4 py-3 sm:py-3.5 rounded-xl border-2 transition-all font-medium text-sm sm:text-base min-h-[48px] sm:min-h-[52px] flex items-center ${selectedOption === idx ? 'border-[#1C74D9] bg-[#1C74D9]/10 text-slate-900' : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-slate-300 hover:bg-slate-100 active:scale-[0.99]'} disabled:opacity-70`}
                 >
                   {option}
                 </button>
@@ -213,21 +214,21 @@ const ChapterQuiz = () => {
               type="button"
               onClick={handleSubmit}
               disabled={selectedOption === null || submitting}
-              className="w-full py-3.5 sm:py-4 rounded-xl font-bold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm sm:text-base min-h-[48px]"
+              className="w-full py-3.5 sm:py-4 rounded-xl font-bold bg-[#1C74D9] text-white hover:bg-[#1557b0] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm sm:text-base min-h-[48px]"
             >
               Submit
             </button>
             {feedback === 'incorrect' && (
               <div className="mt-4 p-4 rounded-xl bg-red-50 border border-red-200">
                 <p className="text-red-600 text-sm font-medium mb-1">Incorrect. This question will appear again at the end.</p>
-                <p className="text-emerald-600 text-sm mb-3">
+                <p className="text-[#1C74D9] text-sm mb-3">
                   <span className="text-slate-500">Correct answer:</span>{' '}
                   {(currentMcq.options || [])[currentMcq.correctIndex ?? 0]}
                 </p>
                 <button
                   type="button"
                   onClick={advanceQuestion}
-                  className="w-full py-3 rounded-xl font-semibold bg-indigo-600 text-white hover:bg-indigo-700 min-h-[44px]"
+                  className="w-full py-3 rounded-xl font-semibold bg-[#1C74D9] text-white hover:bg-[#1557b0] min-h-[44px]"
                 >
                   Continue
                 </button>

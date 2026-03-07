@@ -77,26 +77,26 @@ const Questionnaire = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#F6F6F6" }}>
-        <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="w-16 h-16 border-4 border-[#1C74D9] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen py-12 px-4" style={{ backgroundColor: "#F6F6F6" }}>
+    <div className="min-h-screen py-12 px-4 bg-slate-50">
       <div className="max-w-lg mx-auto">
-        <div className="bg-white rounded-2xl border border-gray-300 shadow-lg p-8">
-          <h1 className="text-2xl font-bold mb-2" style={{ color: "#000000" }}>
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-lg p-8">
+          <h1 className="text-2xl font-bold mb-2 text-slate-900">
             Create your career roadmap
           </h1>
-          <p className="text-gray-600 mb-6">
+          <p className="text-slate-600 mb-6">
             Enter your details once. You won’t be asked again on future logins.
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label htmlFor="domain" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="domain" className="block text-sm font-medium text-slate-700 mb-1">
                 Primary interest or domain
               </label>
               <input
@@ -105,20 +105,20 @@ const Questionnaire = () => {
                 value={domain}
                 onChange={(e) => setDomain(e.target.value)}
                 placeholder="e.g. Python, Web Development, Data Science"
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1C74D9] focus:border-transparent"
                 disabled={submitting}
               />
             </div>
 
             <div>
-              <label htmlFor="proficiency" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="proficiency" className="block text-sm font-medium text-slate-700 mb-1">
                 Proficiency level
               </label>
               <select
                 id="proficiency"
                 value={proficiency}
                 onChange={(e) => setProficiency(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl text-black focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1C74D9] focus:border-transparent"
                 disabled={submitting}
               >
                 <option value="Beginner">Beginner</option>
@@ -128,14 +128,14 @@ const Questionnaire = () => {
             </div>
 
             <div>
-              <label htmlFor="professionalGoal" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="professionalGoal" className="block text-sm font-medium text-slate-700 mb-1">
                 Professional goal
               </label>
               <select
                 id="professionalGoal"
                 value={professionalGoal}
                 onChange={(e) => setProfessionalGoal(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl text-black focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1C74D9] focus:border-transparent"
                 disabled={submitting}
               >
                 <option value="job-ready">Job-ready</option>
@@ -145,14 +145,14 @@ const Questionnaire = () => {
             </div>
 
             <div>
-              <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="status" className="block text-sm font-medium text-slate-700 mb-1">
                 Current status
               </label>
               <select
                 id="status"
                 value={currentStatus}
                 onChange={(e) => setCurrentStatus(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl text-black focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                className="w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1C74D9] focus:border-[#1C74D9] bg-white"
                 disabled={submitting}
               >
                 <option value="School student">School student</option>
@@ -162,7 +162,7 @@ const Questionnaire = () => {
             </div>
 
             {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
                 {error}
               </div>
             )}
@@ -170,7 +170,7 @@ const Questionnaire = () => {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors"
+              className="w-full py-3 bg-[#1C74D9] hover:bg-[#1557b0] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors"
             >
               {submitting ? "Generating roadmap…" : "Generate my roadmap"}
             </button>

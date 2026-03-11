@@ -49,6 +49,35 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const signup = async (email, password, name) => {
+    try {
+      const { data } = await axiosInstance.post("/auth/signup", {
+        email,
+        password,
+        name,
+      });
+
+      if (data?.success && data?.data) {
+        const { user: backendUser, token } = data.data;
+        const userData = {
+          id: backendUser.id,
+          email: backendUser.email,
+          name: backendUser.name,
+          token,
+        };
+        setUser(userData);
+        localStorage.setItem("user", JSON.stringify(userData));
+        localStorage.setItem("token", token);
+        return { success: true };
+      }
+
+      return { success: false, message: data?.message || "Signup failed" };
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || "Signup failed";
+      return { success: false, message: msg };
+    }
+  };
+
   const googleSignIn = async () => {
     try {
       // Lazy-load Firebase only when user clicks - avoids gapi errors on initial page load
@@ -95,7 +124,7 @@ export const AuthProvider = ({ children }) => {
   const isAuthenticated = useCallback(() => Boolean(user || localStorage.getItem("token")), [user]);
 
   return (
-    <AuthContext.Provider value={{ user, login, googleSignIn, logout, loading, isAuthenticated }}>
+    <AuthContext.Provider value={{ user, login, signup, googleSignIn, logout, loading, isAuthenticated }}>
       {children}
     </AuthContext.Provider>
   );

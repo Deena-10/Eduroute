@@ -66,6 +66,7 @@ model Roadmap {
   status              String   @default("active") @db.VarChar(20)
   progress_percentage Float    @default(0.0)
   completed_tasks     Json     @default("[]")
+  completed_hours     Float?   @default(0)
   created_at          DateTime @default(now())
   updated_at          DateTime @updatedAt
 

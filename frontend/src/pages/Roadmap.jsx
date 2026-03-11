@@ -1,3 +1,4 @@
+// frontend/src/pages/Roadmap.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { safeJsonParse } from "../utils/safeJsonParser";
@@ -6,253 +7,199 @@ import axiosInstance from '../api/axiosInstance';
 
 const HOURS_GOAL = 40;
 
-/* ══════════════════════════════════════════
-   STEP ROW  — the main unit card
-══════════════════════════════════════════ */
-const StepRow = ({ unit, onClick, completedTasks, index }) => {
+/* ─── Forest Sage palette ─── */
+const G = {
+  green:       '#2D6A4F',
+  greenMid:    '#40916C',
+  greenLight:  '#52B788',
+  greenSoft:   '#D8F3DC',
+  greenMist:   '#F0FAF3',
+  greenLine:   '#B7E4C7',
+  sageDim:     'rgba(82,183,136,0.12)',
+  sagGlow:     'rgba(45,106,79,0.08)',
+  text1:       '#1A2E1A',
+  text2:       '#3D5A3E',
+  text3:       '#6B8F71',
+  text4:       '#9AB89D',
+  surface:     '#FFFFFF',
+  bg:          '#F4F9F5',
+  bgDeep:      '#EBF5EE',
+  border:      '#D4E8D7',
+  borderSoft:  '#E8F4EA',
+  shadowXs:    '0 1px 4px rgba(26,46,26,0.05)',
+  shadowSm:    '0 2px 10px rgba(26,46,26,0.06)',
+  shadowMd:    '0 6px 24px rgba(26,46,26,0.09)',
+  shadowLg:    '0 12px 40px rgba(26,46,26,0.12)',
+  shadowGreen: '0 6px 24px rgba(45,106,79,0.18)',
+  /* accents */
+  amber:       '#D97706', amberLight: '#FFFBEB',
+  violet:      '#7C3AED', violetLight:'#F5F3FF',
+  sidebarW:    '240px',
+};
+
+/* ── Icons ── */
+const IcoPath   = ({ size=16, color='currentColor' }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg>;
+const IcoTrophy = ({ size=16, color='currentColor' }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>;
+const IcoChart  = ({ size=16, color='currentColor' }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>;
+const IcoBook   = ({ size=16, color='currentColor' }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>;
+
+/* ── StepRow ── */
+const StepRow = ({ unit, onClick, completedTasks, index, isLast }) => {
   const [expanded, setExpanded] = useState(false);
   const isLocked    = unit.status === 'locked';
   const isCompleted = unit.status === 'completed';
   const isAvailable = unit.status === 'available';
-  const word        = unit.isChapterLevel ? 'questions' : 'tasks';
-  const tasks       = unit.tasks || [];
-  const mcqs        = unit.mcqs  || [];
+  const tasks = unit.tasks || [];
+  const mcqs  = unit.mcqs  || [];
+  const word  = unit.isChapterLevel ? 'questions' : 'tasks';
 
-  const handleClick = () => {
-    if (isLocked) return;
-    // On mobile tap expands; clicking "Start" navigates
-    setExpanded(v => !v);
-  };
+  const statusColor = isCompleted ? G.green    : isAvailable ? G.greenMid : G.text4;
+  const statusBg    = isCompleted ? G.greenSoft : isAvailable ? G.sageDim  : G.bgDeep;
+  const statusLabel = isCompleted ? 'Completed' : isAvailable ? 'In Progress' : 'Locked';
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      style={{ display: 'flex', alignItems: 'stretch' }}
+      initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, delay: index * 0.055 }}
+      transition={{ duration: 0.36, delay: index * 0.05 }}
     >
-      <div
-        className="rounded-2xl overflow-hidden border transition-all duration-300"
-        style={{
-          borderColor: isAvailable ? '#1C74D9' : isCompleted ? '#dbeafe' : '#e8edf2',
-          boxShadow: isAvailable
-            ? '0 4px 20px rgba(28,116,217,0.13)'
-            : isCompleted
-            ? '0 2px 8px rgba(28,116,217,0.07)'
+      {/* Timeline spine */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 50, flexShrink: 0 }}>
+        <div style={{
+          width: 40, height: 40, borderRadius: '50%', flexShrink: 0, zIndex: 2,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: isCompleted ? G.green : isAvailable ? G.greenSoft : G.bgDeep,
+          border: isAvailable ? `2.5px solid ${G.green}` : isCompleted ? 'none' : `1.5px solid ${G.border}`,
+          boxShadow: isCompleted
+            ? '0 4px 14px rgba(45,106,79,0.35)'
+            : isAvailable
+            ? `0 0 0 5px rgba(45,106,79,0.1), 0 3px 14px rgba(45,106,79,0.2)`
             : 'none',
-          background: '#fff',
-        }}
-      >
-        {/* ── MAIN ROW ── */}
-        <button
-          type="button"
-          onClick={handleClick}
-          disabled={isLocked}
-          className="w-full text-left flex items-stretch focus:outline-none"
-          style={{ cursor: isLocked ? 'default' : 'pointer' }}
+        }}>
+          {isCompleted
+            ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            : isLocked
+            ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={G.text4} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            : <span style={{ fontSize: 12, fontWeight: 800, color: G.green, fontFamily: "'Plus Jakarta Sans',sans-serif" }}>{unit.unit_number}</span>
+          }
+        </div>
+        {!isLast && (
+          <div style={{
+            width: 2, flex: 1, minHeight: 16, borderRadius: 2, marginTop: 2,
+            background: isCompleted ? G.green : G.borderSoft,
+          }} />
+        )}
+      </div>
+
+      {/* Card */}
+      <div style={{ flex: 1, padding: '0 0 16px 12px' }}>
+        <div
+          style={{
+            borderRadius: 16, overflow: 'hidden',
+            border: `1.5px solid ${isAvailable ? 'rgba(45,106,79,0.28)' : isCompleted ? G.greenLine : G.borderSoft}`,
+            background: G.surface,
+            boxShadow: isAvailable ? '0 5px 20px rgba(45,106,79,0.1)' : G.shadowXs,
+            opacity: isLocked ? 0.6 : 1,
+            cursor: isLocked ? 'default' : 'pointer',
+            transition: 'all 0.22s cubic-bezier(0.22,1,0.36,1)',
+          }}
+          onClick={() => { if (!isLocked) setExpanded(v => !v); }}
+          onMouseEnter={e => { if (!isLocked) { e.currentTarget.style.boxShadow = G.shadowMd; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = isCompleted ? G.greenLine : G.greenLine; } }}
+          onMouseLeave={e => { e.currentTarget.style.boxShadow = isAvailable ? '0 5px 20px rgba(45,106,79,0.1)' : G.shadowXs; e.currentTarget.style.transform = ''; e.currentTarget.style.borderColor = isAvailable ? 'rgba(45,106,79,0.28)' : isCompleted ? G.greenLine : G.borderSoft; }}
         >
-          {/* Left panel — big step number */}
-          <div
-            className="flex flex-col items-center justify-center flex-shrink-0 transition-all duration-300"
-            style={{
-              width: 72,
-              background: isCompleted
-                ? '#1C74D9'
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px 10px' }}>
+            {/* Icon */}
+            <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: statusBg }}>
+              {isCompleted
+                ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={G.green} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                 : isAvailable
-                ? 'rgba(28,116,217,0.07)'
-                : '#f8fafc',
-              borderRight: `1px solid ${isCompleted ? '#1557b0' : isAvailable ? 'rgba(28,116,217,0.15)' : '#f1f5f9'}`,
-            }}
-          >
-            {isCompleted ? (
-              <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            ) : isLocked ? (
-              <svg className="w-5 h-5" style={{ color: '#cbd5e1' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-            ) : (
-              <span
-                className="text-2xl font-black"
-                style={{ color: isAvailable ? '#1C74D9' : '#94a3b8' }}
-              >
-                {unit.unit_number}
-              </span>
-            )}
-            <span
-              className="text-[9px] font-bold uppercase tracking-wider mt-1"
-              style={{ color: isCompleted ? 'rgba(255,255,255,0.7)' : '#94a3b8' }}
-            >
-              Step
-            </span>
-          </div>
-
-          {/* Middle — title + meta */}
-          <div className="flex-1 px-4 py-4 min-w-0">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                {/* Status badge */}
-                <span
-                  className="inline-block text-[9px] font-black uppercase tracking-[0.12em] px-2 py-0.5 rounded-full mb-1.5"
-                  style={{
-                    background: isCompleted
-                      ? '#dbeafe'
-                      : isAvailable
-                      ? 'rgba(28,116,217,0.1)'
-                      : '#f1f5f9',
-                    color: isCompleted
-                      ? '#1C74D9'
-                      : isAvailable
-                      ? '#1C74D9'
-                      : '#94a3b8',
-                  }}
-                >
-                  {isCompleted ? 'Completed' : isAvailable ? 'Active' : 'Locked'}
-                </span>
-                <h3
-                  className="font-bold text-sm leading-snug"
-                  style={{ color: isLocked ? '#94a3b8' : '#0f172a' }}
-                >
-                  {unit.title}
-                </h3>
-                <p className="text-[11px] mt-1" style={{ color: '#94a3b8' }}>
-                  {unit.taskCount} {word}
-                </p>
-              </div>
-
-              {/* Chevron expand indicator (non-locked) */}
+                ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={G.green} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={G.text4} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              }
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <span style={{
+                display: 'inline-block', fontSize: 8, fontWeight: 800, letterSpacing: '0.12em',
+                textTransform: 'uppercase', padding: '2px 8px', borderRadius: 20,
+                background: statusBg, color: statusColor, marginBottom: 5,
+              }}>{statusLabel}</span>
+              <p style={{ fontFamily: "'Fraunces',serif", fontSize: 14, fontWeight: 600, lineHeight: 1.35, color: isLocked ? G.text4 : G.text1 }}>{unit.title}</p>
+              <p style={{ fontSize: 11, color: G.text4, marginTop: 3 }}>{unit.taskCount} {word}</p>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0, paddingTop: 2 }}>
+              <span style={{ fontFamily: "'Fraunces',serif", fontSize: 14, fontWeight: 700, color: isLocked ? G.text4 : statusColor }}>{unit.unitPct ?? 0}%</span>
               {!isLocked && (
-                <motion.div
-                  animate={{ rotate: expanded ? 180 : 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="flex-shrink-0 mt-1"
-                >
-                  <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </motion.div>
+                <span style={{ display: 'flex', transition: 'transform 0.22s', transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={G.text4} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </span>
               )}
             </div>
+          </div>
 
-            {/* Compact progress bar */}
-            <div className="mt-3 flex items-center gap-2">
-              <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: '#f1f5f9' }}>
-                <motion.div
-                  className="h-full rounded-full"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${unit.unitPct ?? 0}%` }}
-                  transition={{ duration: 0.8, ease: 'easeOut', delay: index * 0.055 + 0.3 }}
-                  style={{
-                    background: isLocked ? '#e2e8f0' : 'linear-gradient(90deg,#1C74D9,#4fa3f7)',
-                  }}
-                />
-              </div>
-              <span
-                className="text-[10px] font-bold flex-shrink-0 tabular-nums"
-                style={{ color: isLocked ? '#cbd5e1' : '#1C74D9' }}
-              >
-                {unit.unitPct ?? 0}%
-              </span>
+          {/* Mini progress bar */}
+          <div style={{ padding: '0 16px 12px' }}>
+            <div style={{ height: 4, background: G.bgDeep, borderRadius: 99, overflow: 'hidden' }}>
+              <motion.div
+                style={{ height: '100%', borderRadius: 99, background: isCompleted ? G.green : isAvailable ? `linear-gradient(90deg,${G.green},${G.greenLight})` : G.border }}
+                initial={{ width: 0 }}
+                animate={{ width: `${unit.unitPct ?? 0}%` }}
+                transition={{ duration: 0.9, ease: 'easeOut', delay: index * 0.05 + 0.2 }}
+              />
             </div>
           </div>
-        </button>
 
-        {/* ── EXPANDED DETAILS ── */}
-        <AnimatePresence initial={false}>
-          {expanded && !isLocked && (
-            <motion.div
-              key="expanded"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.25, ease: 'easeInOut' }}
-              style={{ overflow: 'hidden' }}
-            >
-              <div
-                className="mx-4 mb-4 rounded-xl p-4"
-                style={{ background: '#f8fafc', border: '1px solid #f1f5f9' }}
-              >
-                {/* Tasks list */}
-                {unit.isChapterLevel ? (
-                  <p className="text-xs text-slate-500">{mcqs.length} quiz questions in this chapter</p>
-                ) : tasks.length > 0 ? (
-                  <div className="space-y-2 mb-4">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Tasks</p>
-                    {tasks.map((t, i) => {
-                      const done = completedTasks.includes(t.task_id || t.id);
-                      return (
-                        <div key={t.task_id || t.id || i} className="flex items-center gap-2.5">
-                          <div
-                            className="w-4 h-4 rounded-sm flex-shrink-0 flex items-center justify-center"
-                            style={{
-                              background: done ? '#1C74D9' : '#fff',
-                              border: done ? 'none' : '1.5px solid #cbd5e1',
-                            }}
-                          >
-                            {done && (
-                              <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                              </svg>
-                            )}
+          {/* Expanded tasks */}
+          <AnimatePresence initial={false}>
+            {expanded && !isLocked && (
+              <motion.div key="exp" style={{ overflow: 'hidden' }} initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22 }}>
+                <div style={{ padding: '0 12px 12px' }}>
+                  <div style={{ background: G.bg, borderRadius: 12, padding: '14px 16px', border: `1px solid ${G.borderSoft}` }}>
+                    {unit.isChapterLevel
+                      ? <p style={{ fontSize: 12, color: G.text3 }}>{mcqs.length} quiz questions in this chapter</p>
+                      : tasks.length > 0 ? (
+                        <>
+                          <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: G.text4, marginBottom: 10 }}>Tasks</p>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+                            {tasks.map((t, i) => {
+                              const done = completedTasks.includes(t.task_id || t.id);
+                              return (
+                                <div key={t.task_id || t.id || i} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                                  <div style={{ width: 18, height: 18, borderRadius: 5, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: done ? G.green : G.surface, border: done ? 'none' : `1.5px solid ${G.border}` }}>
+                                    {done && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                                  </div>
+                                  <span style={{ fontSize: 12, fontWeight: 500, color: done ? G.text4 : G.text2, textDecoration: done ? 'line-through' : 'none' }}>{t.task_name || `Task ${i + 1}`}</span>
+                                </div>
+                              );
+                            })}
                           </div>
-                          <span
-                            className="text-xs"
-                            style={{
-                              color: done ? '#94a3b8' : '#475569',
-                              textDecoration: done ? 'line-through' : 'none',
-                            }}
-                          >
-                            {t.task_name || `Task ${i + 1}`}
-                          </span>
-                        </div>
-                      );
-                    })}
+                        </>
+                      ) : null
+                    }
+                    <button
+                      style={{ width: '100%', padding: '11px 0', borderRadius: 11, background: G.green, color: '#fff', fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.15s', boxShadow: G.shadowGreen }}
+                      onClick={e => { e.stopPropagation(); onClick(); }}
+                      onMouseEnter={e => { e.currentTarget.style.background = G.greenMid; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = G.green; e.currentTarget.style.transform = ''; }}
+                    >{isCompleted ? '← Review Unit' : 'Continue →'}</button>
                   </div>
-                ) : null}
-
-                {/* CTA */}
-                <button
-                  type="button"
-                  onClick={() => onClick()}
-                  className="w-full py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 active:scale-98"
-                  style={{ background: 'linear-gradient(90deg, #1C74D9, #0A3FAE)' }}
-                >
-                  {isCompleted ? 'Review' : 'Continue'}
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </motion.div>
   );
 };
 
-/* ══════════════════════════════════════════
-   CONNECTOR between steps
-══════════════════════════════════════════ */
-const StepConnector = ({ isCompleted }) => (
-  <div className="flex justify-start pl-9 py-0.5">
-    <div
-      className="w-0.5 h-5"
-      style={{
-        background: isCompleted
-          ? '#1C74D9'
-          : '#e2e8f0',
-      }}
-    />
-  </div>
-);
-
-/* ══════════════════════════════════════════
-   MAIN ROADMAP
-══════════════════════════════════════════ */
+/* ── Main Roadmap ── */
 const Roadmap = () => {
   const navigate = useNavigate();
   const [roadmapData, setRoadmapData]       = useState(null);
   const [completedTasks, setCompletedTasks] = useState([]);
   const [progressPct, setProgressPct]       = useState(0);
-  const [streak, setStreak]                 = useState({ current_streak: 0, last_activity_date: null });
+  const [streak, setStreak]                 = useState({ current_streak: 0 });
   const [completedHours, setCompletedHours] = useState(0);
   const [loading, setLoading]               = useState(true);
   const [activeTab, setActiveTab]           = useState('path');
@@ -266,7 +213,7 @@ const Roadmap = () => {
         const ts = Date.now();
         const [rmRes, stRes] = await Promise.all([
           axiosInstance.get(`/user/roadmap?ts=${ts}`),
-          axiosInstance.get(`/user/streak?ts=${ts}`)
+          axiosInstance.get(`/user/streak?ts=${ts}`),
         ]);
         if (rmRes.data?.success && (rmRes.data.data || rmRes.data.roadmap)) {
           const r = rmRes.data.data || rmRes.data.roadmap;
@@ -283,7 +230,7 @@ const Roadmap = () => {
         }
         if (stRes.data?.success) {
           const sp = stRes.data.data ?? stRes.data;
-          setStreak({ current_streak: sp.current_streak ?? 0, last_activity_date: sp.last_activity_date ?? null });
+          setStreak({ current_streak: sp.current_streak ?? 0 });
         }
       } catch (e) { console.error(e); }
       finally { setLoading(false); }
@@ -291,13 +238,12 @@ const Roadmap = () => {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'rank') {
+    if (activeTab === 'rank')
       axiosInstance.get('/user/rank').then(r => { if (r.data?.success) setRankList(r.data.data || []); }).catch(() => setRankList([]));
-    } else if (activeTab === 'achievements') {
+    else if (activeTab === 'achievements')
       axiosInstance.get('/user/achievements').then(r => { if (r.data?.success) setAchievements(r.data.data || []); }).catch(() => setAchievements([]));
-    } else if (activeTab === 'resources') {
+    else if (activeTab === 'resources')
       axiosInstance.get('/user/resources').then(r => { if (r.data?.success) setResources(r.data.data || { domain: '', videos: [] }); }).catch(() => setResources({ domain: '', videos: [] }));
-    }
   }, [activeTab]);
 
   const units = useMemo(() => {
@@ -324,7 +270,7 @@ const Roadmap = () => {
         taskCount = tl.length;
       }
       let status = 'locked';
-      if (allDone)       status = 'completed';
+      if (allDone) status = 'completed';
       else if (prevDone) status = 'available';
       const unitPct = taskCount > 0 ? Math.round((doneCount / taskCount) * 100) : (allDone ? 100 : 0);
       return { ...unit, ...config, status, taskCount, doneCount, isChapterLevel, unitPct };
@@ -340,357 +286,379 @@ const Roadmap = () => {
     else if (tasks.length) navigate(`/roadmap/task/${tasks[0].task_id || tasks[0].id}`);
   };
 
-  const level = Math.floor(progressPct / 25) + 1;
+  const level    = Math.floor(progressPct / 25) + 1;
+  const circ     = 2 * Math.PI * 20;
+  const circB    = 2 * Math.PI * 24;
 
   const tabs = [
-    { id: 'path',         label: 'Path',        Icon: PathIcon },
-    { id: 'achievements', label: 'Achievements', Icon: TrophyIcon },
-    { id: 'rank',         label: 'Leaderboard',  Icon: ChartIcon },
-    { id: 'resources',    label: 'Resources',    Icon: BookIcon },
+    { id: 'path',         label: 'Path',      Icon: IcoPath   },
+    { id: 'achievements', label: 'Achieve',   Icon: IcoTrophy },
+    { id: 'rank',         label: 'Rank',      Icon: IcoChart  },
+    { id: 'resources',    label: 'Resources', Icon: IcoBook   },
   ];
 
+  const card = {
+    background: G.surface, border: `1px solid ${G.border}`,
+    borderRadius: 16, boxShadow: G.shadowXs,
+  };
+
+  const SectionHdr = ({ dot, label, title, sub }) => (
+    <div style={{ marginBottom: 24 }}>
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: dot + '18', border: `1px solid ${dot}28`, padding: '5px 12px', borderRadius: 99, marginBottom: 12 }}>
+        <span style={{ width: 6, height: 6, borderRadius: '50%', background: dot, display: 'inline-block' }} />
+        <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: dot }}>{label}</span>
+      </div>
+      <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 700, color: G.text1, margin: '0 0 4px', letterSpacing: '-0.02em' }}>{title}</h2>
+      {sub && <p style={{ fontSize: 13, color: G.text4 }}>{sub}</p>}
+    </div>
+  );
+
+  const Empty = ({ icon, msg }) => (
+    <div style={{ ...card, padding: '52px 24px', textAlign: 'center', border: `1.5px dashed ${G.border}` }}>
+      <div style={{ width: 48, height: 48, background: G.bgDeep, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>{icon}</div>
+      <p style={{ fontSize: 13, color: G.text4, maxWidth: 280, margin: '0 auto', lineHeight: 1.75 }}>{msg}</p>
+    </div>
+  );
+
+  /* ── Loading ── */
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-8 h-8 rounded-full border-2 border-[#1C74D9]/20 border-t-[#1C74D9] animate-spin" />
-        <p className="text-sm text-slate-500 font-medium">Loading your journey</p>
-      </div>
+    <div style={{ minHeight: '100vh', background: G.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,400&display=swap'); @keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <div style={{ width: 36, height: 36, borderRadius: '50%', border: `3px solid ${G.greenSoft}`, borderTopColor: G.green, animation: 'spin .7s linear infinite' }} />
+      <p style={{ fontSize: 13, color: G.text4, fontWeight: 500 }}>Loading your journey…</p>
     </div>
   );
 
+  /* ── Empty state ── */
   if (!roadmapData || units.length === 0) return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50"
-         style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
-      <div className="bg-white rounded-2xl p-10 shadow-sm border border-slate-200 text-center max-w-sm w-full">
-        <div className="w-14 h-14 rounded-xl bg-[#1C74D9]/8 mx-auto mb-6 flex items-center justify-center">
-          <PathIcon active />
+    <div style={{ minHeight: '100vh', background: G.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,400&display=swap')`}</style>
+      <div style={{ ...card, borderRadius: 24, padding: '52px 36px', textAlign: 'center', maxWidth: 380, width: '100%', boxShadow: G.shadowMd }}>
+        <div style={{ width: 60, height: 60, background: G.greenMist, borderRadius: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 22px', border: `1px solid ${G.greenLine}` }}>
+          <IcoPath size={24} color={G.green} />
         </div>
-        <h2 className="text-xl font-semibold text-slate-800 mb-2">No active path</h2>
-        <p className="text-slate-500 text-sm mb-8">Start your assessment to generate a personalized roadmap.</p>
-        <button onClick={() => navigate('/questionnaire')}
-          className="w-full py-3 rounded-xl bg-[#1C74D9] text-white font-semibold text-sm hover:bg-[#0A3FAE] transition-colors">
-          Start Journey
-        </button>
+        <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 700, color: G.text1, margin: '0 0 12px', letterSpacing: '-0.02em' }}>No active path yet</h2>
+        <p style={{ fontSize: 14, color: G.text3, margin: '0 0 28px', lineHeight: 1.75 }}>Complete your assessment to generate a personalised roadmap tailored to your goals and timeline.</p>
+        <button
+          style={{ width: '100%', padding: '13px', borderRadius: 13, background: G.green, color: '#fff', fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer', boxShadow: G.shadowGreen, transition: 'all 0.15s' }}
+          onClick={() => navigate('/questionnaire')}
+          onMouseEnter={e => { e.currentTarget.style.background = G.greenMid; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = G.green; e.currentTarget.style.transform = ''; }}
+        >Start Assessment →</button>
       </div>
     </div>
   );
 
+  /* ── Main render ── */
   return (
-    <div className="min-h-screen flex bg-[#F6F6F6]"
-         style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'calc(env(safe-area-inset-bottom) + 5rem)' }}>
+    <div style={{ minHeight: '100vh', background: G.bg, color: G.text1, fontFamily: "'Plus Jakarta Sans',sans-serif", WebkitFontSmoothing: 'antialiased', paddingBottom: 'calc(env(safe-area-inset-bottom)+80px)' }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,600&display=swap');
+        @keyframes spin { to { transform: rotate(360deg) } }
+        @media(max-width:640px) {
+          .rm-sb { display: none !important; }
+          .rm-ct { margin-left: 0 !important; }
+          .rm-mt { display: flex !important; }
+          .rm-bn { display: flex !important; }
+        }
+        @media(min-width:641px) {
+          .rm-mt { display: none !important; }
+          .rm-bn { display: none !important; }
+        }
+        .rm-nav-btn:hover { background: ${G.greenMist} !important; color: ${G.green} !important; }
+      `}</style>
 
-      {/* Desktop sidebar */}
-      <aside className="hidden sm:flex flex-col w-60 flex-shrink-0 fixed left-0 top-0 h-full z-20 bg-white border-r border-slate-100"
-             style={{ paddingTop: 'calc(env(safe-area-inset-top) + 2rem)' }}>
-        <div className="px-6 mb-8">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1C74D9] mb-1">EduRoute</p>
-          <p className="text-sm font-bold text-slate-800 truncate">{roadmapData.roadmap?.domain || 'Career Path'}</p>
-        </div>
-        <nav className="flex flex-col gap-0.5 px-3">
-          {tabs.map(({ id, label, Icon }) => (
-            <button key={id} type="button" onClick={() => setActiveTab(id)}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all"
-              style={{
-                background: activeTab === id ? 'rgba(28,116,217,0.07)' : 'transparent',
-                color: activeTab === id ? '#1C74D9' : '#64748b',
-              }}>
-              <Icon active={activeTab === id} />
-              {label}
-            </button>
-          ))}
-        </nav>
+      <div style={{ display: 'flex', minHeight: '100vh' }}>
 
-        {/* Sidebar stats card */}
-        <div className="mt-auto px-4 pb-8">
-          <div className="rounded-2xl p-4" style={{ background: '#f8fafc', border: '1px solid #f1f5f9' }}>
-            {/* Progress ring-style display */}
-            <div className="flex items-center gap-3 mb-4">
-              <div className="relative w-12 h-12 flex-shrink-0">
-                <svg className="w-12 h-12 -rotate-90" viewBox="0 0 48 48">
-                  <circle cx="24" cy="24" r="20" fill="none" stroke="#e2e8f0" strokeWidth="4" />
-                  <motion.circle
-                    cx="24" cy="24" r="20" fill="none"
-                    stroke="#1C74D9" strokeWidth="4"
-                    strokeLinecap="round"
-                    strokeDasharray={`${2 * Math.PI * 20}`}
-                    initial={{ strokeDashoffset: 2 * Math.PI * 20 }}
-                    animate={{ strokeDashoffset: 2 * Math.PI * 20 * (1 - progressPct / 100) }}
-                    transition={{ duration: 1.2, ease: 'easeOut' }}
-                  />
-                </svg>
-                <span className="absolute inset-0 flex items-center justify-center text-[11px] font-black text-[#1C74D9]">
-                  {progressPct}%
-                </span>
+        {/* ── Sidebar ── */}
+        <aside className="rm-sb" style={{
+          position: 'fixed', left: 0, top: 0, bottom: 0, width: G.sidebarW,
+          background: G.surface, borderRight: `1px solid ${G.border}`,
+          display: 'flex', flexDirection: 'column',
+          paddingTop: 'calc(env(safe-area-inset-top) + 76px)',
+          zIndex: 40,
+        }}>
+          {/* Domain header */}
+          <div style={{ padding: '0 18px 18px', borderBottom: `1px solid ${G.borderSoft}`, marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: G.green, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
               </div>
-              <div>
-                <p className="text-sm font-bold text-slate-800">Progress</p>
-                <p className="text-xs text-slate-400">{(completedHours | 0).toFixed(1)}h / {HOURS_GOAL}h</p>
+              <div style={{ minWidth: 0 }}>
+                <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: G.text4, marginBottom: 2 }}>Active Roadmap</p>
+                <p style={{ fontFamily: "'Fraunces',serif", fontSize: 13, fontWeight: 600, color: G.text1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {roadmapData.roadmap?.domain || 'Career Path'}
+                </p>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { label: 'Streak', value: `${streak.current_streak}d` },
-                { label: 'Level',  value: `${level}` },
-                { label: 'Done',   value: `${units.filter(u => u.status === 'completed').length}` },
-                { label: 'Total',  value: `${units.length}` },
-              ].map(({ label, value }) => (
-                <div key={label} className="bg-white rounded-xl p-2.5 text-center border border-slate-100">
-                  <p className="text-sm font-black text-slate-800">{value}</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">{label}</p>
+          </div>
+
+          {/* Nav */}
+          <nav style={{ padding: '0 10px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {tabs.map(({ id, label, Icon }) => (
+              <button key={id} onClick={() => setActiveTab(id)} className="rm-nav-btn" style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 9,
+                padding: '9px 12px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 13,
+                fontWeight: activeTab === id ? 700 : 600,
+                color: activeTab === id ? G.green : G.text3,
+                background: activeTab === id ? G.sageDim : 'transparent',
+                transition: 'all 0.15s', textAlign: 'left',
+              }}>
+                <Icon size={14} color={activeTab === id ? G.green : G.text4} />
+                {label}
+                {activeTab === id && <span style={{ width: 5, height: 5, borderRadius: '50%', background: G.green, marginLeft: 'auto' }} />}
+              </button>
+            ))}
+          </nav>
+
+          {/* Progress widget */}
+          <div style={{ margin: 'auto 12px 24px', background: G.bg, border: `1px solid ${G.border}`, borderRadius: 16, padding: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+              <div style={{ position: 'relative', width: 46, height: 46, flexShrink: 0 }}>
+                <svg width="46" height="46" viewBox="0 0 46 46" style={{ transform: 'rotate(-90deg)' }}>
+                  <circle cx="23" cy="23" r="20" fill="none" stroke={G.borderSoft} strokeWidth="4" />
+                  <motion.circle cx="23" cy="23" r="20" fill="none" stroke={G.green} strokeWidth="4" strokeLinecap="round" strokeDasharray={circ} initial={{ strokeDashoffset: circ }} animate={{ strokeDashoffset: circ * (1 - progressPct / 100) }} transition={{ duration: 1.3, ease: 'easeOut' }} />
+                </svg>
+                <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Fraunces',serif", fontSize: 10, fontWeight: 700, color: G.green }}>{progressPct}%</span>
+              </div>
+              <div>
+                <p style={{ fontFamily: "'Fraunces',serif", fontSize: 12, fontWeight: 600, color: G.text1 }}>Progress</p>
+                <p style={{ fontSize: 11, color: G.text4, marginTop: 2 }}>{Number(completedHours).toFixed(1)}h / {HOURS_GOAL}h</p>
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+              {[['Streak', `${streak.current_streak}d`, G.amber], ['Level', `Lv.${level}`, G.violet], ['Done', units.filter(u => u.status === 'completed').length, G.green], ['Total', units.length, G.text3]].map(([k, v, c]) => (
+                <div key={k} style={{ background: G.surface, border: `1px solid ${G.borderSoft}`, borderRadius: 10, padding: '8px', textAlign: 'center' }}>
+                  <div style={{ fontFamily: "'Fraunces',serif", fontSize: 15, fontWeight: 700, color: c || G.text1 }}>{v}</div>
+                  <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: G.text4, marginTop: 2 }}>{k}</div>
                 </div>
               ))}
             </div>
           </div>
-        </div>
-      </aside>
+        </aside>
 
-      <div className="flex-1 flex flex-col min-w-0 sm:ml-60">
+        {/* ── Main content ── */}
+        <div className="rm-ct" style={{ flex: 1, display: 'flex', flexDirection: 'column', marginLeft: G.sidebarW, minWidth: 0 }}>
 
-        {/* Header */}
-        <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-lg border-b border-slate-100">
-          <div className="max-w-2xl mx-auto px-4 sm:px-8 py-4">
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div>
-                <h1 className="text-lg font-bold text-slate-800">Your Learning Path</h1>
-                <p className="text-xs text-slate-400 mt-0.5">{roadmapData.roadmap?.domain || 'Career Path'}</p>
+          {/* Sticky header */}
+          <header style={{
+            position: 'sticky', top: 0, zIndex: 30,
+            background: 'rgba(244,249,245,0.92)',
+            backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+            borderBottom: `1px solid ${G.border}`,
+          }}>
+            <div style={{ maxWidth: 740, margin: '0 auto', padding: '14px 24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                <div>
+                  <p style={{ fontFamily: "'Fraunces',serif", fontSize: 18, fontWeight: 700, color: G.text1, lineHeight: 1.2, letterSpacing: '-0.02em' }}>Learning Path</p>
+                  <p style={{ fontSize: 11, color: G.text4, marginTop: 2 }}>{roadmapData.roadmap?.domain || 'Career Path'}</p>
+                </div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {[
+                    { label: `🔥 ${streak.current_streak}d`,  bg: G.amberLight,   color: G.amber  },
+                    { label: `${progressPct}% done`,           bg: G.sageDim,      color: G.green  },
+                    { label: `Lv.${level}`,                    bg: G.violetLight,  color: G.violet },
+                  ].map(({ label, bg, color }) => (
+                    <span key={label} style={{ padding: '5px 11px', borderRadius: 99, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap', background: bg, color }}>{label}</span>
+                  ))}
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Chip label={`${streak.current_streak}d streak`} />
-                <Chip label={`${progressPct}%`} highlight />
-                <Chip label={`Lv.${level}`} />
+              {/* Progress bar */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
+                <div style={{ flex: 1, height: 5, background: G.bgDeep, borderRadius: 99, overflow: 'hidden' }}>
+                  <motion.div
+                    style={{ height: '100%', background: `linear-gradient(90deg,${G.green},${G.greenLight})`, borderRadius: 99 }}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progressPct}%` }}
+                    transition={{ duration: 1.1, ease: 'easeOut' }}
+                  />
+                </div>
+                <span style={{ fontSize: 11, fontWeight: 600, color: G.text4, whiteSpace: 'nowrap' }}>{Number(completedHours).toFixed(1)}h / {HOURS_GOAL}h</span>
               </div>
             </div>
-            <div className="mt-3 flex items-center gap-3">
-              <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                <motion.div className="h-full rounded-full"
-                  initial={{ width: 0 }} animate={{ width: `${progressPct}%` }}
-                  transition={{ duration: 1, ease: 'easeOut' }}
-                  style={{ background: 'linear-gradient(90deg,#1C74D9,#4fa3f7)' }} />
-              </div>
-              <span className="text-xs text-slate-400 font-medium flex-shrink-0">
-                {(completedHours | 0).toFixed(1)}h / {HOURS_GOAL}h
-              </span>
-            </div>
-          </div>
-          <div className="sm:hidden flex border-t border-slate-100">
-            {tabs.map(({ id, label, Icon }) => (
-              <button key={id} type="button" onClick={() => setActiveTab(id)}
-                className="flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-semibold transition-colors"
-                style={{
-                  color: activeTab === id ? '#1C74D9' : '#94a3b8',
-                  borderTop: activeTab === id ? '2px solid #1C74D9' : '2px solid transparent',
-                  marginTop: -1,
+
+            {/* Mobile tabs inside header */}
+            <div className="rm-mt" style={{ borderTop: `1px solid ${G.borderSoft}`, display: 'none' }}>
+              {tabs.map(({ id, label, Icon }) => (
+                <button key={id} onClick={() => setActiveTab(id)} style={{
+                  flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                  padding: '8px 2px', border: 'none', background: 'transparent', cursor: 'pointer',
+                  fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 9, fontWeight: 700,
+                  textTransform: 'uppercase', letterSpacing: '0.06em',
+                  color: activeTab === id ? G.green : G.text4,
+                  borderTop: `2px solid ${activeTab === id ? G.green : 'transparent'}`,
+                  marginTop: -1, transition: 'color 0.15s',
                 }}>
-                <Icon active={activeTab === id} />
-                {label}
-              </button>
-            ))}
-          </div>
-        </header>
+                  <Icon size={14} color={activeTab === id ? G.green : G.text4} />{label}
+                </button>
+              ))}
+            </div>
+          </header>
 
-        <main className="flex-1 overflow-y-auto">
+          {/* Scrollable body */}
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            <div style={{ maxWidth: 740, margin: '0 auto', padding: '28px 24px 100px' }}>
 
-          {/* ══════════ STEP LADDER PATH ══════════ */}
-          {activeTab === 'path' && (
-            <div className="max-w-2xl mx-auto px-4 sm:px-8 py-8 pb-28">
-
-              {/* Summary strip */}
-              <div className="flex items-center gap-3 mb-6 px-4 py-3 bg-white rounded-2xl border border-slate-100 shadow-sm">
-                <div className="flex-1">
-                  <p className="text-xs font-bold text-slate-800">
-                    {units.filter(u => u.status === 'completed').length} of {units.length} steps completed
-                  </p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    {units.find(u => u.status === 'available')?.title
-                      ? `Up next: ${units.find(u => u.status === 'available').title}`
-                      : 'All steps done!'}
-                  </p>
-                </div>
-                <div
-                  className="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold text-white"
-                  style={{ background: '#1C74D9' }}
-                >
-                  {progressPct}%
-                </div>
-              </div>
-
-              {/* Steps */}
-              <div>
-                {units.map((unit, i) => (
-                  <div key={unit.unit_number}>
-                    <StepRow
-                      unit={unit}
-                      onClick={() => handleNodeClick(unit)}
-                      completedTasks={completedTasks}
-                      index={i}
-                    />
-                    {i < units.length - 1 && (
-                      <StepConnector isCompleted={unit.status === 'completed'} />
-                    )}
+              {/* ── PATH TAB ── */}
+              {activeTab === 'path' && (
+                <>
+                  {/* Summary banner */}
+                  <div style={{ background: G.green, borderRadius: 20, padding: '22px 24px', marginBottom: 24, color: '#fff', display: 'flex', alignItems: 'center', gap: 16, position: 'relative', overflow: 'hidden', boxShadow: '0 8px 28px rgba(45,106,79,0.28)' }}>
+                    <div style={{ position: 'absolute', width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', right: -40, top: -50, pointerEvents: 'none' }} />
+                    {/* Ring */}
+                    <div style={{ position: 'relative', flexShrink: 0, zIndex: 1 }}>
+                      <svg width="58" height="58" viewBox="0 0 58 58" style={{ transform: 'rotate(-90deg)' }}>
+                        <circle cx="29" cy="29" r="24" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="5" />
+                        <motion.circle cx="29" cy="29" r="24" fill="none" stroke="#fff" strokeWidth="5" strokeLinecap="round" strokeDasharray={circB} initial={{ strokeDashoffset: circB }} animate={{ strokeDashoffset: circB * (1 - progressPct / 100) }} transition={{ duration: 1.4, ease: 'easeOut' }} />
+                      </svg>
+                      <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Fraunces',serif", fontSize: 11, fontWeight: 700, color: '#fff' }}>{progressPct}%</span>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0, position: 'relative', zIndex: 1 }}>
+                      <p style={{ fontFamily: "'Fraunces',serif", fontSize: 16, fontWeight: 700, margin: '0 0 4px', letterSpacing: '-0.01em' }}>
+                        {units.filter(u => u.status === 'completed').length} of {units.length} steps completed
+                      </p>
+                      <p style={{ fontSize: 12, opacity: 0.75, margin: 0, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                        {units.find(u => u.status === 'available')?.title
+                          ? `Up next: ${units.find(u => u.status === 'available').title}`
+                          : '🎉 All steps completed!'}
+                      </p>
+                    </div>
+                    <div style={{ flexShrink: 0, background: 'rgba(255,255,255,0.18)', borderRadius: 10, padding: '7px 16px', fontFamily: "'Fraunces',serif", fontSize: 14, fontWeight: 700, position: 'relative', zIndex: 1, border: '1px solid rgba(255,255,255,0.25)', backdropFilter: 'blur(8px)' }}>
+                      Lv.{level}
+                    </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
 
-          {/* ══ ACHIEVEMENTS ══ */}
-          {activeTab === 'achievements' && (
-            <div className="max-w-2xl mx-auto px-4 sm:px-8 py-8">
-              <SectionHeader title="Achievements" subtitle="Track your progress and earn badges" />
-              {achievements.length === 0 ? (
-                <EmptyState message='Complete tasks to earn achievements. Reach 50% for "Halfway There"!' />
-              ) : (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {achievements.map((a, i) => (
-                    <motion.div key={i} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.08 }}
-                      className="bg-white rounded-2xl border border-slate-100 p-5 hover:shadow-sm transition-shadow">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-[#1C74D9]/8 flex items-center justify-center">
-                          <span className="font-black text-[#1C74D9]">
-                            {(a.title || a.achievement_type || 'A').charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="font-bold text-slate-800 text-sm">{a.title || a.achievement_type}</p>
-                          <p className="text-xs text-slate-400 mt-0.5">{a.desc}</p>
-                        </div>
+                  {/* Step list */}
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    {units.map((unit, i) => (
+                      <StepRow key={unit.unit_number} unit={unit} onClick={() => handleNodeClick(unit)} completedTasks={completedTasks} index={i} isLast={i === units.length - 1} />
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* ── ACHIEVEMENTS TAB ── */}
+              {activeTab === 'achievements' && (
+                <div>
+                  <SectionHdr dot={G.amber} label="Progress" title="Achievements" sub="Complete milestones to unlock badges" />
+                  {achievements.length === 0
+                    ? <Empty icon={<IcoTrophy size={20} color={G.text4} />} msg="Complete tasks to earn achievements. Reach 50% progress for 'Halfway There'!" />
+                    : (
+                      <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))' }}>
+                        {achievements.map((a, i) => (
+                          <motion.div key={i} style={{ ...card, padding: 20, display: 'flex', alignItems: 'center', gap: 14 }} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}>
+                            <div style={{ width: 44, height: 44, borderRadius: 13, background: G.amberLight, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontFamily: "'Fraunces',serif", fontSize: 18, fontWeight: 700, color: G.amber }}>
+                              {(a.title || a.achievement_type || 'A').charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <p style={{ fontFamily: "'Fraunces',serif", fontSize: 13, fontWeight: 600, color: G.text1 }}>{a.title || a.achievement_type}</p>
+                              <p style={{ fontSize: 11, color: G.text4, marginTop: 2 }}>{a.desc}</p>
+                            </div>
+                          </motion.div>
+                        ))}
                       </div>
-                    </motion.div>
-                  ))}
+                    )
+                  }
                 </div>
               )}
-            </div>
-          )}
 
-          {/* ══ RANK ══ */}
-          {activeTab === 'rank' && (
-            <div className="max-w-2xl mx-auto px-4 sm:px-8 py-8">
-              <SectionHeader title="Leaderboard" subtitle="Ranked by quiz score" />
-              {rankList.length === 0 ? (
-                <EmptyState message="Complete quizzes to appear on the leaderboard." />
-              ) : (
-                <div className="space-y-2">
-                  {rankList.map((r, i) => (
-                    <motion.div key={r.id} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.04 }}
-                      className="flex items-center justify-between px-5 py-4 rounded-2xl border bg-white transition-all"
-                      style={{ borderColor: r.isCurrentUser ? '#1C74D9' : '#f1f5f9' }}>
-                      <div className="flex items-center gap-4">
-                        <span className="font-black text-sm w-8 text-center tabular-nums"
-                              style={{ color: r.rank <= 3 ? '#1C74D9' : '#cbd5e1' }}>
-                          #{r.rank}
-                        </span>
-                        <span className="font-semibold text-slate-800 text-sm">{r.name || 'User'}</span>
-                        {r.isCurrentUser && (
-                          <span className="text-[10px] px-2 py-0.5 bg-[#1C74D9] text-white rounded-full font-bold">You</span>
-                        )}
+              {/* ── RANK TAB ── */}
+              {activeTab === 'rank' && (
+                <div>
+                  <SectionHdr dot={G.violet} label="Community" title="Leaderboard" sub="Ranked by quiz score and accuracy" />
+                  {rankList.length === 0
+                    ? <Empty icon={<IcoChart size={20} color={G.text4} />} msg="Complete quizzes to appear on the leaderboard and compete with peers." />
+                    : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {rankList.map((r, i) => (
+                          <motion.div key={r.id} style={{
+                            ...card, padding: '14px 18px',
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            borderColor: r.isCurrentUser ? 'rgba(45,106,79,0.3)' : G.border,
+                            background: r.isCurrentUser ? G.greenMist : G.surface,
+                            boxShadow: r.isCurrentUser ? '0 4px 18px rgba(45,106,79,0.14)' : G.shadowXs,
+                          }} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                              <div style={{
+                                width: 32, height: 32, borderRadius: 10, flexShrink: 0,
+                                background: r.rank <= 3 ? G.green : G.bgDeep,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontFamily: "'Fraunces',serif", fontSize: 13, fontWeight: 700,
+                                color: r.rank <= 3 ? '#fff' : G.text4,
+                              }}>
+                                {r.rank <= 3 ? ['🥇','🥈','🥉'][r.rank - 1] : `#${r.rank}`}
+                              </div>
+                              <div>
+                                <p style={{ fontFamily: "'Fraunces',serif", fontSize: 14, fontWeight: 600, color: G.text1 }}>{r.name || 'User'}</p>
+                                {r.isCurrentUser && <span style={{ fontSize: 9, padding: '2px 8px', background: G.greenSoft, color: G.green, borderRadius: 20, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>You</span>}
+                              </div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <p style={{ fontFamily: "'Fraunces',serif", fontSize: 15, fontWeight: 700, color: G.text1 }}>{r.total_correct} pts</p>
+                              <p style={{ fontSize: 11, color: G.text4, marginTop: 2 }}>{r.accuracy_pct}% accuracy</p>
+                            </div>
+                          </motion.div>
+                        ))}
                       </div>
-                      <div>
-                        <span className="font-bold text-slate-800 text-sm">{r.total_correct} pts</span>
-                        <span className="text-xs text-slate-400 ml-1.5">({r.accuracy_pct}%)</span>
-                      </div>
-                    </motion.div>
-                  ))}
+                    )
+                  }
                 </div>
               )}
-            </div>
-          )}
 
-          {/* ══ RESOURCES ══ */}
-          {activeTab === 'resources' && (
-            <div className="max-w-2xl mx-auto px-4 sm:px-8 py-8">
-              <SectionHeader title="Resources" subtitle={`${resources.domain || 'General'} learning videos`} />
-              {(resources.videos || []).length === 0 ? (
-                <EmptyState message="Complete your path to unlock personalized videos." />
-              ) : (
-                <div className="space-y-5">
-                  {(resources.videos || []).map((v, i) => (
-                    <motion.div key={i} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.1 }}
-                      className="bg-white rounded-2xl border border-slate-100 overflow-hidden hover:shadow-sm transition-shadow">
-                      <div className="aspect-video bg-slate-100">
-                        <iframe title={v.title} src={v.url} className="w-full h-full"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+              {/* ── RESOURCES TAB ── */}
+              {activeTab === 'resources' && (
+                <div>
+                  <SectionHdr dot={G.green} label="Learning" title="Resources" sub={`${resources.domain || 'General'} learning videos`} />
+                  {(resources.videos || []).length === 0
+                    ? <Empty icon={<IcoBook size={20} color={G.text4} />} msg="Complete your learning path to unlock personalised videos and resources." />
+                    : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                        {(resources.videos || []).map((v, i) => (
+                          <motion.div key={i} style={{ ...card, borderRadius: 16, overflow: 'hidden' }} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.09 }}>
+                            <div style={{ aspectRatio: '16/9', background: G.bgDeep }}>
+                              <iframe title={v.title} src={v.url} style={{ width: '100%', height: '100%', display: 'block', border: 0 }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                            </div>
+                            <p style={{ padding: '14px 18px', fontFamily: "'Fraunces',serif", fontSize: 14, fontWeight: 600, color: G.text1 }}>{v.title}</p>
+                          </motion.div>
+                        ))}
                       </div>
-                      <div className="px-5 py-4">
-                        <p className="font-bold text-slate-800 text-sm">{v.title}</p>
-                      </div>
-                    </motion.div>
-                  ))}
+                    )
+                  }
                 </div>
               )}
+
             </div>
-          )}
-        </main>
+          </div>
+        </div>
       </div>
 
-      {/* Mobile bottom nav */}
-      <nav className="fixed bottom-3 left-3 right-3 bg-white rounded-2xl border border-slate-100 shadow-xl sm:hidden z-30"
-           style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <div className="flex">
-          {tabs.map(({ id, label, Icon }) => (
-            <button key={id} type="button" onClick={() => setActiveTab(id)}
-              className="flex-1 flex flex-col items-center gap-1 py-3 text-[10px] font-semibold transition-all touch-manipulation"
-              style={{ color: activeTab === id ? '#1C74D9' : '#94a3b8' }}>
-              <Icon active={activeTab === id} />
-              {label}
-            </button>
-          ))}
-        </div>
+      {/* ── Mobile bottom nav ── */}
+      <nav className="rm-bn" style={{
+        position: 'fixed', bottom: 10, left: 10, right: 10,
+        background: G.surface, borderRadius: 20,
+        border: `1px solid ${G.border}`,
+        boxShadow: G.shadowLg,
+        zIndex: 50, paddingBottom: 'env(safe-area-inset-bottom)',
+        display: 'none',
+      }}>
+        {tabs.map(({ id, label, Icon }) => (
+          <button key={id} onClick={() => setActiveTab(id)} style={{
+            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+            padding: '10px 4px', border: 'none', background: 'transparent', cursor: 'pointer',
+            fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 9, fontWeight: 700,
+            textTransform: 'uppercase', letterSpacing: '0.06em',
+            color: activeTab === id ? G.green : G.text4,
+            transition: 'color .15s', touchAction: 'manipulation',
+          }}>
+            <Icon size={16} color={activeTab === id ? G.green : G.text4} />
+            {label}
+            <span style={{ width: 4, height: 4, borderRadius: '50%', background: G.green, marginTop: 1, opacity: activeTab === id ? 1 : 0, transition: 'opacity .15s' }} />
+          </button>
+        ))}
       </nav>
     </div>
   );
 };
-
-/* ── HELPERS ── */
-const Chip = ({ label, highlight }) => (
-  <span className="px-2.5 py-1.5 rounded-lg text-xs font-semibold"
-        style={{
-          background: highlight ? 'rgba(28,116,217,0.09)' : '#f1f5f9',
-          color: highlight ? '#1C74D9' : '#64748b',
-        }}>
-    {label}
-  </span>
-);
-
-const SectionHeader = ({ title, subtitle }) => (
-  <div className="mb-6">
-    <h2 className="text-xl font-bold text-slate-800">{title}</h2>
-    {subtitle && <p className="text-sm text-slate-400 mt-0.5">{subtitle}</p>}
-  </div>
-);
-
-const EmptyState = ({ message }) => (
-  <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center">
-    <div className="w-12 h-12 rounded-2xl bg-slate-50 mx-auto mb-4 flex items-center justify-center">
-      <svg className="w-5 h-5 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-      </svg>
-    </div>
-    <p className="text-slate-400 text-sm max-w-xs mx-auto">{message}</p>
-  </div>
-);
-
-const PathIcon = ({ active }) => (
-  <svg className="w-4 h-4" style={{ color: active ? '#1C74D9' : 'currentColor' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 13l4.553 2.276A1 1 0 0021 21.382V10.618a1 1 0 00-.553-.894L15 7m0 13V7m0 0L9 4" />
-  </svg>
-);
-const TrophyIcon = ({ active }) => (
-  <svg className="w-4 h-4" style={{ color: active ? '#1C74D9' : 'currentColor' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M12 15l-3 6h6l-3-6zm0 0V9m-4.5-3H5a2 2 0 000 4h1.5M16.5 6H19a2 2 0 010 4h-1.5M7.5 6h9" />
-  </svg>
-);
-const ChartIcon = ({ active }) => (
-  <svg className="w-4 h-4" style={{ color: active ? '#1C74D9' : 'currentColor' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-  </svg>
-);
-const BookIcon = ({ active }) => (
-  <svg className="w-4 h-4" style={{ color: active ? '#1C74D9' : 'currentColor' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-  </svg>
-);
 
 export default Roadmap;

@@ -27,11 +27,8 @@ function App() {
 
   return (
     <AuthProvider>
-      <div
-        className="min-h-screen"
-        className="min-h-screen bg-slate-50"
-        style={{ minHeight: "100dvh" }}
-      >
+      <div className="min-h-screen" style={{ minHeight: "100dvh", position: "relative" }}>
+        <div className="app-bg" aria-hidden="true" />
         <Navbar />
         <main className="pt-20 sm:pt-24">
           <Routes>

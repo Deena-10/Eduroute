@@ -1,7 +1,6 @@
 import React, { useState, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
-import logoImg from "../images/updatedlogopng.png";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -15,8 +14,8 @@ const Login = () => {
 
   if (!authContext || typeof login !== "function") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-        <div className="bg-white rounded-2xl p-8 border border-slate-200 shadow-xl text-center max-w-sm">
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="glass-card rounded-2xl p-8 shadow-xl text-center max-w-sm">
           <p className="text-red-600 font-medium">Auth not available. Please refresh the page.</p>
         </div>
       </div>
@@ -54,7 +53,7 @@ const Login = () => {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4 sm:p-6 bg-slate-50"
+      className="min-h-screen flex items-center justify-center p-4 sm:p-6"
       style={{
         paddingTop: "calc(env(safe-area-inset-top) + 1rem)",
         paddingBottom: "env(safe-area-inset-bottom)",
@@ -62,8 +61,8 @@ const Login = () => {
     >
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-white shadow-xl border border-slate-200 mb-6">
-            <img src={logoImg} alt="EduRoute AI" className="w-14 h-14 rounded-xl object-cover" />
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl glass-card shadow-xl mb-6" style={{ border: '1px solid rgba(255,255,255,0.6)' }}>
+            <img src="/logo.png" alt="EduRoute AI" className="w-14 h-14 rounded-xl object-cover" />
           </div>
           <div className="mb-2">
             <h1 className="text-3xl font-bold text-slate-800">
@@ -73,7 +72,7 @@ const Login = () => {
           <p className="text-slate-600">Sign in to continue your career journey</p>
         </div>
 
-        <div className="bg-white rounded-3xl p-8 shadow-xl border border-slate-200">
+        <div className="glass-card rounded-3xl p-8 shadow-xl">
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
               <p className="text-red-600 text-center font-medium text-sm">{error}</p>
@@ -89,7 +88,7 @@ const Login = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full pl-4 pr-4 py-3.5 bg-white border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1C74D9] focus:border-transparent transition-all"
+                  className="w-full pl-4 pr-4 py-3.5 bg-white border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#3b82f6] focus:border-transparent transition-all"
                   placeholder="you@example.com"
                 />
               </div>
@@ -103,7 +102,7 @@ const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full pl-4 pr-4 py-3.5 bg-white border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1C74D9] focus:border-transparent transition-all"
+                  className="w-full pl-4 pr-4 py-3.5 bg-white border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#3b82f6] focus:border-transparent transition-all"
                   placeholder="••••••••"
                 />
               </div>
@@ -112,7 +111,7 @@ const Login = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full flex items-center justify-center min-h-[48px] py-3.5 rounded-xl bg-[#1C74D9] text-white font-semibold shadow-lg hover:bg-[#0A3FAE] disabled:opacity-50 transition-all touch-manipulation"
+              className="w-full flex items-center justify-center min-h-[48px] py-3.5 rounded-xl bg-[#3b82f6] text-white font-semibold shadow-lg hover:bg-[#2563eb] disabled:opacity-50 transition-all touch-manipulation"
             >
               {isLoading ? "Signing in..." : "Sign In"}
             </button>
@@ -141,7 +140,7 @@ const Login = () => {
 
           <p className="mt-8 text-center text-slate-600 text-sm">
             Don&apos;t have an account?{" "}
-            <Link to="/signup" className="font-semibold text-[#1C74D9] hover:text-[#0A3FAE]">
+            <Link to="/signup" className="font-semibold text-[#3b82f6] hover:text-[#2563eb]">
               Sign up
             </Link>
           </p>

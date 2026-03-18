@@ -447,7 +447,7 @@ exports.completeTask = async (req, res, next) => {
             }
         }
 
-        // Streak: only when a NEW task was completed — daily snapshot, +1 per day max; reset if a day is skipped
+        // Streak: 1st day = 0; only increases when user attends on the NEXT day (consecutive day). Not incremented per task/test.
         const { rows: streakRows } = await pool.query(
             "SELECT current_streak, last_activity_date FROM user_learning_streak WHERE user_id = $1",
             [userId]
@@ -461,7 +461,7 @@ exports.completeTask = async (req, res, next) => {
         let currentStreak = streakRows.length > 0 ? (streakRows[0].current_streak ?? 0) : 0;
         const lastDate = streakRows[0]?.last_activity_date ? new Date(streakRows[0].last_activity_date).toISOString().slice(0, 10) : null;
         if (!lastDate || (lastDate !== today && lastDate !== yesterday)) {
-            currentStreak = 0; // reset if inactive
+            currentStreak = 0; // reset if inactive or first time
         }
 
         if (isNewCompletion) {
@@ -469,11 +469,11 @@ exports.completeTask = async (req, res, next) => {
             const lastDate = row?.last_activity_date ? new Date(row.last_activity_date).toISOString().slice(0, 10) : null;
 
             if (lastDate === today) {
-                currentStreak = row?.current_streak ?? 0; // same day: no increment
+                currentStreak = row?.current_streak ?? 0; // same day: no increment (don't increment on completing task)
             } else if (lastDate === yesterday) {
-                currentStreak = (row?.current_streak ?? 0) + 1; // consecutive day
+                currentStreak = (row?.current_streak ?? 0) + 1; // next day / within 24h window: streak +1
             } else {
-                currentStreak = 1; // new or reset
+                currentStreak = 0; // first day ever or after a gap: streak stays 0 until they attend next day
             }
 
             await pool.query(

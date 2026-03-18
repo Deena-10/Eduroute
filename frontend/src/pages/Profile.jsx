@@ -145,6 +145,17 @@ const Profile = () => {
         .pf-activity-row:hover { border-color: ${G.greenLine}; }
         .pf-danger-btn { padding: 11px 20px; background: ${G.roseLight}; color: ${G.rose}; border: 1px solid #FECDD3; border-radius: 11px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.15s; font-family: 'Plus Jakarta Sans',sans-serif; }
         .pf-danger-btn:hover { background: #FFE4E6; }
+        .pf-hero-row { display: flex; align-items: center; gap: 22; flex-wrap: wrap; }
+        .pf-hero-streak { flex-shrink: 0; text-align: center; padding: 8px 14px; background: ${G.amberLight}; border-radius: 12px; border: 1px solid rgba(217,119,6,0.2); }
+        @media (max-width: 380px) {
+          .pf-hero-row { flex-direction: column; align-items: stretch; text-align: center; }
+          .pf-hero-row .pf-hero-info { text-align: center; }
+          .pf-hero-row .pf-hero-interests { justify-content: center; }
+          .pf-hero-streak { align-self: center; min-width: 120px; }
+        }
+        @media (min-width: 381px) and (max-width: 520px) {
+          .pf-hero-streak { width: 100%; max-width: 140px; margin-left: auto; margin-right: auto; }
+        }
       `}</style>
 
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '88px 24px 80px' }}>
@@ -161,29 +172,29 @@ const Profile = () => {
 
         {/* ── Profile hero card ── */}
         <Card style={{ marginBottom: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 22, flexWrap: 'wrap' }}>
+          <div className="pf-hero-row">
             {/* Avatar */}
             <div style={{ width: 72, height: 72, background: G.green, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: G.shadowGreen }}>
               <span style={{ fontFamily: "'Fraunces',serif", fontSize: 28, fontWeight: 700, color: '#fff' }}>
                 {userData.username.charAt(0).toUpperCase()}
               </span>
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="pf-hero-info" style={{ flex: 1, minWidth: 0 }}>
               <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 700, color: G.text1, marginBottom: 3, letterSpacing: '-0.02em' }}>{userData.username}</h2>
               <p style={{ fontSize: 13, color: G.text3, marginBottom: 4 }}>{userData.email}</p>
               {userData.domain && (
                 <p style={{ fontSize: 12, color: G.green, fontWeight: 700, marginBottom: 10 }}>Domain: {userData.domain}</p>
               )}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              <div className="pf-hero-interests" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'flex-start' }}>
                 {userData.interests.map((interest, i) => (
                   <span key={i} style={{ padding: '4px 12px', background: G.sageDim, color: G.green, fontSize: 12, fontWeight: 700, borderRadius: 99, border: `1px solid ${G.greenLine}` }}>{interest}</span>
                 ))}
               </div>
             </div>
-            {/* Streak chip */}
-            <div style={{ textAlign: 'center', padding: '12px 20px', background: G.amberLight, borderRadius: 14, border: `1px solid rgba(217,119,6,0.2)`, flexShrink: 0 }}>
-              <div style={{ fontFamily: "'Fraunces',serif", fontSize: 26, fontWeight: 700, color: G.amber, lineHeight: 1 }}>🔥 {streak.current_streak}</div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: G.amber, textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 4 }}>Day Streak</div>
+            {/* Streak chip - aligns well on PWA / small screens */}
+            <div className="pf-hero-streak">
+              <div style={{ fontFamily: "'Fraunces',serif", fontSize:19, fontWeight: 650, color: G.amber, lineHeight: 1 }}>🔥 {streak.current_streak}</div>
+              <div style={{ fontSize: 6, fontWeight: 700, color: G.amber, textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 3 }}>Day Streak</div>
             </div>
           </div>
         </Card>

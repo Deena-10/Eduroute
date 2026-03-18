@@ -509,16 +509,16 @@ const Roadmap = () => {
                     {/* Ring */}
                     <div style={{ position: 'relative', flexShrink: 0, zIndex: 1 }}>
                       <svg width="58" height="58" viewBox="0 0 58 58" style={{ transform: 'rotate(-90deg)' }}>
-                        <circle cx="29" cy="29" r="24" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="5" />
+                        <circle cx="29" cy="29" r="24" fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="5" />
                         <motion.circle cx="29" cy="29" r="24" fill="none" stroke="#fff" strokeWidth="5" strokeLinecap="round" strokeDasharray={circB} initial={{ strokeDashoffset: circB }} animate={{ strokeDashoffset: circB * (1 - progressPct / 100) }} transition={{ duration: 1.4, ease: 'easeOut' }} />
                       </svg>
                       <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Fraunces',serif", fontSize: 11, fontWeight: 700, color: '#fff' }}>{progressPct}%</span>
                     </div>
                     <div style={{ flex: 1, minWidth: 0, position: 'relative', zIndex: 1 }}>
-                      <p style={{ fontFamily: "'Fraunces',serif", fontSize: 16, fontWeight: 700, margin: '0 0 4px', letterSpacing: '-0.01em' }}>
+                      <p style={{ fontFamily: "'Fraunces',serif", fontSize: 16, fontWeight: 700, margin: '0 0 4px', letterSpacing: '-0.01em', color: '#fff' }}>
                         {units.filter(u => u.status === 'completed').length} of {units.length} steps completed
                       </p>
-                      <p style={{ fontSize: 12, opacity: 0.75, margin: 0, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                      <p style={{ fontSize: 12, margin: 0, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', color: '#fff' }}>
                         {units.find(u => u.status === 'available')?.title
                           ? `Up next: ${units.find(u => u.status === 'available').title}`
                           : '🎉 All steps completed!'}

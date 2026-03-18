@@ -276,10 +276,22 @@ def generate_roadmap_via_ai(domain: str, proficiency_level: str = "", profession
     """
     Generate roadmap units using AI. Returns dict with 'units' list or None on failure.
     Each unit has: unit_number, title, level, tasks, mcqs.
+    When proficiency is beginner, chapters MUST start from absolute basics of the domain.
     """
     level_hint = f"Proficiency: {proficiency_level}. " if proficiency_level else ""
     goal_hint = f"Professional goal: {professional_goal}. " if professional_goal else ""
     status_hint = f"Current status: {current_status}. " if current_status else ""
+
+    is_beginner = proficiency_level and str(proficiency_level).strip().lower() in ("beginner", "beginning", "starter", "new")
+    if is_beginner and start_unit == 1:
+        order_instruction = (
+            f'IMPORTANT: The learner is a BEGINNER. You MUST start from the absolute BASICS and FOUNDATIONS of "{domain}". '
+            "First chapters must cover: definitions, core concepts, terminology, and fundamental skills in order. "
+            "Do NOT jump to random or advanced topics. Progress from basics → simple applications → slightly harder concepts. "
+            "Chapter 1 must be the very first thing a complete beginner would need (e.g. what is X, why it matters, first steps)."
+        )
+    else:
+        order_instruction = ""
 
     unit_nums = list(range(start_unit, start_unit + count))
     def _level(n):
@@ -289,6 +301,7 @@ def generate_roadmap_via_ai(domain: str, proficiency_level: str = "", profession
 
     prompt = f"""You are an expert career coach and learning path designer. Generate a structured learning roadmap for the domain "{domain}".
 {level_hint}{goal_hint}{status_hint}
+{order_instruction}
 
 Create exactly {count} chapters (units) for chapters {start_unit} through {start_unit + count - 1}.
 Levels for these chapters: {levels_desc}.

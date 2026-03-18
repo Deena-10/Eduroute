@@ -157,6 +157,8 @@ const Navbar = () => {
           .nb-desktop-auth { display: flex !important; }
         }
         @keyframes nbSlide { from{opacity:0;transform:translateY(-8px);} to{opacity:1;transform:translateY(0);} }
+        .logo-fallback { display: none !important; }
+        .logo-fallback.show { display: flex !important; align-items: center; justify-content: center; }
       `}</style>
 
       <nav style={{
@@ -195,7 +197,13 @@ const Navbar = () => {
                   flexShrink: 0,
                 }}
               >
-                <img src="/logo.png" alt="EduRoute" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img
+                  src={`${process.env.PUBLIC_URL || ''}/logo.png`}
+                  alt="EduRoute"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={(e) => { e.target.style.display = 'none'; e.target.nextElementSibling?.classList.add('show'); }}
+                />
+                <span className="logo-fallback" style={{ display: 'none', color: '#fff', fontWeight: 800, fontSize: 16, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>E</span>
               </div>
               <span style={{
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
@@ -224,17 +232,21 @@ const Navbar = () => {
                       background: 'rgba(82,183,136,0.12)', color: '#2D6A4F',
                       border: '1px solid #B7E4C7',
                     }}>🔥 Streak</span>
-                    {/* Avatar */}
-                    <div style={{
-                      width: 32, height: 32, borderRadius: 9,
-                      background: '#2D6A4F',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontFamily: "'Plus Jakarta Sans', sans-serif",
-                      fontSize: 13, fontWeight: 800, color: '#fff',
-                      flexShrink: 0, cursor: 'pointer',
-                    }}>
+                    {/* Avatar → Profile */}
+                    <Link
+                      to="/profile"
+                      style={{
+                        width: 32, height: 32, borderRadius: 9,
+                        background: '#2D6A4F',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontFamily: "'Plus Jakarta Sans', sans-serif",
+                        fontSize: 13, fontWeight: 800, color: '#fff',
+                        flexShrink: 0, cursor: 'pointer', textDecoration: 'none',
+                      }}
+                      aria-label="Go to profile"
+                    >
                       {user.name?.charAt(0)?.toUpperCase() || 'U'}
-                    </div>
+                    </Link>
                     <button onClick={handleLogout} className="nb-logout-btn">Logout</button>
                   </div>
                 </>
@@ -285,7 +297,12 @@ const Navbar = () => {
               <div style={{ height: 1, background: '#E8F4EA', margin: '8px 4px' }} />
               {user ? (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Link
+                    to="/profile"
+                    onClick={closeMenu}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}
+                    aria-label="Go to profile"
+                  >
                     <div style={{
                       width: 32, height: 32, borderRadius: 9, background: '#2D6A4F',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -294,7 +311,7 @@ const Navbar = () => {
                       {user.name?.charAt(0)?.toUpperCase() || 'U'}
                     </div>
                     <span style={{ fontSize: 13, fontWeight: 600, color: '#3D5A3E' }}>{user.name || 'Profile'}</span>
-                  </div>
+                  </Link>
                   <button onClick={() => { handleLogout(); closeMenu(); }} className="nb-logout-btn">Logout</button>
                 </div>
               ) : (

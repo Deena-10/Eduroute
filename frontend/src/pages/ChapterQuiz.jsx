@@ -5,35 +5,42 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { safeJsonParse } from '../utils/safeJsonParser';
 import axiosInstance from '../api/axiosInstance';
 
-/* ─── Design-system styles (matches Roadmap) ─── */
+/* ─── Green theme (same as home / Roadmap) ─── */
 const QuizStyles = () => (
   <style>{`
-    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=DM+Serif+Display:ital@0;1&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&display=swap');
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --blue:       #1C74D9;
-      --blue-deep:  #0A3FAE;
-      --blue-soft:  #EBF3FD;
-      --blue-mid:   rgba(28,116,217,0.11);
-      --green:      #16A34A;
-      --green-soft: #DCFCE7;
-      --red:        #DC2626;
-      --red-soft:   #FEE2E2;
-      --text-1:     #0D1B2A;
-      --text-2:     #4A5568;
-      --text-muted: #8FA3B8;
-      --surface:    #FFFFFF;
-      --bg:         #F0F4FA;
-      --border:     #E3EAF3;
-      --shadow:     0 4px 24px rgba(13,27,42,0.08);
-      --shadow-lg:  0 12px 40px rgba(13,27,42,0.12);
-      --r:          18px;
+      --green:       #2D6A4F;
+      --green-mid:   #40916C;
+      --green-light: #52B788;
+      --green-soft:  #D8F3DC;
+      --green-mist:  #F0FAF3;
+      --green-line:  #B7E4C7;
+      --sage-dim:    rgba(82,183,136,0.12);
+      --red:         #DC2626;
+      --red-soft:    #FEE2E2;
+      --amber:       #D97706;
+      --amber-light: #FFFBEB;
+      --text-1:      #1A2E1A;
+      --text-2:      #3D5A3E;
+      --text-muted:  #6B8F71;
+      --surface:     #FFFFFF;
+      --bg:          #F4F9F5;
+      --bg-deep:     #EBF5EE;
+      --border:      #D4E8D7;
+      --border-soft: #E8F4EA;
+      --shadow:      0 2px 10px rgba(26,46,26,0.06);
+      --shadow-md:   0 6px 24px rgba(26,46,26,0.09);
+      --shadow-lg:   0 12px 40px rgba(26,46,26,0.12);
+      --shadow-green: 0 6px 24px rgba(45,106,79,0.18);
+      --r:           16px;
     }
 
     .cq-root {
-      font-family: 'Outfit', sans-serif;
+      font-family: 'Plus Jakarta Sans', sans-serif;
       background: var(--bg);
       min-height: 100vh;
       color: var(--text-1);
@@ -45,7 +52,7 @@ const QuizStyles = () => (
     /* ── TOP BAR ── */
     .cq-topbar {
       flex-shrink: 0;
-      background: rgba(255,255,255,0.92);
+      background: rgba(244,249,245,0.92);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--border);
@@ -63,15 +70,15 @@ const QuizStyles = () => (
     }
     .cq-back {
       display: flex; align-items: center; gap: 6px;
-      font-size: 13px; font-weight: 700; color: var(--blue);
-      background: var(--blue-soft); border: none; cursor: pointer;
+      font-size: 13px; font-weight: 700; color: var(--green);
+      background: var(--green-soft); border: none; cursor: pointer;
       padding: 7px 14px; border-radius: 10px;
-      font-family: 'Outfit', sans-serif;
+      font-family: 'Plus Jakarta Sans', sans-serif;
       transition: background 0.15s, transform 0.1s;
       white-space: nowrap; flex-shrink: 0;
       touch-action: manipulation;
     }
-    .cq-back:hover { background: rgba(28,116,217,0.18); }
+    .cq-back:hover { background: var(--green-mist); }
     .cq-back:active { transform: scale(0.97); }
 
     .cq-progress-area { flex: 1; min-width: 0; }
@@ -84,17 +91,17 @@ const QuizStyles = () => (
       font-size: 9px; font-weight: 800; letter-spacing: 0.14em;
       text-transform: uppercase; padding: 2px 8px; border-radius: 20px;
     }
-    .cq-progress-phase.main   { background: var(--blue-mid); color: var(--blue); }
-    .cq-progress-phase.replay { background: #FEF3C7; color: #D97706; }
+    .cq-progress-phase.main   { background: var(--sage-dim); color: var(--green); }
+    .cq-progress-phase.replay { background: var(--amber-light); color: var(--amber); }
     .cq-progress-track {
-      height: 6px; background: var(--border); border-radius: 99px; overflow: hidden;
+      height: 6px; background: var(--border-soft); border-radius: 99px; overflow: hidden;
     }
     .cq-progress-fill {
       height: 100%; border-radius: 99px;
-      background: linear-gradient(90deg, var(--blue), #5BB5FF);
+      background: linear-gradient(90deg, var(--green), var(--green-light));
       transition: width 0.5s cubic-bezier(.4,0,.2,1);
     }
-    .cq-progress-fill.replay { background: linear-gradient(90deg, #F59E0B, #FCD34D); }
+    .cq-progress-fill.replay { background: linear-gradient(90deg, var(--amber), #FCD34D); }
 
     /* ── SCROLL BODY ── */
     .cq-body {
@@ -116,10 +123,10 @@ const QuizStyles = () => (
     }
     .cq-chapter-icon {
       width: 44px; height: 44px; flex-shrink: 0; border-radius: 12px;
-      background: var(--blue-soft);
+      background: var(--green-soft);
       display: flex; align-items: center; justify-content: center;
     }
-    .cq-chapter-title { font-size: 15px; font-weight: 800; color: var(--text-1); line-height: 1.25; }
+    .cq-chapter-title { font-family: 'Fraunces', serif; font-size: 15px; font-weight: 700; color: var(--text-1); line-height: 1.25; }
     .cq-chapter-sub   { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
 
     /* ── QUESTION CARD ── */
@@ -142,13 +149,13 @@ const QuizStyles = () => (
     .cq-dot-row { display: flex; gap: 5px; }
     .cq-dot {
       width: 7px; height: 7px; border-radius: 50%;
-      background: var(--border); transition: background 0.3s;
+      background: var(--border-soft); transition: background 0.3s;
     }
-    .cq-dot.done     { background: var(--blue); }
-    .cq-dot.current  { background: var(--blue); box-shadow: 0 0 0 2px rgba(28,116,217,0.22); }
+    .cq-dot.done     { background: var(--green); }
+    .cq-dot.current  { background: var(--green); box-shadow: 0 0 0 2px rgba(45,106,79,0.22); }
 
     .cq-question-text {
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Fraunces', serif;
       font-size: 19px; font-weight: 400; line-height: 1.5;
       color: var(--text-1); padding: 16px 22px 22px;
     }
@@ -167,23 +174,23 @@ const QuizStyles = () => (
       background: var(--bg);
       cursor: pointer; transition: all 0.17s;
       font-size: 14px; font-weight: 500; color: var(--text-2);
-      font-family: 'Outfit', sans-serif;
+      font-family: 'Plus Jakarta Sans', sans-serif;
       min-height: 52px; touch-action: manipulation;
     }
     .cq-option:not(:disabled):hover {
-      border-color: rgba(28,116,217,0.35);
-      background: var(--blue-soft);
+      border-color: var(--green-line);
+      background: var(--green-soft);
       color: var(--text-1);
     }
     .cq-option.selected {
-      border-color: var(--blue);
-      background: var(--blue-soft);
+      border-color: var(--green);
+      background: var(--green-soft);
       color: var(--text-1);
     }
     .cq-option.correct {
       border-color: var(--green);
       background: var(--green-soft);
-      color: #15803D;
+      color: #2D6A4F;
     }
     .cq-option.wrong {
       border-color: var(--red);
@@ -199,7 +206,7 @@ const QuizStyles = () => (
       background: var(--surface); border: 1.5px solid var(--border);
       color: var(--text-muted); transition: all 0.17s;
     }
-    .cq-option.selected .cq-option-letter  { background: var(--blue); border-color: var(--blue); color: #fff; }
+    .cq-option.selected .cq-option-letter  { background: var(--green); border-color: var(--green); color: #fff; }
     .cq-option.correct  .cq-option-letter  { background: var(--green); border-color: var(--green); color: #fff; }
     .cq-option.wrong    .cq-option-letter  { background: var(--red); border-color: var(--red); color: #fff; }
     .cq-option-text { flex: 1; line-height: 1.45; }
@@ -208,14 +215,15 @@ const QuizStyles = () => (
     .cq-submit-area { padding: 18px 18px 22px; }
     .cq-submit-btn {
       width: 100%; padding: 14px 0; border-radius: 13px;
-      background: linear-gradient(90deg, var(--blue), var(--blue-deep));
+      background: var(--green);
       color: #fff; font-size: 14px; font-weight: 800;
       border: none; cursor: pointer; letter-spacing: 0.02em;
-      font-family: 'Outfit', sans-serif;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      box-shadow: var(--shadow-green);
       transition: opacity 0.15s, transform 0.1s;
       min-height: 50px;
     }
-    .cq-submit-btn:hover:not(:disabled) { opacity: 0.88; }
+    .cq-submit-btn:hover:not(:disabled) { opacity: 0.9; background: var(--green-mid); }
     .cq-submit-btn:active:not(:disabled) { transform: scale(0.98); }
     .cq-submit-btn:disabled { opacity: 0.42; cursor: not-allowed; }
 
@@ -241,7 +249,7 @@ const QuizStyles = () => (
     .cq-feedback.correct  .cq-feedback-icon { background: var(--green); }
     .cq-feedback.incorrect .cq-feedback-icon { background: var(--red); }
     .cq-feedback-title { font-size: 14px; font-weight: 800; }
-    .cq-feedback.correct  .cq-feedback-title { color: #15803D; }
+    .cq-feedback.correct  .cq-feedback-title { color: #2D6A4F; }
     .cq-feedback.incorrect .cq-feedback-title { color: var(--red); }
 
     .cq-feedback-body { padding: 0 16px 14px; }
@@ -253,20 +261,21 @@ const QuizStyles = () => (
       margin: 0 18px 20px;
       width: calc(100% - 36px);
       padding: 13px 0; border-radius: 13px;
-      background: linear-gradient(90deg, var(--blue), var(--blue-deep));
+      background: var(--green);
       color: #fff; font-size: 13px; font-weight: 800;
-      border: none; cursor: pointer; font-family: 'Outfit', sans-serif;
+      border: none; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif;
+      box-shadow: var(--shadow-green);
       transition: opacity 0.15s, transform 0.1s; display: block;
       min-height: 48px; touch-action: manipulation;
     }
-    .cq-feedback-continue:hover { opacity: 0.88; }
+    .cq-feedback-continue:hover { opacity: 0.9; background: var(--green-mid); }
     .cq-feedback-continue:active { transform: scale(0.98); }
 
     /* ── COMPLETION SCREEN ── */
     .cq-complete-screen {
       min-height: 100vh; display: flex; align-items: center; justify-content: center;
       background: var(--bg); padding: 24px;
-      font-family: 'Outfit', sans-serif;
+      font-family: 'Plus Jakarta Sans', sans-serif;
     }
     .cq-complete-card {
       background: var(--surface); border-radius: 24px;
@@ -275,38 +284,38 @@ const QuizStyles = () => (
     }
     .cq-complete-badge {
       width: 80px; height: 80px; border-radius: 50%;
-      background: linear-gradient(135deg, var(--blue), var(--blue-deep));
+      background: var(--green);
       display: flex; align-items: center; justify-content: center;
       margin: 0 auto 24px;
-      box-shadow: 0 8px 28px rgba(28,116,217,0.35);
+      box-shadow: var(--shadow-green);
     }
     .cq-complete-title {
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Fraunces', serif;
       font-size: 28px; color: var(--text-1); margin: 0 0 10px;
     }
     .cq-complete-sub   { font-size: 14px; color: var(--text-muted); margin: 0 0 28px; line-height: 1.6; }
     .cq-complete-score {
       display: flex; align-items: center; justify-content: center; gap: 6px;
-      background: var(--blue-soft); border-radius: 14px; padding: 14px 24px;
+      background: var(--green-soft); border-radius: 14px; padding: 14px 24px;
       margin-bottom: 20px;
     }
-    .cq-complete-score-num { font-size: 32px; font-weight: 900; color: var(--blue); }
+    .cq-complete-score-num { font-size: 32px; font-weight: 900; color: var(--green); }
     .cq-complete-score-denom { font-size: 18px; font-weight: 600; color: var(--text-muted); }
     .cq-complete-score-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-muted); margin-top: 4px; }
     .cq-returning { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; justify-content: center; gap: 6px; }
-    .cq-returning-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--blue); animation: cqpulse 1.2s ease-in-out infinite; }
+    .cq-returning-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: cqpulse 1.2s ease-in-out infinite; }
     @keyframes cqpulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
 
     /* ── LOADING / ERROR SCREENS ── */
     .cq-center {
       min-height: 100vh; display: flex; align-items: center; justify-content: center;
       flex-direction: column; gap: 16px; background: var(--bg);
-      font-family: 'Outfit', sans-serif;
+      font-family: 'Plus Jakarta Sans', sans-serif;
     }
     .cq-spinner {
       width: 36px; height: 36px; border-radius: 50%;
-      border: 3px solid rgba(28,116,217,0.15);
-      border-top-color: var(--blue);
+      border: 3px solid var(--border-soft);
+      border-top-color: var(--green);
       animation: cqspin .8s linear infinite;
     }
     @keyframes cqspin { to { transform: rotate(360deg); } }
@@ -316,19 +325,20 @@ const QuizStyles = () => (
       background: var(--surface); border-radius: 22px;
       border: 1px solid var(--border); padding: 44px 32px;
       text-align: center; max-width: 360px; width: 100%;
-      box-shadow: 0 4px 20px rgba(13,27,42,0.07);
+      box-shadow: var(--shadow);
     }
-    .cq-error-ico { width: 52px; height: 52px; background: var(--bg); border-radius: 14px; display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; }
-    .cq-error-card h2 { font-size: 18px; font-weight: 800; color: var(--text-1); margin: 0 0 8px; }
+    .cq-error-ico { width: 52px; height: 52px; background: var(--bg-deep); border-radius: 14px; display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; }
+    .cq-error-card h2 { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; color: var(--text-1); margin: 0 0 8px; }
     .cq-error-card p  { font-size: 14px; color: var(--text-muted); margin: 0 0 24px; line-height: 1.6; }
     .cq-error-btn {
       padding: 12px 28px; border-radius: 12px;
-      background: linear-gradient(90deg, var(--blue), var(--blue-deep));
+      background: var(--green);
       color: #fff; font-size: 14px; font-weight: 700;
-      border: none; cursor: pointer; font-family: 'Outfit', sans-serif;
+      border: none; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif;
+      box-shadow: var(--shadow-green);
       transition: opacity .15s;
     }
-    .cq-error-btn:hover { opacity: .88; }
+    .cq-error-btn:hover { opacity: .9; background: var(--green-mid); }
   `}</style>
 );
 
@@ -617,7 +627,7 @@ const ChapterQuiz = () => {
             transition={{ duration: 0.35 }}
           >
             <div className="cq-chapter-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
               </svg>
             </div>

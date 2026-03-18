@@ -120,7 +120,13 @@ const Signup = () => {
               margin: '0 auto 18px',
             }}
           >
-            <img src="/logo.png" alt="EduRoute" style={{ width: 52, height: 52, borderRadius: 12, objectFit: 'cover' }} />
+            <img
+              src={`${process.env.PUBLIC_URL || ''}/logo.png`}
+              alt="EduRoute"
+              style={{ width: 52, height: 52, borderRadius: 12, objectFit: 'cover' }}
+              onError={(e) => { e.target.style.display = 'none'; if (e.target.nextElementSibling) e.target.nextElementSibling.style.display = 'flex'; }}
+            />
+            <span style={{ display: 'none', width: 52, height: 52, borderRadius: 12, background: '#2D6A4F', color: '#fff', fontWeight: 800, fontSize: 24, alignItems: 'center', justifyContent: 'center', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>E</span>
           </div>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: G.greenMid, marginBottom: 14 }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: G.greenLight, display: 'inline-block', animation: 'sway 3s ease-in-out infinite' }} />

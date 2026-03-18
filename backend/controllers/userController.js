@@ -395,12 +395,17 @@ exports.completeTask = async (req, res, next) => {
             );
         }
 
-        // Auto-generate next chapter when user completes the last chapter
+        // Auto-generate next chapter whenever a chapter is newly completed
         const units = content?.roadmap?.units || content?.units || [];
         const isChapterLevel = units.length > 0 && Array.isArray(units[0].mcqs);
-        if (isChapterLevel && roadmap.domain && completedTasks.length === units.length) {
-            const lastUnit = units[units.length - 1];
-            const lastUnitNum = lastUnit?.unit_number ?? units.length;
+        // We only trigger AI when this task completion is new, the roadmap is chapter-based, and tied to a domain.
+        if (isNewCompletion && isChapterLevel && roadmap.domain) {
+            // Always extend from the highest existing unit number so chapters keep growing forward.
+            const lastUnitNum =
+                units.reduce((max, u) => {
+                    const n = typeof u.unit_number === "number" ? u.unit_number : max;
+                    return n > max ? n : max;
+                }, units.length) || units.length;
             try {
                 const { data } = await aiService.postWithRetry(
                     "/generate-next-chapter",

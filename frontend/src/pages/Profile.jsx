@@ -146,15 +146,11 @@ const Profile = () => {
         .pf-danger-btn { padding: 11px 20px; background: ${G.roseLight}; color: ${G.rose}; border: 1px solid #FECDD3; border-radius: 11px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.15s; font-family: 'Plus Jakarta Sans',sans-serif; }
         .pf-danger-btn:hover { background: #FFE4E6; }
         .pf-hero-row { display: flex; align-items: center; gap: 22; flex-wrap: wrap; }
-        .pf-hero-streak { flex-shrink: 0; text-align: center; padding: 8px 14px; background: ${G.amberLight}; border-radius: 12px; border: 1px solid rgba(217,119,6,0.2); }
+        .pf-hero-streak { flex-shrink: 0; text-align: center; background: ${G.amberLight}; border-radius: 12px; border: 1px solid rgba(217,119,6,0.2); }
         @media (max-width: 380px) {
           .pf-hero-row { flex-direction: column; align-items: stretch; text-align: center; }
           .pf-hero-row .pf-hero-info { text-align: center; }
           .pf-hero-row .pf-hero-interests { justify-content: center; }
-          .pf-hero-streak { align-self: center; min-width: 120px; }
-        }
-        @media (min-width: 381px) and (max-width: 520px) {
-          .pf-hero-streak { width: 100%; max-width: 140px; margin-left: auto; margin-right: auto; }
         }
       `}</style>
 
@@ -171,7 +167,7 @@ const Profile = () => {
         </div>
 
         {/* ── Profile hero card ── */}
-        <Card style={{ marginBottom: 20 }}>
+        <Card style={{ marginBottom: 12 }}>
           <div className="pf-hero-row">
             {/* Avatar */}
             <div style={{ width: 72, height: 72, background: G.green, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: G.shadowGreen }}>
@@ -191,13 +187,16 @@ const Profile = () => {
                 ))}
               </div>
             </div>
-            {/* Streak chip - aligns well on PWA / small screens */}
-            <div className="pf-hero-streak">
-              <div style={{ fontFamily: "'Fraunces',serif", fontSize:19, fontWeight: 650, color: G.amber, lineHeight: 1 }}>🔥 {streak.current_streak}</div>
-              <div style={{ fontSize: 6, fontWeight: 700, color: G.amber, textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 3 }}>Day Streak</div>
-            </div>
           </div>
         </Card>
+
+        {/* ── Streak row ── */}
+        <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'center' }}>
+          <div className="pf-hero-streak" style={{ padding: '10px 24px' }}>
+            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 700, color: G.amber, lineHeight: 1 }}>🔥 {streak.current_streak}</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: G.amber, textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 4 }}>Day Streak</div>
+          </div>
+        </div>
 
         {/* ── Learning Domains card ── */}
         <Card style={{ marginBottom: 24 }}>

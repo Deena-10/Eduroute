@@ -1,554 +1,897 @@
 // frontend/src/pages/Home.jsx
-import React, { useState, useContext } from 'react';
+// PWA-optimised · Mobile-first · MNC-grade design
+import React, { useState, useContext, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { AuthContext } from '../context/AuthContext';
 
-/* ─── Forest Sage palette ─── */
-const G = {
-  green:      '#2D6A4F',
-  greenMid:   '#40916C',
-  greenLight: '#52B788',
-  greenSoft:  '#D8F3DC',
-  greenMist:  '#F0FAF3',
-  greenLine:  '#B7E4C7',
-  sageDim:    'rgba(82,183,136,0.12)',
-  text1:      '#1A2E1A',
-  text2:      '#3D5A3E',
-  text3:      '#6B8F71',
-  text4:      '#9AB89D',
-  surface:    '#FFFFFF',
-  bg:         '#F4F9F5',
-  bgDeep:     '#EBF5EE',
-  border:     '#D4E8D7',
-  borderSoft: '#E8F4EA',
-  shadowSm:   '0 2px 10px rgba(26,46,26,0.06)',
-  shadowMd:   '0 6px 24px rgba(26,46,26,0.09)',
-  shadowLg:   '0 12px 40px rgba(26,46,26,0.12)',
-  shadowGreen:'0 6px 24px rgba(45,106,79,0.18)',
-  /* accent colours kept for variety */
-  amber:      '#D97706', amberLight: '#FFFBEB',
-  blue:       '#2563EB', blueLight:  '#EFF6FF',
-  violet:     '#7C3AED', violetLight:'#F5F3FF',
-  cyan:       '#0891B2', cyanLight:  '#ECFEFF',
-  rose:       '#E11D48', roseLight:  '#FFF1F2',
+/* ════════════════════════════════════════════════
+   DESIGN TOKENS
+════════════════════════════════════════════════ */
+const T = {
+  g900:'#061812', g800:'#0A2318', g700:'#0F3222',
+  g600:'#155C35', g500:'#1D7A48', g400:'#28A362',
+  g300:'#4DC885', g200:'#96DFB6', g100:'#D0F0E1', g50:'#EBF9F2',
+  n950:'#06090A', n900:'#0E1510', n800:'#1C2B1F',
+  n700:'#2E4533', n600:'#456050', n500:'#617D69',
+  n400:'#8DA893', n300:'#B5CEBB', n200:'#D5E7D9',
+  n100:'#EAF2EC', n50:'#F4FAF6', white:'#FFFFFF',
+  amber:'#D97706', blue:'#1A56DB', violet:'#6D28D9', teal:'#0891B2', rose:'#DC2626',
+  elev1:'0 1px 4px rgba(6,24,18,0.08)',
+  elev2:'0 4px 16px rgba(6,24,18,0.1)',
+  elev3:'0 12px 40px rgba(6,24,18,0.14)',
+  elev4:'0 24px 64px rgba(6,24,18,0.18)',
 };
 
+/* ════════════════════════════════════════════════
+   DATA
+════════════════════════════════════════════════ */
 const roadmaps = [
-  { id:1, title:'Software Engineering',    description:'From fundamentals to full-stack mastery with modern frameworks and cloud', duration:'12 months', students:'8.4k', rating:4.9, skills:['JavaScript','React','Node.js','AWS'],    color:G.green,    light:G.greenMist, emoji:'💻' },
-  { id:2, title:'Data Science & AI',       description:'Statistics, machine learning, deep learning and real-world data engineering', duration:'10 months', students:'6.2k', rating:4.8, skills:['Python','TensorFlow','SQL','Spark'],  color:G.violet,   light:G.violetLight, emoji:'🧠' },
-  { id:3, title:'Cybersecurity',           description:'Ethical hacking, threat analysis, and enterprise security architecture',     duration:'8 months',  students:'3.8k', rating:4.7, skills:['Pentesting','Crypto','SIEM','Cloud'], color:G.rose,     light:G.roseLight, emoji:'🔐' },
-  { id:4, title:'UI/UX Design',            description:'Research, wireframing, prototyping and design systems for digital products',  duration:'6 months',  students:'5.1k', rating:4.9, skills:['Figma','Research','Systems','Motion'],color:G.greenMid, light:G.greenSoft, emoji:'🎨' },
-  { id:5, title:'Product Management',      description:'Strategy, roadmapping, and cross-functional leadership for tech products',    duration:'7 months',  students:'4.3k', rating:4.8, skills:['Strategy','Analytics','Agile','GTM'], color:G.amber,    light:G.amberLight, emoji:'📦' },
-  { id:6, title:'Cloud Architecture',      description:'AWS, GCP, Azure — infrastructure, DevOps, and platform engineering',          duration:'9 months',  students:'2.9k', rating:4.7, skills:['AWS','Kubernetes','Terraform','CI/CD'],color:G.cyan,    light:G.cyanLight, emoji:'☁️' },
+  { id:1, title:'Software Engineering',  sub:'Full-Stack · Cloud · Systems',   dur:'12 mo', students:'8.4k', rating:4.9, skills:['React','Node.js','AWS'],       color:T.g500,   emoji:'💻', hot:true  },
+  { id:2, title:'Data Science & AI',     sub:'ML · Deep Learning · MLOps',     dur:'10 mo', students:'6.2k', rating:4.8, skills:['Python','TensorFlow','SQL'],   color:T.violet, emoji:'🧠', hot:true  },
+  { id:3, title:'Cybersecurity',         sub:'Offensive · Defensive · GRC',    dur:'8 mo',  students:'3.8k', rating:4.7, skills:['Pentesting','SIEM','Cloud'],   color:T.rose,   emoji:'🔐', hot:false },
+  { id:4, title:'UI/UX Design',          sub:'Research · Systems · Motion',    dur:'6 mo',  students:'5.1k', rating:4.9, skills:['Figma','Research','Systems'],  color:T.g600,   emoji:'🎨', hot:false },
+  { id:5, title:'Product Management',    sub:'Strategy · Analytics · GTM',     dur:'7 mo',  students:'4.3k', rating:4.8, skills:['OKRs','Agile','Analytics'],    color:T.amber,  emoji:'📦', hot:false },
+  { id:6, title:'Cloud Architecture',    sub:'AWS · GCP · DevOps',             dur:'9 mo',  students:'2.9k', rating:4.7, skills:['Kubernetes','Terraform','IaC'],color:T.teal,   emoji:'☁️', hot:false },
 ];
 const internships = [
-  { id:1, title:'Frontend Developer Intern', company:'TechCorp',    location:'Remote',        stipend:'$2,000/mo', skills:['React','TypeScript','CSS'],  logo:'T', color:G.green },
-  { id:2, title:'Data Science Intern',       company:'DataFlow Inc', location:'New York',      stipend:'$3,000/mo', skills:['Python','ML','SQL'],         logo:'D', color:G.violet },
-  { id:3, title:'UX Design Intern',          company:'DesignHub',    location:'San Francisco', stipend:'$2,500/mo', skills:['Figma','Research','Proto'],   logo:'H', color:G.greenMid },
-  { id:4, title:'Cloud Engineer Intern',     company:'InfraScale',   location:'Austin',        stipend:'$2,800/mo', skills:['AWS','Docker','Go'],          logo:'I', color:G.cyan },
+  { id:1, title:'Frontend Developer Intern', company:'TechCorp',   loc:'Remote',        pay:'$2,000/mo', skills:['React','TypeScript'], logo:'TC', color:T.g500   },
+  { id:2, title:'Data Science Intern',       company:'DataFlow',   loc:'New York',      pay:'$3,000/mo', skills:['Python','ML'],        logo:'DF', color:T.violet },
+  { id:3, title:'UX Design Intern',          company:'DesignHub',  loc:'San Francisco', pay:'$2,500/mo', skills:['Figma','Research'],   logo:'DH', color:T.g600   },
+  { id:4, title:'Cloud Engineer Intern',     company:'InfraScale', loc:'Austin',        pay:'$2,800/mo', skills:['AWS','Docker'],       logo:'IS', color:T.teal   },
 ];
 const events = [
-  { id:1, title:'Tech Career Fair 2025',    dateNum:'15', month:'MAR', location:'Virtual Event',  description:'Connect with 200+ top tech companies. Live Q&A, resume review, and on-spot offers.',          type:'Career Fair', color:G.green },
-  { id:2, title:'AI/ML Bootcamp',           dateNum:'20', month:'MAR', location:'Online',         description:'3-day hands-on workshop on modern ML. Build and deploy real production models.',               type:'Workshop',    color:G.violet },
-  { id:3, title:'Startup Founder Meetup',   dateNum:'25', month:'MAR', location:'Downtown Hub',   description:'Network with founders, angels, and VCs. Pitch your ideas in a warm setting.',                  type:'Networking',  color:G.greenMid },
-  { id:4, title:'Open Source Sprint',       dateNum:'02', month:'APR', location:'GitHub Remote',  description:'48-hour collaborative hackathon contributing to impactful open-source projects.',               type:'Hackathon',   color:G.amber },
+  { id:1, title:'Tech Career Fair 2025',  date:'Mar 15', loc:'Virtual',       type:'Career Fair', color:T.g500   },
+  { id:2, title:'AI/ML Bootcamp',         date:'Mar 20', loc:'Online',        type:'Workshop',    color:T.violet },
+  { id:3, title:'Startup Founder Meetup', date:'Mar 25', loc:'Downtown Hub',  type:'Networking',  color:T.g600   },
+  { id:4, title:'Open Source Sprint',     date:'Apr 02', loc:'GitHub Remote', type:'Hackathon',   color:T.amber  },
 ];
 const testimonials = [
-  { name:'Priya Sharma',  role:'Software Engineer @ Google', quote:"EduRoute's structured roadmap helped me go from zero to landing my dream job in 11 months. The AI guidance was like having a personal mentor.", avatar:'P', color:G.green },
-  { name:'Marcus Chen',   role:'Data Scientist @ Stripe',    quote:'The curated learning paths saved me hundreds of hours of research. I knew exactly what to learn and in what order — no guesswork.',            avatar:'M', color:G.violet },
-  { name:'Aisha Patel',   role:'UX Lead @ Figma',            quote:'From a non-design background to leading a team at Figma in 14 months. The structured approach and community made all the difference.',         avatar:'A', color:G.greenMid },
+  { name:'Priya S.',  co:'Google', role:'Software Engineer', q:'From zero to Google in 11 months. The AI roadmap eliminated every guessing game — I just had to execute.', av:'PS', color:T.g500   },
+  { name:'Marcus C.', co:'Stripe', role:'Data Scientist',    q:'Wasted 6 months on random YouTube. EduRoute\'s structured path changed everything. Stripe offer in 9 months.',   av:'MC', color:T.violet },
+  { name:'Aisha P.',  co:'Figma',  role:'UX Lead',           q:'Finance to UX Lead at Figma in 14 months. The mentors and curriculum are unmatched anywhere online.',            av:'AP', color:T.g600   },
 ];
-const features = [
-  { icon:'🎯', title:'Personalised AI Roadmaps',  desc:'Answer a few questions and receive a custom learning path built around your goals, timeline, and existing skills.', color:G.green,    light:G.greenMist  },
-  { icon:'📊', title:'Progress Intelligence',     desc:'Smart tracking that adapts as you learn — see exactly where you stand and what to prioritise next.',                color:G.violet,   light:G.violetLight },
-  { icon:'🤝', title:'Mentor Network',            desc:'Get matched with industry mentors who have walked the same path. Weekly check-ins and honest career guidance.',      color:G.greenMid, light:G.greenSoft  },
-  { icon:'🏆', title:'Achievement System',        desc:'Earn certificates, badges, and rankings as you progress. Build a portfolio that tells your story.',                  color:G.amber,    light:G.amberLight },
-  { icon:'💼', title:'Internship Pipeline',       desc:'Access exclusive opportunities from 500+ partner companies actively recruiting from our platform.',                  color:G.cyan,     light:G.cyanLight  },
-  { icon:'🌐', title:'Community Learning',        desc:'Study groups, peer reviews, and live sessions. Absorb knowledge faster with driven peers.',                         color:G.rose,     light:G.roseLight  },
+const companies = ['Google','Microsoft','Stripe','Figma','Airbnb','Notion','GitHub','Vercel','Atlassian','Adobe','Shopify','Linear'];
+const stats = [
+  { n:'42K+', l:'Active Learners' },
+  { n:'120+', l:'Career Paths'    },
+  { n:'94%',  l:'Placement Rate'  },
+  { n:'4.9★', l:'Avg Rating'      },
 ];
-const stats = [['42K+','Active Learners'],['120+','Career Paths'],['94%','Placement Rate'],['4.9★','Avg Rating']];
 
-const fadeUp = { initial:{opacity:0,y:16}, animate:{opacity:1,y:0}, transition:{duration:0.5,ease:[0.22,1,0.36,1]} };
-const stagger = { animate:{ transition:{ staggerChildren:0.09 } } };
+/* ════════════════════════════════════════════════
+   HOOKS & UTILS
+════════════════════════════════════════════════ */
+const ease = [0.16, 1, 0.3, 1];
 
-const Tag = ({ children, color }) => (
-  <span style={{ fontSize:10, fontWeight:700, padding:'3px 10px', borderRadius:6, background:color+'20', color, letterSpacing:'0.06em', textTransform:'uppercase' }}>{children}</span>
+const useMedia = (query) => {
+  const [match, setMatch] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia(query).matches : false
+  );
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const handler = (e) => setMatch(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, [query]);
+  return match;
+};
+
+const CountUp = ({ end }) => {
+  const ref = useRef();
+  const inView = useInView(ref, { once: true });
+  const [val, setVal] = useState('0');
+  useEffect(() => {
+    if (!inView) return;
+    const num = parseInt(end.replace(/\D/g, ''));
+    if (!num) { setVal(end); return; }
+    let cur = 0;
+    const step = Math.max(1, Math.ceil(num / 50));
+    const timer = setInterval(() => {
+      cur = Math.min(cur + step, num);
+      setVal(end.replace(/\d+/, cur.toLocaleString()));
+      if (cur >= num) clearInterval(timer);
+    }, 20);
+    return () => clearInterval(timer);
+  }, [inView, end]);
+  return <span ref={ref}>{val}</span>;
+};
+
+/* ════════════════════════════════════════════════
+   ATOMS
+════════════════════════════════════════════════ */
+const Pill = ({ children, color = T.g500 }) => (
+  <span style={{ display:'inline-flex', alignItems:'center', fontSize:11, fontWeight:600,
+    padding:'3px 9px', borderRadius:99, background:color+'18', color,
+    border:`1px solid ${color}28`, whiteSpace:'nowrap', letterSpacing:'0.01em' }}>
+    {children}
+  </span>
 );
-const Chip = ({ label }) => (
-  <span style={{ display:'inline-flex', alignItems:'center', fontSize:11, fontWeight:600, padding:'3px 9px', borderRadius:99, background:'rgba(26,46,26,0.06)', color:G.text3 }}>{label}</span>
+
+const HotBadge = () => (
+  <span style={{ display:'inline-flex', alignItems:'center', gap:3, fontSize:10, fontWeight:700,
+    padding:'3px 8px', borderRadius:4, background:'#FEF3C7', color:'#92400E',
+    border:'1px solid #FDE68A', textTransform:'uppercase', letterSpacing:'0.08em' }}>
+    🔥 Hot
+  </span>
 );
 
+const Eyebrow = ({ children, light }) => (
+  <span style={{ display:'inline-flex', alignItems:'center', gap:6, fontSize:10, fontWeight:700,
+    letterSpacing:'0.14em', textTransform:'uppercase',
+    color: light ? T.g300 : T.g500 }}>
+    {children}
+  </span>
+);
+
+/* ════════════════════════════════════════════════
+   MAIN COMPONENT
+════════════════════════════════════════════════ */
 const Home = () => {
   const { user } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState('roadmaps');
+  const isMobile = useMedia('(max-width: 640px)');
+  const isTablet = useMedia('(max-width: 960px)');
+  const ticker = [...companies, ...companies];
 
   return (
-    <div style={{ minHeight:'100vh', color:G.text1, fontFamily:"'Plus Jakarta Sans',sans-serif", WebkitFontSmoothing:'antialiased', overflowX:'hidden', background:G.bg }}>
+    <div style={{ fontFamily:"'Instrument Sans','DM Sans',system-ui,sans-serif",
+      color:T.n900, background:T.white, overflowX:'hidden',
+      WebkitFontSmoothing:'antialiased', WebkitTapHighlightColor:'transparent' }}>
+
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&display=swap');
 
-        :root {
-          --green: #2D6A4F; --green-mid: #40916C; --green-light: #52B788;
-          --green-soft: #D8F3DC; --green-mist: #F0FAF3; --green-line: #B7E4C7;
-          --sage-dim: rgba(82,183,136,0.12);
-          --text-1: #1A2E1A; --text-2: #3D5A3E; --text-3: #6B8F71; --text-4: #9AB89D;
-          --surface: #FFFFFF; --bg: #F4F9F5; --bg-deep: #EBF5EE;
-          --border: #D4E8D7; --border-soft: #E8F4EA;
-          --shadow-sm: 0 2px 10px rgba(26,46,26,0.06);
-          --shadow-md: 0 6px 24px rgba(26,46,26,0.09);
-          --shadow-lg: 0 12px 40px rgba(26,46,26,0.12);
-          --shadow-green: 0 6px 24px rgba(45,106,79,0.18);
+        *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+        html { -webkit-text-size-adjust:100%; scroll-behavior:smooth; }
+        a { text-decoration:none; color:inherit; }
+        button { font-family:inherit; cursor:pointer; -webkit-appearance:none; }
+        img { display:block; max-width:100%; }
+
+        /* ── Scrollbar hide ── */
+        .noscroll { overflow-x:auto; -ms-overflow-style:none; scrollbar-width:none; }
+        .noscroll::-webkit-scrollbar { display:none; }
+
+        /* ── Touch-optimised buttons ── */
+        .btn-prim {
+          display:inline-flex; align-items:center; justify-content:center; gap:8px;
+          min-height:48px; padding:12px 24px; border-radius:8px;
+          font-size:15px; font-weight:600; letter-spacing:-0.01em;
+          background:${T.g500}; color:#fff; border:none;
+          box-shadow:0 1px 3px rgba(6,24,18,.25),inset 0 1px 0 rgba(255,255,255,.12);
+          transition:background 0.18s, transform 0.15s, box-shadow 0.18s;
+          -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+        }
+        .btn-prim:hover  { background:${T.g600}; box-shadow:0 6px 20px rgba(21,92,53,.35),inset 0 1px 0 rgba(255,255,255,.12); transform:translateY(-1px); }
+        .btn-prim:active { transform:scale(0.97); }
+
+        .btn-ghost {
+          display:inline-flex; align-items:center; justify-content:center; gap:8px;
+          min-height:48px; padding:12px 24px; border-radius:8px;
+          font-size:15px; font-weight:600; letter-spacing:-0.01em;
+          background:transparent; color:rgba(255,255,255,0.82);
+          border:1.5px solid rgba(255,255,255,0.22);
+          transition:all 0.18s; touch-action:manipulation;
+        }
+        .btn-ghost:hover  { background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.4); }
+        .btn-ghost:active { transform:scale(0.97); }
+
+        .btn-white {
+          display:inline-flex; align-items:center; justify-content:center; gap:8px;
+          min-height:48px; padding:12px 24px; border-radius:8px;
+          font-size:15px; font-weight:600; letter-spacing:-0.01em;
+          background:#fff; color:${T.g700}; border:none;
+          box-shadow:0 2px 8px rgba(0,0,0,.12);
+          transition:all 0.18s; touch-action:manipulation;
+        }
+        .btn-white:hover  { box-shadow:0 6px 24px rgba(0,0,0,.18); transform:translateY(-1px); }
+        .btn-white:active { transform:scale(0.97); }
+
+        /* ── Cards ── */
+        .card {
+          background:#fff; border:1px solid ${T.n100}; border-radius:14px;
+          box-shadow:${T.elev1};
+          transition:box-shadow 0.22s ${ease.join(',')}, transform 0.22s ${ease.join(',')}, border-color 0.18s;
+        }
+        .card:hover { box-shadow:${T.elev3}; transform:translateY(-2px); border-color:${T.n200}; }
+
+        /* ── Tabs ── */
+        .tab {
+          min-height:40px; padding:8px 18px; border-radius:6px;
+          font-size:13px; font-weight:600; letter-spacing:-0.01em;
+          border:none; white-space:nowrap; transition:all 0.15s;
+          touch-action:manipulation; -webkit-tap-highlight-color:transparent;
+        }
+        .tab.on  { background:${T.n900}; color:#fff; }
+        .tab.off { background:transparent; color:${T.n500}; }
+        .tab.off:hover { background:${T.n50}; color:${T.n800}; }
+
+        /* ── Ticker animation ── */
+        @keyframes ticker { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+        .ticker-track { display:flex; animation:ticker 38s linear infinite; width:max-content; }
+        .ticker-track:hover { animation-play-state:paused; }
+
+        /* ── Pulse dot ── */
+        @keyframes pulsedot { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.7);opacity:0.4} }
+
+        /* ── Float ── */
+        @keyframes floatA { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+        @keyframes floatB { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+
+        /* ── Horizontal scroll snap (mobile cards) ── */
+        .hscroll {
+          display:flex; gap:14px; overflow-x:auto; padding-bottom:12px;
+          scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch;
+          -ms-overflow-style:none; scrollbar-width:none;
+        }
+        .hscroll::-webkit-scrollbar { display:none; }
+        .hscroll > * { scroll-snap-align:start; flex-shrink:0; }
+
+        /* ── Progress bar ── */
+        .prog-track { height:5px; background:${T.n100}; border-radius:99px; overflow:hidden; }
+
+        /* ── Feature grid border trick ── */
+        .feat-grid { display:grid; gap:1px; background:${T.n100}; border-radius:16px; overflow:hidden; border:1px solid ${T.n100}; }
+
+        /* ══ RESPONSIVE BREAKPOINTS ══ */
+
+        /* xs: < 480px */
+        @media (max-width:479px) {
+          .hero-headline { font-size:2.2rem !important; }
+          .sec-h2        { font-size:1.7rem !important; }
+          .stats-grid    { grid-template-columns:repeat(2,1fr) !important; }
+          .hero-btns     { flex-direction:column !important; }
+          .hero-btns > * { width:100% !important; }
+          .cta-btns      { flex-direction:column !important; }
+          .cta-btns > *  { width:100% !important; }
+          .outcomes-grid { grid-template-columns:1fr !important; }
+          .testi-grid    { grid-template-columns:1fr !important; }
+          .hiw-grid      { grid-template-columns:1fr !important; }
+          .feat-grid     { grid-template-columns:1fr !important; }
         }
 
-        .hm-card {
-          background: #FFFFFF;
-          border: 1px solid #D4E8D7;
-          box-shadow: 0 2px 10px rgba(26,46,26,0.06);
-          border-radius: 18px;
-          transition: all 0.25s cubic-bezier(0.22,1,0.36,1);
-        }
-        .hm-card:hover {
-          box-shadow: 0 8px 28px rgba(26,46,26,0.1);
-          transform: translateY(-2px);
-          border-color: #B7E4C7;
+        /* sm: 480–767px */
+        @media (min-width:480px) and (max-width:767px) {
+          .hero-headline { font-size:2.6rem !important; }
+          .stats-grid    { grid-template-columns:repeat(2,1fr) !important; }
+          .hero-btns     { flex-direction:row !important; }
+          .outcomes-grid { grid-template-columns:1fr !important; }
+          .testi-grid    { grid-template-columns:1fr !important; }
+          .hiw-grid      { grid-template-columns:1fr !important; }
+          .feat-grid     { grid-template-columns:repeat(2,1fr) !important; }
         }
 
-        .tab-btn {
-          padding: 7px 20px; border-radius: 9px;
-          font-size: 13px; font-weight: 700;
-          border: none; cursor: pointer;
-          transition: all 0.18s;
-          font-family: 'Plus Jakarta Sans', sans-serif;
-          white-space: nowrap;
-        }
-        .tab-btn.active { background: #2D6A4F; color: #fff; box-shadow: 0 4px 14px rgba(45,106,79,0.25); }
-        .tab-btn:not(.active) { background: #FFFFFF; color: #6B8F71; border: 1px solid #D4E8D7; }
-        .tab-btn:not(.active):hover { background: #F0FAF3; color: #2D6A4F; border-color: #B7E4C7; }
-
-        .btn-primary {
-          display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-          padding: 12px 24px; border-radius: 11px; font-size: 13px; font-weight: 700;
-          background: #2D6A4F; color: #fff; text-decoration: none; border: none;
-          cursor: pointer; transition: all 0.2s;
-          font-family: 'Plus Jakarta Sans', sans-serif;
-          box-shadow: 0 6px 24px rgba(45,106,79,0.22);
-        }
-        .btn-primary:hover { background: #40916C; transform: translateY(-1px); box-shadow: 0 10px 32px rgba(45,106,79,0.32); }
-
-        .btn-outline {
-          display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-          padding: 12px 24px; border-radius: 11px; font-size: 13px; font-weight: 700;
-          background: transparent; color: #2D6A4F; text-decoration: none;
-          border: 1.5px solid #D4E8D7; cursor: pointer; transition: all 0.18s;
-          font-family: 'Plus Jakarta Sans', sans-serif;
-        }
-        .btn-outline:hover { border-color: #B7E4C7; background: rgba(82,183,136,0.08); }
-
-        .sec-lbl {
-          display: inline-flex; align-items: center; gap: 6px;
-          font-size: 10px; font-weight: 700; text-transform: uppercase;
-          letter-spacing: 0.18em; color: #40916C;
-          background: rgba(64,145,108,0.1); padding: 5px 13px;
-          border-radius: 99px; border: 1px solid rgba(64,145,108,0.2);
+        /* md: 768–959px */
+        @media (min-width:768px) and (max-width:959px) {
+          .hero-grid     { grid-template-columns:1fr !important; }
+          .hero-visual   { display:none !important; }
+          .hiw-grid      { grid-template-columns:1fr !important; }
+          .outcomes-grid { grid-template-columns:1fr !important; }
+          .testi-grid    { grid-template-columns:repeat(2,1fr) !important; }
+          .feat-grid     { grid-template-columns:repeat(2,1fr) !important; }
+          .cta-grid      { grid-template-columns:1fr !important; text-align:center !important; }
+          .cta-btns      { justify-content:center !important; }
         }
 
-        @media(max-width:768px) {
-          .hero-g { grid-template-columns: 1fr !important; }
-          .hero-prev { display: none !important; }
-          .stats-s { grid-template-columns: repeat(2,auto) !important; }
-          .cta-g { grid-template-columns: 1fr !important; }
+        /* lg: 960–1279px */
+        @media (min-width:960px) and (max-width:1279px) {
+          .hero-grid { grid-template-columns:1fr 420px !important; }
         }
 
-        @keyframes sway { 0%,100%{transform:scale(1)} 50%{transform:scale(1.4);opacity:.6} }
-        @keyframes flt1 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
-        @keyframes flt2 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
-        .scrollbar-hide::-webkit-scrollbar { display:none; }
-        .scrollbar-hide { -ms-overflow-style:none; scrollbar-width:none; }
+        /* All mobile: < 960px */
+        @media (max-width:959px) {
+          .hero-grid     { grid-template-columns:1fr !important; }
+          .hero-visual   { display:none !important; }
+          .hiw-grid      { grid-template-columns:1fr !important; gap:0 !important; }
+          .cta-grid      { grid-template-columns:1fr !important; }
+          .cta-btns      { flex-direction:column !important; }
+          .cta-btns > *  { width:100% !important; }
+        }
+
+        /* Safe area support for notched phones */
+        .safe-x { padding-left:max(24px, env(safe-area-inset-left)); padding-right:max(24px, env(safe-area-inset-right)); }
+        .safe-b { padding-bottom:max(16px, env(safe-area-inset-bottom)); }
+
+        /* Accessibility */
+        @media (prefers-reduced-motion: reduce) {
+          *, *::before, *::after { animation-duration:0.01ms !important; transition-duration:0.01ms !important; }
+        }
       `}</style>
 
-      <div style={{ maxWidth:1200, margin:'0 auto', padding:'104px 24px 80px' }}>
+      {/* ════════════════════════════════════════════
+          HERO — Dark forest
+      ════════════════════════════════════════════ */}
+      <section style={{ background:`linear-gradient(155deg,${T.g900} 0%,${T.g800} 50%,${T.g700} 100%)`, position:'relative', overflow:'hidden', paddingTop:'env(safe-area-inset-top,0px)' }}>
+        {/* Mesh grid */}
+        <div style={{ position:'absolute', inset:0, backgroundImage:`linear-gradient(rgba(255,255,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.02) 1px,transparent 1px)`, backgroundSize:'56px 56px', pointerEvents:'none' }}/>
+        {/* Radial glows */}
+        <div style={{ position:'absolute', top:'-15%', right:'-10%', width:'60%', maxWidth:500, paddingBottom:'60%', borderRadius:'50%', background:'radial-gradient(circle,rgba(29,122,72,0.25) 0%,transparent 65%)', pointerEvents:'none' }}/>
+        <div style={{ position:'absolute', bottom:'-10%', left:'-5%', width:'40%', maxWidth:350, paddingBottom:'40%', borderRadius:'50%', background:'radial-gradient(circle,rgba(29,122,72,0.15) 0%,transparent 65%)', pointerEvents:'none' }}/>
 
-        {/* ── HERO ── */}
-        <section style={{ display:'grid', gridTemplateColumns:'1fr 380px', gap:56, alignItems:'center', marginBottom:96 }} className="hero-g">
-          <motion.div initial={{opacity:0,y:28}} animate={{opacity:1,y:0}} transition={{duration:0.7,ease:[0.22,1,0.36,1]}}>
-            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:24, flexWrap:'wrap' }}>
-              <span className="sec-lbl">✦ AI-Powered Education Platform</span>
-              <div style={{ display:'inline-flex', alignItems:'center', gap:7, background:'rgba(255,251,235,0.95)', border:'1px solid rgba(217,119,6,0.25)', padding:'5px 13px', borderRadius:99 }}>
-                <span style={{ width:6, height:6, borderRadius:'50%', background:'#D97706', display:'inline-block', animation:'sway 2s ease-in-out infinite' }}/>
-                <span style={{ fontSize:11, fontWeight:700, color:'#92400E' }}>2,400 learners active today</span>
-              </div>
+        <div style={{ maxWidth:1280, margin:'0 auto', padding:'72px 24px 0' }} className="safe-x">
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 460px', gap:72, alignItems:'center' }} className="hero-grid">
+
+            {/* Left */}
+            <div>
+              {/* Live badge */}
+              <motion.div initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.55,ease}}>
+                <div style={{ display:'inline-flex', alignItems:'center', gap:7, background:'rgba(29,122,72,0.18)', border:'1px solid rgba(77,200,133,0.3)', padding:'6px 13px', borderRadius:6, marginBottom:24 }}>
+                  <span style={{ width:7, height:7, borderRadius:'50%', background:T.g300, display:'inline-block', animation:'pulsedot 2s ease-in-out infinite' }}/>
+                  <span style={{ fontSize:11, fontWeight:700, color:T.g200, letterSpacing:'0.08em', textTransform:'uppercase' }}>2,400 learners online now</span>
+                </div>
+              </motion.div>
+
+              {/* Headline */}
+              <motion.h1 className="hero-headline" initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{duration:0.6,ease,delay:0.07}}
+                style={{ fontFamily:"'Instrument Serif',serif", fontSize:'clamp(2.4rem,5.5vw,4rem)', fontWeight:400, lineHeight:1.06, letterSpacing:'-0.035em', color:'#fff', marginBottom:20 }}>
+                The platform that<br/>
+                <em style={{ fontStyle:'italic', color:T.g300 }}>builds careers,</em><br/>
+                not just skills
+              </motion.h1>
+
+              {/* Sub */}
+              <motion.p initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.6,ease,delay:0.13}}
+                style={{ fontSize:isMobile?15:16.5, color:'rgba(255,255,255,0.58)', lineHeight:1.78, maxWidth:500, marginBottom:32 }}>
+                AI-personalised roadmaps, vetted mentors, and direct hiring pipelines — the complete operating system for your professional growth.
+              </motion.p>
+
+              {/* CTAs */}
+              <motion.div className="hero-btns" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} transition={{duration:0.55,ease,delay:0.19}}
+                style={{ display:'flex', flexWrap:'wrap', gap:10, marginBottom:44 }}>
+                <Link to="/questionnaire" className="btn-prim" style={{ flex:isMobile?'1 1 100%':'0 0 auto' }}>
+                  Get your free roadmap
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </Link>
+                <Link to="/roadmap" className="btn-ghost" style={{ flex:isMobile?'1 1 100%':'0 0 auto' }}>
+                  Explore paths
+                </Link>
+              </motion.div>
+
+              {/* Social proof */}
+              <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{duration:0.6,delay:0.28}}
+                style={{ display:'flex', alignItems:'center', gap:14, paddingBottom:56 }}>
+                <div style={{ display:'flex' }}>
+                  {[T.g500,T.violet,T.amber,T.teal,T.rose].map((c,i) => (
+                    <div key={i} style={{ width:30, height:30, borderRadius:'50%', background:c, border:'2px solid rgba(255,255,255,0.18)', marginLeft:i>0?-9:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:700, color:'#fff', flexShrink:0 }}>
+                      {['P','M','A','J','K'][i]}
+                    </div>
+                  ))}
+                </div>
+                <div>
+                  <div style={{ fontSize:12.5, fontWeight:600, color:'rgba(255,255,255,0.82)' }}>Joined by 42,000+ learners</div>
+                  <div style={{ fontSize:11, color:'rgba(255,255,255,0.38)', marginTop:1 }}>90+ countries · 94% placement rate</div>
+                </div>
+              </motion.div>
             </div>
 
-            <h1 style={{
-              fontFamily: "'Fraunces', serif",
-              fontSize: 'clamp(2.4rem,5vw,3.6rem)',
-              fontWeight: 700, lineHeight: 1.08,
-              letterSpacing: '-0.03em', color: G.text1, marginBottom: 18,
-            }}>
-              Build the Career<br/>
-              <em style={{ fontStyle:'italic', color:G.green }}>You Deserve</em><br/>
-              with AI Guidance
-            </h1>
-
-            <p style={{ fontSize:15, color:G.text3, lineHeight:1.8, maxWidth:460, marginBottom:28 }}>
-              Personalised learning roadmaps, curated resources, and real career opportunities — one intelligent platform for ambitious learners.
-            </p>
-
-            <div style={{ display:'flex', gap:10, flexWrap:'wrap', marginBottom:36 }}>
-              <Link to="/questionnaire" className="btn-primary">
-                Start Your Journey
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-              </Link>
-              <Link to="/roadmap" className="btn-outline">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                Explore Paths
-              </Link>
-            </div>
-
-            {/* Stats */}
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,auto)', gap:0, justifyContent:'start', paddingTop:24, borderTop:`1px solid ${G.borderSoft}` }} className="stats-s">
-              {stats.map(([n,l],i) => (
-                <React.Fragment key={l}>
-                  {i > 0 && <div style={{ width:1, background:G.borderSoft, margin:'0 20px', alignSelf:'stretch' }}/>}
+            {/* Right — Dashboard Preview (desktop only) */}
+            <motion.div className="hero-visual" initial={{opacity:0,y:36,scale:0.95}} animate={{opacity:1,y:0,scale:1}} transition={{duration:0.85,ease,delay:0.22}} style={{ position:'relative', paddingBottom:60 }}>
+              {/* Notification top-left */}
+              <div style={{ position:'absolute', top:-14, left:-14, zIndex:10, animation:'floatA 5s ease-in-out infinite' }}>
+                <div style={{ background:'#fff', borderRadius:12, padding:'10px 14px', display:'flex', alignItems:'center', gap:10, boxShadow:T.elev3, border:`1px solid ${T.n100}` }}>
+                  <div style={{ width:32, height:32, borderRadius:9, background:T.g50, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0 }}>🎉</div>
                   <div>
-                    <div style={{ fontFamily:"'Fraunces',serif", fontSize:22, fontWeight:700, color:G.text1, letterSpacing:'-0.02em' }}>{n}</div>
-                    <div style={{ fontSize:11, color:G.text4, marginTop:2, fontWeight:600, whiteSpace:'nowrap', textTransform:'uppercase', letterSpacing:'0.06em' }}>{l}</div>
+                    <div style={{ fontSize:11, fontWeight:700, color:T.n900, whiteSpace:'nowrap' }}>Offer received!</div>
+                    <div style={{ fontSize:10, color:T.n400, marginTop:1 }}>Software Eng @ Stripe</div>
                   </div>
-                </React.Fragment>
+                </div>
+              </div>
+
+              {/* Main card */}
+              <div style={{ background:'#fff', borderRadius:18, overflow:'hidden', boxShadow:T.elev4, border:`1px solid ${T.n100}` }}>
+                {/* Toolbar */}
+                <div style={{ background:T.n50, padding:'11px 16px', display:'flex', alignItems:'center', gap:7, borderBottom:`1px solid ${T.n100}` }}>
+                  {['#FF5F57','#FFBD2E','#28C840'].map((c,i) => <div key={i} style={{ width:11, height:11, borderRadius:'50%', background:c }}/>)}
+                  <div style={{ marginLeft:8, flex:1, background:T.n100, borderRadius:5, padding:'4px 10px', fontSize:10, color:T.n400, fontFamily:'DM Mono,monospace' }}>eduroute.app/roadmap</div>
+                </div>
+                {/* Header */}
+                <div style={{ background:`linear-gradient(135deg,${T.g800},${T.g600})`, padding:'22px 22px 18px', position:'relative', overflow:'hidden' }}>
+                  <div style={{ position:'absolute', right:-20, top:-20, width:100, height:100, borderRadius:'50%', background:'rgba(255,255,255,0.05)' }}/>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:14 }}>
+                    <div>
+                      <div style={{ fontSize:9, fontWeight:700, letterSpacing:'0.14em', textTransform:'uppercase', color:'rgba(255,255,255,0.45)', marginBottom:4 }}>Active Roadmap</div>
+                      <div style={{ fontFamily:"'Instrument Serif',serif", fontSize:17, color:'#fff' }}>Software Engineering</div>
+                    </div>
+                    <div style={{ background:'rgba(255,255,255,0.15)', borderRadius:6, padding:'4px 10px', fontSize:12, fontWeight:700, color:'#fff' }}>68%</div>
+                  </div>
+                  <div className="prog-track">
+                    <motion.div initial={{width:0}} animate={{width:'68%'}} transition={{duration:1.5,ease:'easeOut',delay:0.8}} style={{ height:'100%', background:`linear-gradient(90deg,${T.g300},rgba(255,255,255,0.9))`, borderRadius:99 }}/>
+                  </div>
+                  <div style={{ display:'flex', justifyContent:'space-between', marginTop:6 }}>
+                    <span style={{ fontSize:9.5, color:'rgba(255,255,255,0.38)' }}>Module 3 of 8</span>
+                    <span style={{ fontSize:9.5, color:'rgba(255,255,255,0.38)' }}>Est. May 2025</span>
+                  </div>
+                </div>
+                {/* Steps */}
+                {[
+                  {n:1, label:'JS Fundamentals',    time:'8h',  state:'done'  },
+                  {n:2, label:'React & Patterns',   time:'6h',  state:'done'  },
+                  {n:3, label:'Node.js & APIs',     time:'10h', state:'active', pct:50},
+                  {n:4, label:'Databases & Cloud',  time:'9h',  state:'next'  },
+                  {n:5, label:'System Design',      time:'12h', state:'locked'},
+                ].map((s,i) => (
+                  <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 18px', borderBottom:i<4?`1px solid ${T.n50}`:'none', background:s.state==='active'?T.g50:'#fff' }}>
+                    <div style={{ width:26, height:26, borderRadius:7, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:s.state==='done'?10:11, fontWeight:700,
+                      background:s.state==='done'?T.g500:s.state==='active'?T.g50:T.n50,
+                      color:s.state==='done'?'#fff':s.state==='active'?T.g500:T.n300,
+                      border:s.state==='active'?`1.5px solid ${T.g400}`:s.state==='next'?`1.5px dashed ${T.n300}`:'none' }}>
+                      {s.state==='done' ? <svg width="9" height="7" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg> : s.state==='locked'?'🔒':s.n}
+                    </div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:12, fontWeight:s.state==='active'?700:500, color:s.state==='locked'?T.n300:T.n800, letterSpacing:'-0.01em', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{s.label}</div>
+                      {s.state==='active' && (
+                        <div className="prog-track" style={{ marginTop:4 }}>
+                          <motion.div initial={{width:0}} animate={{width:`${s.pct}%`}} transition={{duration:1,ease:'easeOut',delay:1.2}} style={{ height:'100%', background:T.g400, borderRadius:99 }}/>
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ display:'flex', alignItems:'center', gap:6, flexShrink:0 }}>
+                      <span style={{ fontSize:10, color:T.n400, fontFamily:'DM Mono,monospace' }}>{s.time}</span>
+                      {s.state==='active' && <Pill color={T.g500}>50%</Pill>}
+                      {s.state==='done'   && <Pill color={T.g500}>✓</Pill>}
+                    </div>
+                  </div>
+                ))}
+                <div style={{ padding:'12px 18px 16px' }}>
+                  <button className="btn-prim" style={{ width:'100%', borderRadius:9 }}>Continue → Node.js & APIs</button>
+                </div>
+              </div>
+
+              {/* Badge bottom-right */}
+              <div style={{ position:'absolute', bottom:20, right:-12, zIndex:10, animation:'floatB 6s ease-in-out infinite' }}>
+                <div style={{ background:'#fff', borderRadius:12, padding:'10px 14px', display:'flex', alignItems:'center', gap:10, boxShadow:T.elev3, border:`1px solid ${T.n100}` }}>
+                  <div style={{ width:32, height:32, borderRadius:9, background:'#FFF7ED', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 }}>📈</div>
+                  <div>
+                    <div style={{ fontSize:11, fontWeight:700, color:T.n900 }}>Skill score +12</div>
+                    <div style={{ fontSize:10, color:T.n400, marginTop:1 }}>This week · Top 8%</div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+
+        {/* Stats strip */}
+        <div style={{ borderTop:'1px solid rgba(255,255,255,0.07)', marginTop:0 }}>
+          <div style={{ maxWidth:1280, margin:'0 auto', padding:'0 24px' }} className="safe-x">
+            <div className="stats-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)' }}>
+              {stats.map((s,i) => (
+                <div key={i} style={{ padding:isMobile?'22px 0':'28px 0', borderRight:i<3?'1px solid rgba(255,255,255,0.07)':'none', paddingLeft:i>0?isMobile?16:36:0, paddingRight:isMobile?8:36 }}>
+                  <div style={{ fontFamily:"'Instrument Serif',serif", fontSize:isMobile?'1.4rem':'2rem', fontWeight:400, color:'#fff', lineHeight:1, marginBottom:5 }}>
+                    <CountUp end={s.n}/>
+                  </div>
+                  <div style={{ fontSize:isMobile?10:12, color:'rgba(255,255,255,0.4)', fontWeight:500, letterSpacing:'0.02em', lineHeight:1.3 }}>{s.l}</div>
+                </div>
               ))}
             </div>
-          </motion.div>
-
-          {/* Hero card preview */}
-          <motion.div className="hero-prev" initial={{opacity:0,x:24}} animate={{opacity:1,x:0}} transition={{duration:0.7,delay:0.18,ease:[0.22,1,0.36,1]}} style={{ position:'relative' }}>
-            {/* Float badge top */}
-            <motion.div initial={{opacity:0,scale:0.85}} animate={{opacity:1,scale:1}} transition={{delay:0.6}} style={{ position:'absolute', top:-18, right:8, zIndex:20, animation:'flt2 5s ease-in-out infinite' }}>
-              <div style={{ background:'#fff', border:`1px solid ${G.border}`, borderRadius:14, padding:'10px 14px', display:'flex', alignItems:'center', gap:9, boxShadow:'0 6px 20px rgba(26,46,26,0.1)' }}>
-                <div style={{ width:30, height:30, borderRadius:9, background:G.greenMist, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14 }}>🎯</div>
-                <div>
-                  <div style={{ fontSize:11, fontWeight:700, color:G.text1, lineHeight:1 }}>Milestone reached!</div>
-                  <div style={{ fontSize:10, color:G.text4, marginTop:2 }}>React Fundamentals</div>
-                </div>
-              </div>
-            </motion.div>
-
-            <div className="hm-card" style={{ overflow:'hidden', borderRadius:22, boxShadow:'0 12px 40px rgba(26,46,26,0.12)' }}>
-              <div style={{ background:G.green, padding:'22px 22px 20px', position:'relative', overflow:'hidden' }}>
-                <div style={{ position:'absolute', width:160, height:160, borderRadius:'50%', background:'rgba(255,255,255,0.06)', right:-40, top:-50 }}/>
-                <div style={{ fontSize:10, fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', color:'rgba(255,255,255,0.7)', marginBottom:4 }}>Active Roadmap</div>
-                <div style={{ fontFamily:"'Fraunces',serif", fontSize:17, fontWeight:700, color:'#fff', marginBottom:16 }}>Software Engineering</div>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
-                  <span style={{ fontSize:12, color:'rgba(255,255,255,0.75)' }}>Overall progress</span>
-                  <span style={{ fontFamily:"'Fraunces',serif", fontSize:26, fontWeight:700, color:'#fff', lineHeight:1 }}>68%</span>
-                </div>
-                <div style={{ height:6, background:'rgba(255,255,255,0.2)', borderRadius:99, overflow:'hidden' }}>
-                  <motion.div initial={{width:0}} animate={{width:'68%'}} transition={{duration:1.4,ease:'easeOut',delay:0.5}} style={{ height:'100%', background:'rgba(255,255,255,0.9)', borderRadius:99 }}/>
-                </div>
-              </div>
-              {[
-                {n:'✓',title:'JavaScript Fundamentals',time:'8h',status:'done'},
-                {n:'2', title:'React & Modern Patterns',time:'6h', status:'active'},
-                {n:'3', title:'Node.js & REST APIs',   time:'10h',status:'locked'},
-                {n:'4', title:'Databases & Cloud',     time:'9h', status:'locked'},
-              ].map((s,i) => {
-                const isDone=s.status==='done', isActive=s.status==='active';
-                return (
-                  <div key={i} style={{ display:'flex', alignItems:'center', gap:11, padding:'11px 20px', borderBottom:i<3?`1px solid ${G.borderSoft}`:'none' }}>
-                    <div style={{ width:32, height:32, borderRadius:9, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:800, background:isDone?G.greenSoft:isActive?G.sageDim:G.bgDeep, color:isDone?G.green:isActive?G.green:G.text4, border:isActive?`2px solid ${G.green}`:'none' }}>
-                      {s.status==='locked'?'🔒':s.n}
-                    </div>
-                    <div style={{ flex:1 }}>
-                      <div style={{ fontSize:13, fontWeight:600, color:s.status==='locked'?G.text4:G.text1 }}>{s.title}</div>
-                      <div style={{ fontSize:11, color:G.text4, marginTop:1 }}>{s.time} · {isDone?'Done':isActive?'In Progress':'Locked'}</div>
-                    </div>
-                    {isDone&&<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G.green} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
-                    {isActive&&<span style={{ fontSize:10, fontWeight:800, padding:'3px 8px', borderRadius:6, background:G.greenSoft, color:G.green }}>50%</span>}
-                  </div>
-                );
-              })}
-              <div style={{ padding:'12px 20px 18px' }}>
-                <button style={{ width:'100%', padding:'12px', background:G.green, color:'#fff', border:'none', borderRadius:11, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:"'Plus Jakarta Sans',sans-serif", boxShadow:`0 4px 16px rgba(45,106,79,0.25)` }}>
-                  Continue Learning →
-                </button>
-              </div>
-            </div>
-
-            {/* Float badge bottom */}
-            <motion.div initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} transition={{delay:0.8}} style={{ position:'absolute', bottom:-16, left:8, zIndex:20, animation:'flt1 6s ease-in-out infinite' }}>
-              <div style={{ background:'#fff', border:`1px solid ${G.border}`, borderRadius:13, padding:'9px 14px', display:'flex', alignItems:'center', gap:10, boxShadow:'0 4px 16px rgba(26,46,26,0.08)' }}>
-                <div style={{ display:'flex' }}>
-                  {[G.green, G.violet, G.greenMid].map((c,i) => <div key={i} style={{ width:22, height:22, borderRadius:'50%', background:c, border:'2px solid #fff', marginLeft:i>0?-7:0 }}/>)}
-                </div>
-                <span style={{ fontSize:11, fontWeight:600, color:G.text3 }}>+84 joined this week</span>
-              </div>
-            </motion.div>
-          </motion.div>
-        </section>
-
-        {/* ── TRUSTED BY ── */}
-        <section style={{ marginBottom:80 }}>
-          <p style={{ textAlign:'center', fontSize:10, fontWeight:700, color:G.text4, textTransform:'uppercase', letterSpacing:'0.16em', marginBottom:16 }}>Learners hired at</p>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', flexWrap:'wrap', padding:'14px 0', borderTop:`1px solid ${G.borderSoft}`, borderBottom:`1px solid ${G.borderSoft}` }}>
-            {['Google','Stripe','Figma','Airbnb','Notion','GitHub','Vercel','Linear'].map((c,i) => (
-              <React.Fragment key={c}>
-                {i>0&&<div style={{ width:1, height:16, background:G.borderSoft }}/>}
-                <span style={{ padding:'0 24px', fontSize:14, fontWeight:700, color:G.text4, letterSpacing:'-0.02em', opacity:0.7 }}>{c}</span>
-              </React.Fragment>
-            ))}
           </div>
-        </section>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════
+          TICKER
+      ════════════════════════════════════════════ */}
+      <section style={{ background:T.n50, borderBottom:`1px solid ${T.n100}`, padding:'18px 0', overflow:'hidden', position:'relative' }}>
+        <div style={{ position:'absolute', left:0, top:0, bottom:0, width:80, background:`linear-gradient(to right,${T.n50},transparent)`, zIndex:1, pointerEvents:'none' }}/>
+        <div style={{ position:'absolute', right:0, top:0, bottom:0, width:80, background:`linear-gradient(to left,${T.n50},transparent)`, zIndex:1, pointerEvents:'none' }}/>
+        <div style={{ fontSize:9, fontWeight:700, letterSpacing:'0.16em', textTransform:'uppercase', color:T.n300, textAlign:'center', marginBottom:14 }}>Our graduates work at</div>
+        <div className="ticker-track">
+          {ticker.map((c,i) => (
+            <span key={i} style={{ padding:'0 36px', fontSize:13, fontWeight:700, color:T.n400, letterSpacing:'-0.01em', whiteSpace:'nowrap' }}>{c}</span>
+          ))}
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════
+          CONTENT AREA
+      ════════════════════════════════════════════ */}
+      <div style={{ maxWidth:1280, margin:'0 auto', padding:'0 24px' }} className="safe-x">
 
         {/* ── HOW IT WORKS ── */}
-        <section style={{ marginBottom:88 }}>
+        <section style={{ padding:'72px 0' }}>
           <div style={{ textAlign:'center', marginBottom:48 }}>
-            <span className="sec-lbl" style={{ marginBottom:16, display:'inline-flex' }}>⚡ How It Works</span>
-            <h2 style={{ fontFamily:"'Fraunces',serif", fontSize:'clamp(1.6rem,3.2vw,2.4rem)', fontWeight:700, color:G.text1, letterSpacing:'-0.02em', marginBottom:10, marginTop:16 }}>
-              From Assessment to Offer Letter
+            <Eyebrow>How it works</Eyebrow>
+            <h2 className="sec-h2" style={{ fontFamily:"'Instrument Serif',serif", fontSize:'clamp(1.8rem,3.5vw,2.8rem)', fontWeight:400, letterSpacing:'-0.025em', color:T.n900, margin:'14px 0 12px', lineHeight:1.15 }}>
+              From day one to<br/>offer letter
             </h2>
-            <p style={{ fontSize:14, color:G.text3, maxWidth:460, margin:'0 auto', lineHeight:1.75 }}>Three steps to unlock a fully personalised career journey</p>
+            <p style={{ fontSize:15, color:T.n500, lineHeight:1.8, maxWidth:440, margin:'0 auto' }}>
+              Three high-leverage steps built around how top engineers, designers, and PMs actually land jobs.
+            </p>
           </div>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))', gap:16 }}>
+
+          <div className="hiw-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16 }}>
             {[
-              {step:'01',icon:'🎯',title:'Take the Assessment',   desc:'Answer a 5-minute questionnaire about your skills, goals, and learning style. Our AI builds your profile.',                          color:G.green,    light:G.greenMist  },
-              {step:'02',icon:'🗺️',title:'Get Your Roadmap',     desc:'Receive a step-by-step learning plan with curated resources, timelines, and milestones tailored to you.',                           color:G.greenMid, light:G.greenSoft  },
-              {step:'03',icon:'🚀',title:'Learn & Get Hired',     desc:'Follow your roadmap, earn certificates, and access exclusive internship and job opportunities.',                                      color:G.violet,   light:G.violetLight},
+              { n:'01', icon:'🎯', title:'Personalised Assessment',   desc:'5-minute diagnostic. Our AI maps your skills, goals, and schedule into a custom learning plan — not a generic course list.',   color:T.g500  },
+              { n:'02', icon:'🗺️', title:'AI-Curated Roadmap',       desc:'Week-by-week plan with hand-picked resources and milestones. Adapts in real time as you progress.',                           color:T.g600  },
+              { n:'03', icon:'🚀', title:'Learn, Build, Get Hired',   desc:'Earn verifiable certificates, build a portfolio, and get matched to 500+ companies that hire directly from EduRoute.',        color:T.g700  },
             ].map((s,i) => (
-              <motion.div key={i} className="hm-card" initial={{opacity:0,y:18}} whileInView={{opacity:1,y:0}} viewport={{once:true,margin:'-20px'}} transition={{duration:0.5,delay:i*0.1}} style={{ padding:28, position:'relative', overflow:'hidden' }}>
-                <div style={{ position:'absolute', top:18, right:20, fontFamily:"'Fraunces',serif", fontSize:48, fontWeight:700, color:'rgba(26,46,26,0.04)', lineHeight:1, userSelect:'none' }}>{s.step}</div>
-                <div style={{ width:48, height:48, borderRadius:13, background:s.light, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, marginBottom:18, position:'relative', zIndex:1 }}>{s.icon}</div>
-                <h3 style={{ fontFamily:"'Fraunces',serif", fontSize:16, fontWeight:600, color:G.text1, marginBottom:8, position:'relative', zIndex:1 }}>{s.title}</h3>
-                <p style={{ fontSize:13, color:G.text3, lineHeight:1.72, position:'relative', zIndex:1 }}>{s.desc}</p>
+              <motion.div key={i} className="card" initial={{opacity:0,y:20}} whileInView={{opacity:1,y:0}} viewport={{once:true,margin:'-30px'}} transition={{duration:0.5,ease,delay:i*0.1}} style={{ padding:28, position:'relative', overflow:'hidden' }}>
+                <div style={{ position:'absolute', top:16, right:18, fontFamily:"'Instrument Serif',serif", fontSize:52, fontWeight:400, color:'rgba(12,28,18,0.04)', lineHeight:1, userSelect:'none' }}>{s.n}</div>
+                <div style={{ width:50, height:50, borderRadius:13, background:s.color+'12', border:`1px solid ${s.color}22`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, marginBottom:18 }}>{s.icon}</div>
+                <h3 style={{ fontFamily:"'Instrument Serif',serif", fontSize:17, fontWeight:400, color:T.n900, marginBottom:10, letterSpacing:'-0.02em' }}>{s.title}</h3>
+                <p style={{ fontSize:13.5, color:T.n500, lineHeight:1.75 }}>{s.desc}</p>
               </motion.div>
             ))}
           </div>
         </section>
 
         {/* ── FEATURES ── */}
-        <section style={{ marginBottom:88 }}>
-          <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', flexWrap:'wrap', gap:20, marginBottom:36 }}>
+        <section style={{ paddingBottom:72 }}>
+          <div style={{ display:'flex', flexWrap:'wrap', alignItems:'flex-end', justifyContent:'space-between', gap:16, marginBottom:36 }}>
             <div>
-              <span className="sec-lbl" style={{ marginBottom:12, display:'inline-flex' }}>✦ Platform Features</span>
-              <h2 style={{ fontFamily:"'Fraunces',serif", fontSize:'clamp(1.6rem,3vw,2.2rem)', fontWeight:700, color:G.text1, letterSpacing:'-0.02em', marginTop:12 }}>Everything to Succeed</h2>
+              <Eyebrow>Platform</Eyebrow>
+              <h2 className="sec-h2" style={{ fontFamily:"'Instrument Serif',serif", fontSize:'clamp(1.8rem,3vw,2.4rem)', fontWeight:400, letterSpacing:'-0.025em', color:T.n900, marginTop:12, lineHeight:1.15 }}>
+                Everything in one place
+              </h2>
             </div>
-            <p style={{ fontSize:14, color:G.text3, maxWidth:340, lineHeight:1.75 }}>A complete ecosystem for your professional development journey</p>
+            <p style={{ fontSize:14, color:T.n500, maxWidth:360, lineHeight:1.8 }}>Assessment, learning, mentorship, and hiring — one platform, zero gaps.</p>
           </div>
-          <motion.div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:16 }} variants={stagger} initial="initial" whileInView="animate" viewport={{once:true,margin:'-20px'}}>
-            {features.map((f,i) => (
-              <motion.div key={i} variants={fadeUp} className="hm-card" style={{ padding:26, cursor:'default', display:'flex', flexDirection:'column', gap:14 }}>
-                <div style={{ width:48, height:48, borderRadius:13, background:f.light, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, border:`1px solid ${G.borderSoft}` }}>{f.icon}</div>
-                <div>
-                  <h3 style={{ fontFamily:"'Fraunces',serif", fontSize:15, fontWeight:600, color:G.text1, marginBottom:7 }}>{f.title}</h3>
-                  <p style={{ fontSize:13, color:G.text3, lineHeight:1.72 }}>{f.desc}</p>
-                </div>
-                <div style={{ marginTop:'auto', display:'flex', alignItems:'center', gap:5, fontSize:13, fontWeight:700, color:f.color }}>
+
+          <div className="feat-grid" style={{ gridTemplateColumns:'repeat(3,1fr)' }}>
+            {[
+              { icon:'🎯', title:'AI Roadmaps',          desc:'Custom week-by-week learning plans that adapt to your pace and goals.',                              color:T.g500   },
+              { icon:'📊', title:'Progress Analytics',    desc:'Real-time skill tracking with gap analysis and next-best-action prompts.',                           color:T.violet },
+              { icon:'🤝', title:'Mentor Matching',       desc:'Matched to industry professionals based on your career target and experience.',                       color:T.g600   },
+              { icon:'🏆', title:'Verified Credentials',  desc:'Blockchain-anchored certificates recognised by 500+ hiring partners.',                               color:T.amber  },
+              { icon:'💼', title:'Hiring Pipeline',       desc:'Direct introductions to recruiters. No cold applications, no resume black holes.',                   color:T.teal   },
+              { icon:'🌐', title:'Peer Community',        desc:'Cohort-based learning with study groups, code reviews, and weekly standups.',                        color:T.rose   },
+            ].map((f,i) => (
+              <motion.div key={i} initial={{opacity:0}} whileInView={{opacity:1}} viewport={{once:true}} transition={{duration:0.35,delay:i*0.05}}
+                style={{ background:T.white, padding:isMobile?22:30, transition:'background 0.18s', cursor:'default' }}
+                onMouseEnter={e=>e.currentTarget.style.background=T.n50}
+                onMouseLeave={e=>e.currentTarget.style.background=T.white}>
+                <div style={{ width:46, height:46, borderRadius:12, background:f.color+'12', border:`1px solid ${f.color}20`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, marginBottom:16 }}>{f.icon}</div>
+                <h3 style={{ fontFamily:"'Instrument Serif',serif", fontSize:16, fontWeight:400, color:T.n900, marginBottom:8, letterSpacing:'-0.01em' }}>{f.title}</h3>
+                <p style={{ fontSize:13, color:T.n500, lineHeight:1.72, marginBottom:14 }}>{f.desc}</p>
+                <div style={{ display:'inline-flex', alignItems:'center', gap:5, fontSize:13, fontWeight:600, color:f.color }}>
                   Learn more <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </div>
               </motion.div>
             ))}
-          </motion.div>
+          </div>
         </section>
 
         {/* ── EXPLORE TABS ── */}
-        <section style={{ marginBottom:88 }}>
-          <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', flexWrap:'wrap', gap:20, marginBottom:24 }}>
+        <section style={{ paddingBottom:72 }}>
+          {/* Header */}
+          <div style={{ display:'flex', flexWrap:'wrap', alignItems:'flex-end', justifyContent:'space-between', gap:16, marginBottom:24, paddingBottom:18, borderBottom:`1px solid ${T.n100}` }}>
             <div>
-              <span className="sec-lbl" style={{ marginBottom:12, display:'inline-flex' }}>📚 Explore</span>
-              <h2 style={{ fontFamily:"'Fraunces',serif", fontSize:'clamp(1.5rem,2.8vw,2rem)', fontWeight:700, color:G.text1, letterSpacing:'-0.02em', marginTop:12 }}>Discover Opportunities</h2>
+              <Eyebrow>Explore</Eyebrow>
+              <h2 className="sec-h2" style={{ fontFamily:"'Instrument Serif',serif", fontSize:'clamp(1.7rem,3vw,2.2rem)', fontWeight:400, letterSpacing:'-0.025em', color:T.n900, marginTop:10 }}>Discover opportunities</h2>
             </div>
-            <div className="scrollbar-hide" style={{ display:'flex', gap:6, overflowX:'auto' }}>
+            {/* Tabs */}
+            <div style={{ display:'flex', gap:2, background:T.n50, padding:3, borderRadius:8, border:`1px solid ${T.n100}` }}>
               {[['roadmaps','Roadmaps'],['internships','Internships'],['events','Events']].map(([id,label]) => (
-                <button key={id} className={`tab-btn${activeTab===id?' active':''}`} onClick={()=>setActiveTab(id)}>{label}</button>
+                <button key={id} className={`tab ${activeTab===id?'on':'off'}`} onClick={() => setActiveTab(id)}>{label}</button>
               ))}
             </div>
           </div>
 
           <AnimatePresence mode="wait">
+            {/* Roadmaps */}
             {activeTab==='roadmaps' && (
-              <motion.div key="roadmaps" initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-6}} transition={{duration:0.2}} style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(256px,1fr))', gap:16 }}>
-                {roadmaps.map(item => (
-                  <Link key={item.id} to="/roadmap" style={{ textDecoration:'none' }}>
-                    <div className="hm-card" style={{ padding:22, display:'flex', flexDirection:'column', gap:14, height:'100%', cursor:'pointer' }}>
-                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
-                        <div style={{ width:44, height:44, borderRadius:12, background:item.light, display:'flex', alignItems:'center', justifyContent:'center', fontSize:19, border:`1px solid ${G.borderSoft}` }}>{item.emoji}</div>
-                        <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:4 }}>
-                          <Tag color={item.color}>{item.duration}</Tag>
-                          <span style={{ fontSize:11, color:G.text4 }}>★ {item.rating}</span>
+              <motion.div key="r" initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0}} transition={{duration:0.2}}>
+                {/* Mobile: horizontal scroll */}
+                {isTablet ? (
+                  <div className="hscroll" style={{ paddingBottom:16 }}>
+                    {roadmaps.map(item => (
+                      <Link key={item.id} to="/roadmap">
+                        <div className="card" style={{ padding:20, width:260 }}>
+                          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:14 }}>
+                            <div style={{ width:44, height:44, borderRadius:11, background:item.color+'12', border:`1px solid ${item.color}20`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:19 }}>{item.emoji}</div>
+                            <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:5 }}>
+                              {item.hot && <HotBadge/>}
+                              <span style={{ fontSize:11, color:T.n400, fontWeight:600 }}>★ {item.rating}</span>
+                            </div>
+                          </div>
+                          <h3 style={{ fontFamily:"'Instrument Serif',serif", fontSize:16, fontWeight:400, color:T.n900, marginBottom:2, letterSpacing:'-0.02em' }}>{item.title}</h3>
+                          <div style={{ fontSize:11, color:T.n400, marginBottom:12, fontWeight:500 }}>{item.sub}</div>
+                          <div style={{ display:'flex', flexWrap:'wrap', gap:5, marginBottom:14 }}>
+                            {item.skills.map(sk => <Pill key={sk} color={item.color}>{sk}</Pill>)}
+                          </div>
+                          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', paddingTop:12, borderTop:`1px solid ${T.n50}` }}>
+                            <span style={{ fontSize:11, color:T.n400 }}>⏱ {item.dur} · 👥 {item.students}</span>
+                            <span style={{ fontSize:13, fontWeight:700, color:item.color }}>Enrol →</span>
+                          </div>
                         </div>
-                      </div>
-                      <div>
-                        <h3 style={{ fontFamily:"'Fraunces',serif", fontSize:14, fontWeight:600, color:G.text1, marginBottom:5, lineHeight:1.3 }}>{item.title}</h3>
-                        <p style={{ fontSize:12, color:G.text3, lineHeight:1.65 }}>{item.description}</p>
-                      </div>
-                      <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>{item.skills.map(sk=><Chip key={sk} label={sk}/>)}</div>
-                      <div style={{ marginTop:'auto', display:'flex', justifyContent:'space-between', alignItems:'center', paddingTop:12, borderTop:`1px solid ${G.borderSoft}` }}>
-                        <span style={{ fontSize:11, color:G.text4, fontWeight:500 }}>👥 {item.students} enrolled</span>
-                        <span style={{ fontSize:13, fontWeight:700, color:item.color }}>Start →</span>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:16 }}>
+                    {roadmaps.map(item => (
+                      <Link key={item.id} to="/roadmap">
+                        <div className="card card-link" style={{ padding:24 }}>
+                          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:16 }}>
+                            <div style={{ width:48, height:48, borderRadius:12, background:item.color+'12', border:`1px solid ${item.color}20`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20 }}>{item.emoji}</div>
+                            <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:5 }}>
+                              {item.hot && <HotBadge/>}
+                              <span style={{ fontSize:11, color:T.n400, fontWeight:600 }}>★ {item.rating}</span>
+                            </div>
+                          </div>
+                          <h3 style={{ fontFamily:"'Instrument Serif',serif", fontSize:17, fontWeight:400, color:T.n900, marginBottom:3, letterSpacing:'-0.02em' }}>{item.title}</h3>
+                          <div style={{ fontSize:12, color:T.n400, marginBottom:14, fontWeight:500 }}>{item.sub}</div>
+                          <div style={{ display:'flex', flexWrap:'wrap', gap:5, marginBottom:16 }}>
+                            {item.skills.map(sk => <Pill key={sk} color={item.color}>{sk}</Pill>)}
+                          </div>
+                          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', paddingTop:14, borderTop:`1px solid ${T.n50}` }}>
+                            <span style={{ fontSize:11, color:T.n400 }}>⏱ {item.dur} · 👥 {item.students}</span>
+                            <span style={{ fontSize:13, fontWeight:700, color:item.color }}>Enrol →</span>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </motion.div>
             )}
+
+            {/* Internships */}
             {activeTab==='internships' && (
-              <motion.div key="internships" initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-6}} transition={{duration:0.2}} style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:16 }}>
-                {internships.map(item => (
-                  <div key={item.id} className="hm-card" style={{ padding:22, display:'flex', flexDirection:'column', gap:14 }}>
-                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                      <div style={{ width:42, height:42, borderRadius:11, background:item.color+'18', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, fontWeight:800, color:item.color, fontFamily:"'Fraunces',serif" }}>{item.logo}</div>
-                      <Tag color={G.green}>Paid</Tag>
-                    </div>
-                    <div>
-                      <h3 style={{ fontFamily:"'Fraunces',serif", fontSize:14, fontWeight:600, color:G.text1, marginBottom:2 }}>{item.title}</h3>
-                      <p style={{ fontSize:13, fontWeight:700, color:item.color }}>{item.company}</p>
-                    </div>
-                    <div style={{ background:G.bgDeep, borderRadius:10, padding:'10px 14px', display:'flex', flexDirection:'column', gap:6, border:`1px solid ${G.borderSoft}` }}>
-                      {[['📍',item.location],['💰',item.stipend]].map(([ic,v]) => (
-                        <div key={v} style={{ display:'flex', alignItems:'center', gap:8, fontSize:12, color:G.text3 }}><span>{ic}</span><span style={{ fontWeight:600, color:G.text2 }}>{v}</span></div>
-                      ))}
-                    </div>
-                    <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>{item.skills.map(sk=><Chip key={sk} label={sk}/>)}</div>
-                    <button style={{ width:'100%', padding:'11px', background:G.green, color:'#fff', border:'none', borderRadius:10, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:"'Plus Jakarta Sans',sans-serif", transition:'all 0.2s', boxShadow:`0 4px 14px rgba(45,106,79,0.22)` }}
-                      onMouseEnter={e=>{e.currentTarget.style.background=G.greenMid;e.currentTarget.style.transform='translateY(-1px)';}}
-                      onMouseLeave={e=>{e.currentTarget.style.background=G.green;e.currentTarget.style.transform='';}}>
-                      Apply Now
-                    </button>
+              <motion.div key="int" initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0}} transition={{duration:0.2}}>
+                {isTablet ? (
+                  <div className="hscroll">
+                    {internships.map(item => (
+                      <div key={item.id} className="card" style={{ padding:20, width:280 }}>
+                        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                            <div style={{ width:40, height:40, borderRadius:10, background:item.color+'12', border:`1px solid ${item.color}20`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:800, color:item.color, fontFamily:'DM Mono,monospace' }}>{item.logo}</div>
+                            <div>
+                              <div style={{ fontSize:13, fontWeight:600, color:T.n900 }}>{item.company}</div>
+                              <div style={{ fontSize:10, color:T.n400 }}>Verified Partner</div>
+                            </div>
+                          </div>
+                          <Pill color={T.g500}>Paid</Pill>
+                        </div>
+                        <h3 style={{ fontFamily:"'Instrument Serif',serif", fontSize:15, fontWeight:400, color:T.n900, letterSpacing:'-0.01em', marginBottom:12 }}>{item.title}</h3>
+                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:12, padding:10, background:T.n50, borderRadius:8, border:`1px solid ${T.n100}` }}>
+                          <div><div style={{ fontSize:9, color:T.n400, textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:700, marginBottom:2 }}>Location</div><div style={{ fontSize:12, fontWeight:600, color:T.n700 }}>{item.loc}</div></div>
+                          <div><div style={{ fontSize:9, color:T.n400, textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:700, marginBottom:2 }}>Stipend</div><div style={{ fontSize:12, fontWeight:700, color:T.g600 }}>{item.pay}</div></div>
+                        </div>
+                        <div style={{ display:'flex', flexWrap:'wrap', gap:5, marginBottom:14 }}>{item.skills.map(sk=><Pill key={sk} color={item.color}>{sk}</Pill>)}</div>
+                        <button className="btn-prim" style={{ width:'100%', borderRadius:8 }}>Apply Now</button>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                ) : (
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:16 }}>
+                    {internships.map(item => (
+                      <div key={item.id} className="card" style={{ padding:24 }}>
+                        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                            <div style={{ width:44, height:44, borderRadius:11, background:item.color+'12', border:`1px solid ${item.color}20`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:800, color:item.color, fontFamily:'DM Mono,monospace' }}>{item.logo}</div>
+                            <div>
+                              <div style={{ fontSize:14, fontWeight:600, color:T.n900 }}>{item.company}</div>
+                              <div style={{ fontSize:11, color:T.n400 }}>Verified Partner</div>
+                            </div>
+                          </div>
+                          <Pill color={T.g500}>Paid</Pill>
+                        </div>
+                        <h3 style={{ fontFamily:"'Instrument Serif',serif", fontSize:16, fontWeight:400, color:T.n900, letterSpacing:'-0.01em', marginBottom:14 }}>{item.title}</h3>
+                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:14, padding:12, background:T.n50, borderRadius:8, border:`1px solid ${T.n100}` }}>
+                          <div><div style={{ fontSize:9, color:T.n400, textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:700, marginBottom:3 }}>Location</div><div style={{ fontSize:12.5, fontWeight:600, color:T.n700 }}>{item.loc}</div></div>
+                          <div><div style={{ fontSize:9, color:T.n400, textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:700, marginBottom:3 }}>Stipend</div><div style={{ fontSize:12.5, fontWeight:700, color:T.g600 }}>{item.pay}</div></div>
+                        </div>
+                        <div style={{ display:'flex', flexWrap:'wrap', gap:5, marginBottom:16 }}>{item.skills.map(sk=><Pill key={sk} color={item.color}>{sk}</Pill>)}</div>
+                        <button className="btn-prim" style={{ width:'100%', borderRadius:8 }}>Apply Now</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </motion.div>
             )}
+
+            {/* Events */}
             {activeTab==='events' && (
-              <motion.div key="events" initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-6}} transition={{duration:0.2}} style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:16 }}>
-                {events.map(item => (
-                  <div key={item.id} className="hm-card" style={{ padding:22, display:'flex', flexDirection:'column', gap:14 }}>
-                    <div style={{ display:'flex', gap:14, alignItems:'flex-start' }}>
-                      <div style={{ background:item.color+'14', border:`1px solid ${item.color}25`, borderRadius:12, padding:'8px 14px', textAlign:'center', flexShrink:0 }}>
-                        <div style={{ fontFamily:"'Fraunces',serif", fontSize:20, fontWeight:700, color:item.color, lineHeight:1 }}>{item.dateNum}</div>
-                        <div style={{ fontSize:9, fontWeight:700, color:item.color, letterSpacing:'0.1em', textTransform:'uppercase', marginTop:2 }}>{item.month}</div>
+              <motion.div key="ev" initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0}} transition={{duration:0.2}}>
+                {isTablet ? (
+                  <div className="hscroll">
+                    {events.map(item => (
+                      <div key={item.id} className="card" style={{ padding:20, width:280 }}>
+                        <div style={{ display:'flex', gap:12, marginBottom:14 }}>
+                          <div style={{ background:item.color+'12', border:`1px solid ${item.color}22`, borderRadius:10, padding:'10px 12px', textAlign:'center', flexShrink:0 }}>
+                            <div style={{ fontFamily:"'Instrument Serif',serif", fontSize:20, color:item.color, lineHeight:1 }}>{item.date.split(' ')[1]}</div>
+                            <div style={{ fontSize:9, fontWeight:700, color:item.color, letterSpacing:'0.1em', textTransform:'uppercase', marginTop:2 }}>{item.date.split(' ')[0]}</div>
+                          </div>
+                          <div>
+                            <Pill color={item.color}>{item.type}</Pill>
+                            <h3 style={{ fontFamily:"'Instrument Serif',serif", fontSize:15, fontWeight:400, color:T.n900, marginTop:6, letterSpacing:'-0.01em', lineHeight:1.3 }}>{item.title}</h3>
+                          </div>
+                        </div>
+                        <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, color:T.n400, marginBottom:14 }}>
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                          {item.loc}
+                        </div>
+                        <button style={{ width:'100%', padding:'11px', background:'transparent', color:item.color, border:`1.5px solid ${item.color}30`, borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', transition:'all 0.18s', minHeight:44 }}
+                          onMouseEnter={e=>{e.currentTarget.style.background=item.color;e.currentTarget.style.color='#fff';}}
+                          onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.color=item.color;}}>
+                          Register Free →
+                        </button>
                       </div>
-                      <div style={{ flex:1 }}>
-                        <Tag color={item.color}>{item.type}</Tag>
-                        <h3 style={{ fontFamily:"'Fraunces',serif", fontSize:13, fontWeight:600, color:G.text1, marginTop:6, lineHeight:1.35 }}>{item.title}</h3>
-                      </div>
-                    </div>
-                    <p style={{ fontSize:12, color:G.text3, lineHeight:1.65 }}>{item.description}</p>
-                    <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:12, color:G.text4 }}>
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                      {item.location}
-                    </div>
-                    <button style={{ width:'100%', padding:'11px', background:'transparent', color:item.color, border:`1.5px solid ${item.color}30`, borderRadius:10, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:"'Plus Jakarta Sans',sans-serif", transition:'all 0.2s' }}
-                      onMouseEnter={e=>{e.currentTarget.style.background=item.color;e.currentTarget.style.color='#fff';}}
-                      onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.color=item.color;}}>
-                      Register Free
-                    </button>
+                    ))}
                   </div>
-                ))}
+                ) : (
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(290px,1fr))', gap:16 }}>
+                    {events.map(item => (
+                      <div key={item.id} className="card" style={{ padding:24 }}>
+                        <div style={{ display:'flex', gap:14, alignItems:'flex-start', marginBottom:16 }}>
+                          <div style={{ background:item.color+'12', border:`1px solid ${item.color}22`, borderRadius:12, padding:'10px 14px', textAlign:'center', flexShrink:0 }}>
+                            <div style={{ fontFamily:"'Instrument Serif',serif", fontSize:22, color:item.color, lineHeight:1 }}>{item.date.split(' ')[1]}</div>
+                            <div style={{ fontSize:9, fontWeight:700, color:item.color, letterSpacing:'0.1em', textTransform:'uppercase', marginTop:2 }}>{item.date.split(' ')[0]}</div>
+                          </div>
+                          <div>
+                            <Pill color={item.color}>{item.type}</Pill>
+                            <h3 style={{ fontFamily:"'Instrument Serif',serif", fontSize:16, fontWeight:400, color:T.n900, marginTop:8, letterSpacing:'-0.01em', lineHeight:1.3 }}>{item.title}</h3>
+                          </div>
+                        </div>
+                        <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:12, color:T.n400, marginBottom:16 }}>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                          {item.loc}
+                        </div>
+                        <button style={{ width:'100%', padding:'12px', background:'transparent', color:item.color, border:`1.5px solid ${item.color}30`, borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', transition:'all 0.18s', minHeight:48 }}
+                          onMouseEnter={e=>{e.currentTarget.style.background=item.color;e.currentTarget.style.color='#fff';}}
+                          onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.color=item.color;}}>
+                          Register Free →
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
         </section>
 
-        {/* ── TESTIMONIALS ── */}
-        <section style={{ marginBottom:88 }}>
-          <div style={{ textAlign:'center', marginBottom:44 }}>
-            <span className="sec-lbl" style={{ marginBottom:14, display:'inline-flex' }}>💬 Success Stories</span>
-            <h2 style={{ fontFamily:"'Fraunces',serif", fontSize:'clamp(1.6rem,3vw,2.2rem)', fontWeight:700, color:G.text1, letterSpacing:'-0.02em', marginTop:16 }}>Real People, Real Results</h2>
-          </div>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(300px,1fr))', gap:16 }}>
-            {testimonials.map((t,i) => (
-              <motion.div key={i} className="hm-card" initial={{opacity:0,y:18}} whileInView={{opacity:1,y:0}} viewport={{once:true,margin:'-20px'}} transition={{duration:0.5,delay:i*0.1}} style={{ padding:26 }}>
-                <div style={{ display:'flex', gap:3, marginBottom:14 }}>{[...Array(5)].map((_,j)=><span key={j} style={{ color:'#F59E0B', fontSize:13 }}>★</span>)}</div>
-                <p style={{ fontSize:13, color:G.text2, lineHeight:1.8, marginBottom:20, fontStyle:'italic' }}>"{t.quote}"</p>
-                <div style={{ display:'flex', alignItems:'center', gap:12, paddingTop:18, borderTop:`1px solid ${G.borderSoft}` }}>
-                  <div style={{ width:38, height:38, borderRadius:'50%', background:G.green, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:"'Fraunces',serif", fontSize:14, fontWeight:700, color:'#fff', flexShrink:0 }}>{t.avatar}</div>
-                  <div>
-                    <div style={{ fontSize:13, fontWeight:700, color:G.text1 }}>{t.name}</div>
-                    <div style={{ fontSize:11, color:G.text4, marginTop:1 }}>{t.role}</div>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </section>
-
         {/* ── OUTCOMES ── */}
-        <section style={{ marginBottom:88 }}>
-          <div className="hm-card" style={{ padding:'40px 40px 0', overflow:'hidden', position:'relative', borderRadius:22 }}>
-            <div style={{ position:'absolute', top:0, right:0, width:'50%', height:'100%', background:'radial-gradient(ellipse at 70% 30%, rgba(208,237,214,0.35) 0%, transparent 70%)', pointerEvents:'none' }}/>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:48, alignItems:'center' }} className="hero-g">
-              <div style={{ position:'relative', zIndex:1 }}>
-                <span className="sec-lbl" style={{ marginBottom:14, display:'inline-flex' }}>📈 Outcomes</span>
-                <h2 style={{ fontFamily:"'Fraunces',serif", fontSize:'clamp(1.5rem,2.8vw,2rem)', fontWeight:700, color:G.text1, letterSpacing:'-0.02em', marginTop:14, marginBottom:20 }}>What You'll Achieve in 6 Months</h2>
-                <div style={{ display:'flex', flexDirection:'column', gap:12, marginBottom:28 }}>
-                  {[['Build 10+ portfolio projects',G.green],['Complete 200+ skill assessments',G.violet],['Earn 5 industry certificates',G.greenMid],['Land interviews at top companies',G.amber]].map(([item,color]) => (
-                    <div key={item} style={{ display:'flex', alignItems:'center', gap:10 }}>
-                      <div style={{ width:22, height:22, borderRadius:7, background:color+'18', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                      </div>
-                      <span style={{ fontSize:13, fontWeight:500, color:G.text2 }}>{item}</span>
+        <section style={{ paddingBottom:72 }}>
+          <div className="outcomes-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', borderRadius:20, overflow:'hidden', border:`1px solid ${T.n100}`, boxShadow:T.elev2 }}>
+            {/* Dark left */}
+            <div style={{ background:`linear-gradient(145deg,${T.g900},${T.g700})`, padding:isMobile?'36px 24px':'52px 44px', position:'relative', overflow:'hidden' }}>
+              <div style={{ position:'absolute', top:-50, right:-50, width:180, height:180, borderRadius:'50%', background:'rgba(255,255,255,0.03)', pointerEvents:'none' }}/>
+              <Eyebrow light>Outcomes</Eyebrow>
+              <h2 style={{ fontFamily:"'Instrument Serif',serif", fontSize:'clamp(1.5rem,2.8vw,2.2rem)', fontWeight:400, color:'#fff', letterSpacing:'-0.025em', margin:'14px 0 22px', lineHeight:1.2 }}>
+                What you'll achieve in 6 months
+              </h2>
+              <ul style={{ listStyle:'none', display:'flex', flexDirection:'column', gap:13, marginBottom:32 }}>
+                {['Build 10+ portfolio projects','Complete 200+ skill assessments','Earn 5 industry certificates','Land interviews at top companies'].map(item => (
+                  <li key={item} style={{ display:'flex', alignItems:'center', gap:10, fontSize:14, color:'rgba(255,255,255,0.72)' }}>
+                    <div style={{ width:18, height:18, minWidth:18, borderRadius:'50%', background:'rgba(34,135,78,0.28)', border:'1px solid rgba(77,200,133,0.4)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                      <svg width="9" height="7" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke={T.g300} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     </div>
-                  ))}
-                </div>
-                <Link to="/questionnaire" className="btn-primary">
-                  Start for Free <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                </Link>
-              </div>
-              <div style={{ position:'relative', zIndex:1, paddingBottom:40 }}>
-                {[['Technical Skills',85,G.green],['Problem Solving',78,G.violet],['System Design',70,G.greenMid],['Communication',92,G.amber],['Industry Knowledge',88,G.cyan]].map(([skill,pct,color],i) => (
-                  <motion.div key={skill} initial={{opacity:0,x:18}} whileInView={{opacity:1,x:0}} viewport={{once:true}} transition={{delay:i*0.1}} style={{ marginBottom:16 }}>
-                    <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6, fontSize:12, fontWeight:700 }}>
-                      <span style={{ color:G.text2 }}>{skill}</span>
-                      <span style={{ color }}>{pct}%</span>
-                    </div>
-                    <div style={{ height:6, background:G.bgDeep, borderRadius:99, overflow:'hidden' }}>
-                      <motion.div style={{ height:'100%', background:`linear-gradient(90deg,${color},${color}88)`, borderRadius:99 }} initial={{width:0}} whileInView={{width:`${pct}%`}} viewport={{once:true}} transition={{duration:1.1,ease:'easeOut',delay:i*0.1+0.2}}/>
-                    </div>
-                  </motion.div>
+                    {item}
+                  </li>
                 ))}
-              </div>
+              </ul>
+              <Link to="/questionnaire" className="btn-white" style={{ display:'inline-flex' }}>
+                Start free today
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              </Link>
+            </div>
+            {/* Light right */}
+            <div style={{ background:T.white, padding:isMobile?'36px 24px':'52px 44px' }}>
+              <Eyebrow>Skill Growth</Eyebrow>
+              <h3 style={{ fontFamily:"'Instrument Serif',serif", fontSize:isMobile?17:20, fontWeight:400, color:T.n900, letterSpacing:'-0.02em', margin:'14px 0 28px' }}>Average learner improvement</h3>
+              {[
+                ['Technical Skills',   85, T.g500  ],
+                ['Problem Solving',    78, T.violet ],
+                ['System Design',      70, T.g600   ],
+                ['Communication',      92, T.amber  ],
+                ['Industry Knowledge', 88, T.teal   ],
+              ].map(([skill,pct,color],i) => (
+                <motion.div key={skill} initial={{opacity:0,x:16}} whileInView={{opacity:1,x:0}} viewport={{once:true}} transition={{delay:i*0.09}} style={{ marginBottom:18 }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
+                    <span style={{ fontSize:13, fontWeight:500, color:T.n700 }}>{skill}</span>
+                    <span style={{ fontSize:12, fontWeight:700, color, fontFamily:'DM Mono,monospace' }}>{pct}%</span>
+                  </div>
+                  <div className="prog-track" style={{ border:`1px solid ${T.n100}` }}>
+                    <motion.div style={{ height:'100%', background:color, borderRadius:99 }} initial={{width:0}} whileInView={{width:`${pct}%`}} viewport={{once:true}} transition={{duration:1.1,ease:'easeOut',delay:i*0.1+0.2}}/>
+                  </div>
+                </motion.div>
+              ))}
             </div>
           </div>
         </section>
 
-        {/* ── CTA ── */}
-        <section>
-          <motion.div initial={{opacity:0,y:22}} whileInView={{opacity:1,y:0}} viewport={{once:true}} transition={{duration:0.6}}>
-            <div style={{ background:G.green, borderRadius:24, padding:'52px 48px', display:'grid', gridTemplateColumns:'1fr auto', gap:36, alignItems:'center', position:'relative', overflow:'hidden', boxShadow:'0 16px 56px rgba(45,106,79,0.28)' }} className="cta-g">
-              <div style={{ position:'absolute', width:340, height:340, borderRadius:'50%', background:'rgba(255,255,255,0.05)', right:-80, top:-110, pointerEvents:'none' }}/>
-              <div style={{ position:'relative', zIndex:1 }}>
-                <div style={{ display:'inline-flex', alignItems:'center', gap:6, background:'rgba(255,255,255,0.14)', padding:'5px 13px', borderRadius:99, fontSize:11, fontWeight:700, color:'rgba(255,255,255,0.9)', marginBottom:16, border:'1px solid rgba(255,255,255,0.22)' }}>
-                  🎓 Join 42,000+ learners
+        {/* ── TESTIMONIALS ── */}
+        <section style={{ paddingBottom:80 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', flexWrap:'wrap', gap:16, marginBottom:36 }}>
+            <div>
+              <Eyebrow>Stories</Eyebrow>
+              <h2 className="sec-h2" style={{ fontFamily:"'Instrument Serif',serif", fontSize:'clamp(1.8rem,3vw,2.4rem)', fontWeight:400, letterSpacing:'-0.025em', color:T.n900, marginTop:12 }}>Real people, real results</h2>
+            </div>
+            <Link to="/stories" style={{ fontSize:13, fontWeight:600, color:T.g500, display:'flex', alignItems:'center', gap:5, flexShrink:0 }}>
+              All stories <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </Link>
+          </div>
+          {/* Mobile: scroll, Desktop: grid */}
+          {isTablet ? (
+            <div className="hscroll">
+              {testimonials.map((t,i) => (
+                <div key={i} className="card" style={{ padding:24, width:300, display:'flex', flexDirection:'column' }}>
+                  <div style={{ display:'flex', gap:2, marginBottom:14 }}>{[...Array(5)].map((_,j)=><span key={j} style={{ color:'#F59E0B', fontSize:13 }}>★</span>)}</div>
+                  <p style={{ fontSize:13.5, color:T.n600, lineHeight:1.78, flex:1, marginBottom:20, fontStyle:'italic' }}>"{t.q}"</p>
+                  <div style={{ display:'flex', alignItems:'center', gap:12, paddingTop:18, borderTop:`1px solid ${T.n50}` }}>
+                    <div style={{ width:38, height:38, borderRadius:'50%', background:t.color, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:700, color:'#fff', flexShrink:0, fontFamily:"'Instrument Serif',serif" }}>{t.av}</div>
+                    <div>
+                      <div style={{ fontSize:13, fontWeight:700, color:T.n900 }}>{t.name}</div>
+                      <div style={{ fontSize:11, color:T.n400, marginTop:1 }}>{t.role} <span style={{ color:t.color, fontWeight:700 }}>@ {t.co}</span></div>
+                    </div>
+                  </div>
                 </div>
-                <h2 style={{ fontFamily:"'Fraunces',serif", fontSize:'clamp(1.5rem,3.2vw,2.2rem)', fontWeight:700, color:'#fff', marginBottom:12, lineHeight:1.2, letterSpacing:'-0.02em' }}>
-                  Ready to Transform Your Career?
+              ))}
+            </div>
+          ) : (
+            <div className="testi-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16 }}>
+              {testimonials.map((t,i) => (
+                <motion.div key={i} className="card" initial={{opacity:0,y:18}} whileInView={{opacity:1,y:0}} viewport={{once:true,margin:'-20px'}} transition={{duration:0.5,delay:i*0.1}} style={{ padding:32, display:'flex', flexDirection:'column' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:18 }}>
+                    <div style={{ width:30, height:30, borderRadius:8, background:t.color+'12', border:`1px solid ${t.color}20`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:800, color:t.color, fontFamily:'DM Mono,monospace' }}>{t.co[0]}</div>
+                    <span style={{ fontSize:13, fontWeight:700, color:T.n800 }}>{t.co}</span>
+                    <div style={{ marginLeft:'auto', display:'flex', gap:2 }}>{[...Array(5)].map((_,j)=><span key={j} style={{ color:'#F59E0B', fontSize:12 }}>★</span>)}</div>
+                  </div>
+                  <p style={{ fontSize:14, color:T.n600, lineHeight:1.8, flex:1, marginBottom:22, fontStyle:'italic' }}>"{t.q}"</p>
+                  <div style={{ display:'flex', alignItems:'center', gap:12, paddingTop:20, borderTop:`1px solid ${T.n50}` }}>
+                    <div style={{ width:40, height:40, borderRadius:'50%', background:t.color, display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:700, color:'#fff', flexShrink:0, fontFamily:"'Instrument Serif',serif" }}>{t.av}</div>
+                    <div>
+                      <div style={{ fontSize:13, fontWeight:700, color:T.n900, letterSpacing:'-0.01em' }}>{t.name}</div>
+                      <div style={{ fontSize:11, color:T.n400, marginTop:1 }}>{t.role} <span style={{ color:t.color, fontWeight:700 }}>@ {t.co}</span></div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+
+      {/* ════════════════════════════════════════════
+          CTA — Full-width dark band
+      ════════════════════════════════════════════ */}
+      <section style={{ background:`linear-gradient(135deg,${T.g900} 0%,${T.g800} 55%,${T.g700} 100%)`, position:'relative', overflow:'hidden', paddingBottom:'env(safe-area-inset-bottom,0px)' }}>
+        {/* Grid texture */}
+        <div style={{ position:'absolute', inset:0, backgroundImage:`linear-gradient(rgba(255,255,255,0.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.018) 1px,transparent 1px)`, backgroundSize:'48px 48px', pointerEvents:'none' }}/>
+        {/* Glow */}
+        <div style={{ position:'absolute', top:'-30%', right:'-10%', width:'50%', maxWidth:480, paddingBottom:'50%', borderRadius:'50%', background:'radial-gradient(circle,rgba(29,122,72,0.18) 0%,transparent 65%)', pointerEvents:'none' }}/>
+
+        <div style={{ maxWidth:1280, margin:'0 auto', padding:'80px 24px 72px' }} className="safe-x safe-b">
+          <motion.div initial={{opacity:0,y:22}} whileInView={{opacity:1,y:0}} viewport={{once:true}} transition={{duration:0.65,ease}}>
+            <div className="cta-grid" style={{ display:'grid', gridTemplateColumns:'1fr auto', gap:48, alignItems:'center' }}>
+              <div>
+                <div style={{ display:'inline-flex', alignItems:'center', gap:7, background:'rgba(29,122,72,0.18)', border:'1px solid rgba(77,200,133,0.28)', padding:'5px 13px', borderRadius:5, fontSize:11, fontWeight:700, color:T.g200, letterSpacing:'0.08em', textTransform:'uppercase', marginBottom:20 }}>
+                  🎓 Free to get started
+                </div>
+                <h2 style={{ fontFamily:"'Instrument Serif',serif", fontSize:'clamp(1.9rem,4vw,3.2rem)', fontWeight:400, color:'#fff', lineHeight:1.1, letterSpacing:'-0.03em', marginBottom:14 }}>
+                  Ready to build the<br/>
+                  <em style={{ fontStyle:'italic', color:T.g300 }}>career you deserve?</em>
                 </h2>
-                <p style={{ fontSize:14, color:'rgba(255,255,255,0.75)', lineHeight:1.75, maxWidth:440 }}>Get your personalised roadmap in 5 minutes. No credit card required.</p>
+                <p style={{ fontSize:15.5, color:'rgba(255,255,255,0.5)', maxWidth:480, lineHeight:1.78 }}>
+                  No credit card. No commitment. Just a 5-minute assessment and a roadmap built for you.
+                </p>
               </div>
-              <div style={{ display:'flex', flexDirection:'column', gap:10, flexShrink:0, position:'relative', zIndex:1, minWidth:190 }}>
-                <Link to="/questionnaire" style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'14px 24px', borderRadius:12, fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:14, fontWeight:700, background:'#fff', color:G.green, textDecoration:'none', boxShadow:'0 4px 20px rgba(0,0,0,0.14)', transition:'all 0.2s', whiteSpace:'nowrap' }}
-                  onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow='0 10px 30px rgba(0,0,0,0.2)';}}
-                  onMouseLeave={e=>{e.currentTarget.style.transform='';e.currentTarget.style.boxShadow='0 4px 20px rgba(0,0,0,0.14)';}}>
-                  Get Started Free →
+              <div className="cta-btns" style={{ display:'flex', flexDirection:'column', gap:10, minWidth:220, flexShrink:0 }}>
+                <Link to="/questionnaire" className="btn-white" style={{ justifyContent:'center', width:'100%' }}>
+                  Get started — it's free
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </Link>
                 {user ? (
-                  <Link to="/profile" style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'13px 24px', borderRadius:12, fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:13, fontWeight:600, background:'rgba(255,255,255,0.12)', color:'#fff', textDecoration:'none', border:'1.5px solid rgba(255,255,255,0.25)', transition:'all 0.2s', whiteSpace:'nowrap' }}
-                    onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.2)'}
-                    onMouseLeave={e=>e.currentTarget.style.background='rgba(255,255,255,0.12)'}>
-                    View My Profile
+                  <Link to="/profile" style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:48, padding:'12px 24px', borderRadius:8, fontSize:14, fontWeight:600, color:'rgba(255,255,255,0.72)', border:'1.5px solid rgba(255,255,255,0.16)', background:'rgba(255,255,255,0.07)', transition:'all 0.18s', width:'100%' }}
+                    onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.13)'}
+                    onMouseLeave={e=>e.currentTarget.style.background='rgba(255,255,255,0.07)'}>
+                    Go to my dashboard →
                   </Link>
                 ) : (
-                  <Link to="/login" style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'13px 24px', borderRadius:12, fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:13, fontWeight:600, background:'rgba(255,255,255,0.12)', color:'#fff', textDecoration:'none', border:'1.5px solid rgba(255,255,255,0.25)', transition:'all 0.2s', whiteSpace:'nowrap' }}
-                    onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.2)'}
-                    onMouseLeave={e=>e.currentTarget.style.background='rgba(255,255,255,0.12)'}>
-                    Sign In
+                  <Link to="/login" style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:48, padding:'12px 24px', borderRadius:8, fontSize:14, fontWeight:600, color:'rgba(255,255,255,0.72)', border:'1.5px solid rgba(255,255,255,0.16)', background:'rgba(255,255,255,0.07)', transition:'all 0.18s', width:'100%' }}
+                    onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.13)'}
+                    onMouseLeave={e=>e.currentTarget.style.background='rgba(255,255,255,0.07)'}>
+                    Sign in to your account
                   </Link>
                 )}
               </div>
             </div>
           </motion.div>
-        </section>
+        </div>
+      </section>
 
-      </div>
     </div>
   );
 };

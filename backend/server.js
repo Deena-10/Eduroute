@@ -26,8 +26,12 @@ const allowedOrigins = [
   "http://127.0.0.1:5173",
 ];
 if (process.env.FRONTEND_URL) {
-  const url = process.env.FRONTEND_URL.replace(/\/$/, "");
-  if (!allowedOrigins.includes(url)) allowedOrigins.push(url);
+  const urls = process.env.FRONTEND_URL.split(/[\s,]+/)
+    .map((s) => s.trim().replace(/\/$/, ""))
+    .filter(Boolean);
+  urls.forEach((url) => {
+    if (!allowedOrigins.includes(url)) allowedOrigins.push(url);
+  });
 }
 app.use(
   cors({
@@ -37,7 +41,7 @@ app.use(
       cb(null, false);
     },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-admin-key"],
     credentials: true,
   })
 );
@@ -84,6 +88,15 @@ app.use(errorHandler);
 // ✅ Start server
 // ==========================
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`✅ Server running on http://localhost:${PORT}`);
+  const aiUrl = process.env.AI_SERVICE_URL;
+  console.log(
+    aiUrl
+      ? `✅ AI_SERVICE_URL set (${String(aiUrl).replace(/\/$/, "")})`
+      : "⚠️ AI_SERVICE_URL not set — using http://localhost:5001 (set this on Render to your Python service URL)"
+  );
 });
+// Allow long-running AI roadmap generation (proxies and default Node timeouts are often 60s or less).
+server.setTimeout(Number(process.env.REQUEST_TIMEOUT_MS) || 180000);
+server.headersTimeout = Number(process.env.REQUEST_TIMEOUT_MS) || 180000;

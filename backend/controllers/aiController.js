@@ -6,18 +6,25 @@ const pool = require("../config/postgres");
    1. AI SERVICE HEALTH CHECK
 ========================================= */
 exports.healthCheck = async (req, res) => {
+    const base = aiService.AI_SERVICE_URL;
     try {
-        const response = await aiService.get("/health");
+        const response = await aiService.get("/health", {}, { timeout: 15000 });
         return res.status(200).json({
             success: true,
+            aiServiceBaseUrl: base,
             aiService: response.data,
             message: "AI service connected",
         });
     } catch (error) {
-        console.error("AI Health Check Error:", error.message);
+        console.error("AI Health Check Error:", error.message, "→", base);
         return res.status(503).json({
             success: false,
             message: "AI service unavailable",
+            aiServiceBaseUrl: base,
+            hint:
+                "On Render, set AI_SERVICE_URL on the Node backend to your Python service URL (https://…, no trailing slash). " +
+                "Put GEMINI_API_KEY (or similar) on the Python service. First request after sleep can take 30–60s.",
+            detail: error.code || error.message,
         });
     }
 };
@@ -165,7 +172,7 @@ exports.generateRoadmap = async (req, res) => {
                 const response = await aiService.postWithRetry(
                     "/generate-roadmap",
                     { domain: domainKey, proficiency_level, professional_goal, current_status },
-                    { timeout: 60000 }
+                    { timeout: Number(process.env.AI_ROADMAP_TIMEOUT_MS) || 120000 }
                 );
                 if (response.data && response.data.roadmap) {
                     roadmapPayload = response.data;

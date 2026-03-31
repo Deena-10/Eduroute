@@ -53,9 +53,18 @@ const Questionnaire = () => {
       else { setError("Something went wrong. Please try again."); }
     } catch (err) {
       const msg = err.response?.data?.error || err.message;
-      setError(msg?.includes("not running") || msg?.includes("ECONNREFUSED")
-        ? "AI service is offline. Start it with: cd ai_service && python application.py (or use start-dev.bat)"
-        : msg || "Failed to generate roadmap. Please try again.");
+      const isUnreachable =
+        msg?.includes("not running") ||
+        msg?.includes("ECONNREFUSED") ||
+        msg?.includes("ENOTFOUND") ||
+        msg?.includes("timeout") ||
+        msg?.includes("AI service unavailable") ||
+        err.response?.status === 503;
+      setError(
+        isUnreachable
+          ? "Could not reach the AI service. On Render: set the backend env AI_SERVICE_URL to your Python service URL (no trailing slash), redeploy backend, then try again. For local dev: run the ai_service on port 5001."
+          : msg || "Failed to generate roadmap. Please try again."
+      );
     } finally { setSubmitting(false); }
   };
 

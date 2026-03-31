@@ -41,13 +41,29 @@ const Signup = () => {
   };
 
   const handleGoogleSignIn = async () => {
+    if (typeof googleSignIn !== "function") {
+      setError("Google sign-in is not available. Please refresh the page.");
+      return;
+    }
     setError(""); setIsLoading(true);
     try {
       const result = await googleSignIn();
       if (result.success) navigate("/");
-      else setError(result.message || "Google sign in failed");
+      else {
+        const msg = result.message || "Google sign in failed";
+        if (msg.includes("popup") || msg.includes("blocked")) {
+          setError("Sign-in popup was blocked. Please allow popups for this site and try again.");
+        } else {
+          setError(msg);
+        }
+      }
     } catch (err) {
-      setError(err.message || "Google sign in failed. Please try again.");
+      const msg = err.message || "Google sign in failed. Please try again.";
+      if (msg.includes("popup") || msg.includes("blocked")) {
+        setError("Sign-in popup was blocked. Please allow popups for this site and try again.");
+      } else {
+        setError(msg);
+      }
     } finally { setIsLoading(false); }
   };
 

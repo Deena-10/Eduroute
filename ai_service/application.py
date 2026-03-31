@@ -10,6 +10,25 @@ try:
 except ImportError:
     pass
 
+def _check_api_keys():
+    """Return which API keys are configured (for diagnostics; never log actual keys)."""
+    keys = {}
+    for name, env_vars in [
+        ("HF", ["HF_TOKEN", "HF_API_KEY"]),
+        ("GEMINI", ["GEMINI_API_KEY"]),
+        ("COHERE", ["COHERE_API_KEY"]),
+        ("ANTHROPIC", ["ANTHROPIC_API_KEY"]),
+        ("GROQ", ["GROQ_API_KEY"]),
+        ("OPENAI", ["OPENAI_API_KEY"]),
+    ]:
+        keys[name] = any(bool(os.environ.get(v)) for v in env_vars)
+    return keys
+
+# Log API key status at startup (helps diagnose deployment issues)
+_api_keys = _check_api_keys()
+_configured = [k for k, v in _api_keys.items() if v]
+print(f"[AI] Startup: API keys configured: {_configured or 'NONE (will use template fallback)'}")
+
 LEVELS = ["beginner", "intermediate", "advanced"]
 MCQS_PER_CHAPTER = 5
 MAX_MCQS_PER_CHAPTER = 5
@@ -141,8 +160,40 @@ def _build_payload_from_ai(ai_result, domain):
 # ========== API Endpoints ==========
 @app.route("/health", methods=["GET"])
 def health():
-    has_key = bool(os.environ.get("HF_TOKEN") or os.environ.get("HF_API_KEY") or os.environ.get("GEMINI_API_KEY") or os.environ.get("COHERE_API_KEY") or os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("GROQ_API_KEY") or os.environ.get("OPENAI_API_KEY"))
-    return jsonify({"status": "ok", "service": "ai-service", "ai_configured": has_key}), 200
+    keys = _check_api_keys()
+    has_key = any(keys.values())
+    return jsonify({
+        "status": "ok",
+        "service": "ai-service",
+        "ai_configured": has_key,
+        "keys_present": {k: bool(v) for k, v in keys.items()},
+    }), 200
+
+
+@app.route("/ask_ai", methods=["POST"])
+def ask_ai():
+    """Chat Q&A — same contract as backend `aiController.chat` (expects `answer` in JSON)."""
+    data = request.get_json() or {}
+    question = (data.get("question") or "").strip()
+    if not question:
+        return jsonify({"error": "question required"}), 400
+    from llm_client import call_llm
+
+    prompt = (
+        "You are a concise career and learning coach for EduRoute. "
+        "Answer in clear plain text. Prefer short paragraphs and bullet points when helpful. "
+        "Stay under about 400 words unless the user explicitly asks for depth.\n\n"
+        f"User: {question}"
+    )
+    answer = call_llm(prompt)
+    if not answer:
+        answer = (
+            "No LLM is available (no API keys on this service or all providers failed). "
+            "In Render, add GEMINI_API_KEY, GROQ_API_KEY, or OPENAI_API_KEY to **this** Python web service "
+            "(not only the Node backend), then redeploy."
+        )
+    return jsonify({"answer": answer}), 200
+
 
 @app.route("/generate-roadmap", methods=["POST"])
 def generate_roadmap():
@@ -163,7 +214,8 @@ def generate_roadmap():
         return jsonify(payload), 200
 
     # Fallback: template-based (no API keys or all APIs failed)
-    print(f"[AI] Fallback: using templates for '{domain}' (add API keys to .env for AI generation)")
+    configured = [k for k, v in _check_api_keys().items() if v]
+    print(f"[AI] Fallback: using templates for '{domain}' — keys present: {configured or 'NONE'}. Set GEMINI_API_KEY etc. in Render env vars (AI service, not backend).")
     units = [_fallback_unit(i, domain) for i in range(1, 9)]
     units = normalize_units_mcqs(units, domain)
     colors = ["#3B82F6", "#10B981", "#F59E0B"]

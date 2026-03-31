@@ -87,6 +87,9 @@ exports.login = async (req, res, next) => {
 exports.googleSignin = async (req, res, next) => {
     const { token } = req.body;
     try {
+        if (!admin.apps?.length) {
+            return sendResponse(res, 503, false, "Google sign-in is not configured. Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY on the backend.");
+        }
         const decoded = await admin.auth().verifyIdToken(token);
         const { uid, email, name, picture } = decoded;
 

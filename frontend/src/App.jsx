@@ -15,6 +15,7 @@ import ChapterQuiz from "./pages/ChapterQuiz";
 import TaskPage from "./pages/TaskPage";
 import Profile from "./pages/Profile";
 import Events from "./pages/Events";
+import AdminPost from "./pages/AdminPost";
 
 function App() {
   useEffect(() => {
@@ -35,6 +36,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/admin/post" element={<AdminPost />} />
             <Route
               path="/questionnaire"
               element={

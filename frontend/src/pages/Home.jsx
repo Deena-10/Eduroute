@@ -335,14 +335,14 @@ const Home = () => {
                 AI-personalised roadmaps, vetted mentors, and direct hiring pipelines — the complete operating system for your professional growth.
               </motion.p>
 
-              {/* CTAs */}
+              {/* CTAs — Get your roadmap → login if not signed in, roadmap if signed in */}
               <motion.div className="hero-btns" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} transition={{duration:0.55,ease,delay:0.19}}
                 style={{ display:'flex', flexWrap:'wrap', gap:10, marginBottom:44 }}>
-                <Link to="/questionnaire" className="btn-prim" style={{ flex:isMobile?'1 1 100%':'0 0 auto' }}>
+                <Link to={user ? "/roadmap" : "/login"} className="btn-prim" style={{ flex:isMobile?'1 1 100%':'0 0 auto' }}>
                   Get your free roadmap
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </Link>
-                <Link to="/roadmap" className="btn-ghost" style={{ flex:isMobile?'1 1 100%':'0 0 auto' }}>
+                <Link to={user ? "/roadmap" : "/login"} className="btn-ghost" style={{ flex:isMobile?'1 1 100%':'0 0 auto' }}>
                   Explore paths
                 </Link>
               </motion.div>
@@ -869,8 +869,8 @@ const Home = () => {
                 </p>
               </div>
               <div className="cta-btns" style={{ display:'flex', flexDirection:'column', gap:10, minWidth:220, flexShrink:0 }}>
-                <Link to="/questionnaire" className="btn-white" style={{ justifyContent:'center', width:'100%' }}>
-                  Get started — it's free
+                <Link to={user ? "/roadmap" : "/login"} className="btn-white" style={{ justifyContent:'center', width:'100%' }}>
+                  {user ? "Go to roadmap" : "Get started — it's free"}
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </Link>
                 {user ? (

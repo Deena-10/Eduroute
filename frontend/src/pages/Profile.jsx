@@ -132,6 +132,7 @@ const Profile = () => {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,600&display=swap');
         @keyframes fadein { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes flamePulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.12)} }
         .pf-tab { padding: 8px 20px; border-radius: 10px; font-size: 13px; font-weight: 700; border: 1px solid ${G.border}; cursor: pointer; transition: all 0.16s; font-family: 'Plus Jakarta Sans',sans-serif; background: ${G.surface}; color: ${G.text3}; }
         .pf-tab:hover { background: ${G.greenMist}; color: ${G.green}; border-color: ${G.greenLine}; }
         .pf-tab.active { background: ${G.green}; color: #fff; border-color: ${G.green}; box-shadow: ${G.shadowGreen}; }
@@ -145,12 +146,14 @@ const Profile = () => {
         .pf-activity-row:hover { border-color: ${G.greenLine}; }
         .pf-danger-btn { padding: 11px 20px; background: ${G.roseLight}; color: ${G.rose}; border: 1px solid #FECDD3; border-radius: 11px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.15s; font-family: 'Plus Jakarta Sans',sans-serif; }
         .pf-danger-btn:hover { background: #FFE4E6; }
-        .pf-hero-row { display: flex; align-items: center; gap: 22; flex-wrap: wrap; }
-        .pf-hero-streak { flex-shrink: 0; text-align: center; background: ${G.amberLight}; border-radius: 12px; border: 1px solid rgba(217,119,6,0.2); }
-        @media (max-width: 380px) {
-          .pf-hero-row { flex-direction: column; align-items: stretch; text-align: center; }
-          .pf-hero-row .pf-hero-info { text-align: center; }
-          .pf-hero-row .pf-hero-interests { justify-content: center; }
+        .streak-badge { display: flex; flex-direction: column; align-items: center; justify-content: center; background: ${G.amberLight}; border: 1.5px solid rgba(217,119,6,0.22); border-radius: 16px; padding: 14px 20px; min-width: 90px; flex-shrink: 0; }
+        .streak-flame { font-size: 26px; line-height: 1; animation: flamePulse 2s ease-in-out infinite; display: block; }
+        .streak-count { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 700; color: ${G.amber}; line-height: 1.1; }
+        .streak-label { font-size: 10px; font-weight: 700; color: ${G.amber}; text-transform: uppercase; letter-spacing: 0.1em; margin-top: 3px; opacity: 0.8; }
+        @media (max-width: 600px) {
+          .pf-hero-inner { flex-direction: column !important; }
+          .streak-badge { flex-direction: row !important; gap: 10px; min-width: unset; width: 100%; justify-content: center; padding: 10px 16px; border-radius: 12px; }
+          .streak-count { font-size: 22px !important; }
         }
       `}</style>
 
@@ -166,37 +169,41 @@ const Profile = () => {
           <p style={{ fontSize: 14, color: G.text3 }}>Track your learning progress and achievements</p>
         </div>
 
-        {/* ── Profile hero card ── */}
-        <Card style={{ marginBottom: 12 }}>
-          <div className="pf-hero-row">
-            {/* Avatar */}
-            <div style={{ width: 72, height: 72, background: G.green, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: G.shadowGreen }}>
-              <span style={{ fontFamily: "'Fraunces',serif", fontSize: 28, fontWeight: 700, color: '#fff' }}>
-                {userData.username.charAt(0).toUpperCase()}
-              </span>
-            </div>
-            <div className="pf-hero-info" style={{ flex: 1, minWidth: 0 }}>
-              <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 700, color: G.text1, marginBottom: 3, letterSpacing: '-0.02em' }}>{userData.username}</h2>
-              <p style={{ fontSize: 13, color: G.text3, marginBottom: 4 }}>{userData.email}</p>
-              {userData.domain && (
-                <p style={{ fontSize: 12, color: G.green, fontWeight: 700, marginBottom: 10 }}>Domain: {userData.domain}</p>
-              )}
-              <div className="pf-hero-interests" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'flex-start' }}>
-                {userData.interests.map((interest, i) => (
-                  <span key={i} style={{ padding: '4px 12px', background: G.sageDim, color: G.green, fontSize: 12, fontWeight: 700, borderRadius: 99, border: `1px solid ${G.greenLine}` }}>{interest}</span>
-                ))}
+        {/* ── Profile hero card — streak badge is now inside, top-right ── */}
+        <Card style={{ marginBottom: 24 }}>
+          {/* Top row: avatar+info on left, streak badge on right */}
+          <div className="pf-hero-inner" style={{ display: 'flex', alignItems: 'flex-start', gap: 20, flexWrap: 'wrap' }}>
+
+            {/* Left: avatar + info */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 18, flex: 1, minWidth: 0 }}>
+              <div style={{ width: 72, height: 72, background: G.green, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: G.shadowGreen }}>
+                <span style={{ fontFamily: "'Fraunces',serif", fontSize: 28, fontWeight: 700, color: '#fff' }}>
+                  {userData.username.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 700, color: G.text1, marginBottom: 3, letterSpacing: '-0.02em' }}>{userData.username}</h2>
+                <p style={{ fontSize: 13, color: G.text3, marginBottom: 4 }}>{userData.email}</p>
+                {userData.domain && (
+                  <p style={{ fontSize: 12, color: G.green, fontWeight: 700, marginBottom: 10 }}>Domain: {userData.domain}</p>
+                )}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {userData.interests.map((interest, i) => (
+                    <span key={i} style={{ padding: '4px 12px', background: G.sageDim, color: G.green, fontSize: 12, fontWeight: 700, borderRadius: 99, border: `1px solid ${G.greenLine}` }}>{interest}</span>
+                  ))}
+                </div>
               </div>
             </div>
+
+            {/* Right: streak badge */}
+            <div className="streak-badge">
+              <span className="streak-flame">🔥</span>
+              <span className="streak-count">{streak.current_streak}</span>
+              <span className="streak-label">Day Streak</span>
+            </div>
+
           </div>
         </Card>
-
-        {/* ── Streak row ── */}
-        <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'center' }}>
-          <div className="pf-hero-streak" style={{ padding: '10px 24px' }}>
-            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 700, color: G.amber, lineHeight: 1 }}>🔥 {streak.current_streak}</div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: G.amber, textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 4 }}>Day Streak</div>
-          </div>
-        </div>
 
         {/* ── Learning Domains card ── */}
         <Card style={{ marginBottom: 24 }}>

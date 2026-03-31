@@ -1,0 +1,20 @@
+# Example Render blueprint: SPA rewrite for React Router.
+# Render Static Sites do NOT use public/_redirects for routing — add this rewrite in the
+# dashboard OR merge into your real render.yaml.
+#
+# Dashboard: Static Site → Redirects/Rewrites → Add rule:
+#   Action: Rewrite | Source: /* | Destination: /index.html
+#
+# Or define a static site here (adjust `name` to avoid duplicating an existing service):
+
+# services:
+#   - type: web
+#     name: your-frontend-service-name
+#     runtime: static
+#     rootDir: frontend
+#     buildCommand: npm install && npm run build
+#     staticPublishPath: build
+#     routes:
+#       - type: rewrite
+#         source: /*
+#         destination: /index.html

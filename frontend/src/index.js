@@ -62,14 +62,4 @@ if (document.readyState === "complete" || document.readyState === "interactive")
   document.addEventListener("DOMContentLoaded", renderApp);
 }
 
-// Register PWA service worker in production only
-if (process.env.NODE_ENV === "production" && "serviceWorker" in navigator) {
-  window.addEventListener("load", function () {
-    navigator.serviceWorker.register("/sw.js").then(
-      function (reg) {
-        reg.update();
-      },
-      function () {}
-    );
-  });
-}
+// Service worker removed to prevent 404 script caching issues

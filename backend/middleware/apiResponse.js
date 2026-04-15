@@ -7,18 +7,15 @@ const responseHelper = (req, res, next) => {
     res.success = (data, message = "Success", status = 200) => {
         return res.status(status).json({
             success: true,
-            data,
             message,
-            error: null
+            data
         });
     };
 
-    res.error = (error, message = "An error occurred", status = 500) => {
+    res.error = (_error, message = "An error occurred", status = 500) => {
         return res.status(status).json({
             success: false,
-            data: null,
-            message,
-            error: typeof error === 'string' ? error : error.message || "Internal Server Error"
+            message
         });
     };
 
@@ -39,13 +36,11 @@ const errorHandler = (err, req, res, next) => {
     const status = err.status || (isDbError ? 503 : 500);
     const message = isDbError
         ? "Database temporarily unavailable. Please try again shortly."
-        : (err.message || "Internal Server Error");
+        : "Internal Server Error";
 
     return res.status(status).json({
         success: false,
-        data: null,
         message,
-        error: process.env.NODE_ENV === 'development' ? err.stack : undefined
     });
 };
 

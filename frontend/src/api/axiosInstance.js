@@ -1,17 +1,39 @@
 import axios from 'axios';
 
-const API_BASE_URL = (process.env.REACT_APP_API_URL || 'http://localhost:5000/api').replace(/\/$/, '');
+// Safely get API Base URL: supports both Vite and Create React App, with fallback.
+const getApiBaseUrl = () => {
+  try {
+    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE_URL) {
+      return import.meta.env.VITE_API_BASE_URL;
+    }
+  } catch (e) {}
+  try {
+    if (typeof process !== 'undefined' && process.env && process.env.REACT_APP_API_BASE_URL) {
+      return process.env.REACT_APP_API_BASE_URL;
+    }
+  } catch (e) {}
+  // Default Render backend if env is missing
+  return 'https://eduroute-1.onrender.com/api';
+};
 
-const axiosInstance = axios.create({
+const API_BASE_URL = getApiBaseUrl();
+
+const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 60000
+  withCredentials: true,
+  timeout: 60000,
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  }
 });
 
-axiosInstance.interceptors.request.use(config => {
+// Request Interceptor
+api.interceptors.request.use(config => {
   let token;
   try {
     token = localStorage.getItem('token');
-    // Never send or trust HTML/noscript stored as token (avoids JSON parse errors)
+    // Clear HTML-like tokens to prevent backend crashes
     if (token && (token.includes('You need') || token.includes('Sign in wi') || token.startsWith('<!') || token.startsWith('<html'))) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
@@ -20,31 +42,29 @@ axiosInstance.interceptors.request.use(config => {
   } catch (e) {
     token = null;
   }
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
   return config;
 });
 
-axiosInstance.interceptors.response.use(
-  response => {
-    const contentType = String(response.headers?.['content-type'] || '');
-    const looksLikeHtml = typeof response.data === 'string' && /<!doctype html|<html|You need to enable JavaScript/i.test(response.data);
-    if (!contentType.includes('application/json') && looksLikeHtml) {
-      const err = new Error('Non-JSON (HTML) response received from API. Check API base URL / routing.');
-      err.name = 'NonJsonResponseError';
-      err.response = response;
-      throw err;
-    }
+// Response Interceptor
+api.interceptors.response.use(
+  (response) => {
+    // Axios safely parses standard JSON to response.data automatically
     return response;
   },
-  error => {
-    // Enhanced error handling for JSON parsing issues
-    if (error.code === 'ECONNABORTED') {
-      console.error('Request timeout:', error.config?.url);
+  (error) => {
+    // 503 Error (e.g. Supabase or Render backend waking up)
+    if (error.response?.status === 503) {
+      console.warn("Server waking up, please try again in a few seconds");
+      alert("Server is currently waking up, please try again in a few seconds.");
     }
     
-    if (error.response?.status === 401) {
-      console.log('401 error received from API, logging out:', error.config?.url);
-      // For any API 401, clear auth data and redirect to login
+    // 401 Unauthorized
+    else if (error.response?.status === 401) {
+      console.log('401 error received from API, clearing auth data:', error.config?.url);
       try {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
@@ -55,37 +75,24 @@ axiosInstance.interceptors.response.use(
         window.location.href = '/login';
       }
     }
-    
-    // Check for JSON parsing errors in response
-    if (error.message && error.message.includes('JSON')) {
-      console.warn('JSON parsing error in response:', error.message);
-      // Clear potentially corrupted data
-      const keysToCheck = ['user', 'token'];
-      keysToCheck.forEach(key => {
-        try {
-          const value = localStorage.getItem(key);
-          if (value && (value.includes('You need t') || value.includes('Sign in wi'))) {
-            localStorage.removeItem(key);
-            console.log(`Removed corrupted key: ${key}`);
-          }
-        } catch (e) {
-          localStorage.removeItem(key);
-        }
-      });
+
+    // 404 Not Found
+    else if (error.response?.status === 404) {
+      console.error(`API endpoint not found (404): ${error.config?.url}`);
     }
 
-    // Detect HTML responses where JSON was expected (common misrouting symptom)
-    const responseData = error.response?.data;
-    if (typeof responseData === 'string' && /<!doctype html|<html|You need to enable JavaScript/i.test(responseData)) {
-      console.error('HTML received from API endpoint. Likely incorrect baseURL or reverse-proxy routing:', {
-        baseURL: API_BASE_URL,
-        url: error.config?.url,
-        status: error.response?.status,
-      });
+    // 500 Internal Server Error
+    else if (error.response?.status === 500) {
+      console.error('Internal Server Error. The backend encountered a problem.');
+    }
+
+    // Fallback error logging
+    else if (error.message && error.message.includes('JSON')) {
+      console.error('JSON Parsing Error:', error.message);
     }
     
     return Promise.reject(error);
   }
 );
 
-export default axiosInstance;
+export default api;

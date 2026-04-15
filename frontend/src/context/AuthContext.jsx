@@ -1,7 +1,8 @@
 // c:\finalyearproject\career-roadmap-app\frontend\src\context\AuthContext.jsx
 import React, { createContext, useState, useEffect, useCallback } from "react";
-import axiosInstance from "../api/axiosInstance";
+import api from "../api/axiosInstance";
 import { getFirebaseAuth, isFirebaseLoaded } from "../firebaseAuth";
+import { safeLocalStorageParse } from "../utils/safeJsonParser";
 
 export const AuthContext = createContext();
 
@@ -9,30 +10,19 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const looksLikeHtml = (value) =>
-    typeof value === "string" &&
-    (value.includes("You need to enable JavaScript") ||
-      value.trim().startsWith("<!doctype") ||
-      value.trim().startsWith("<html"));
-
   // Initial state from localStorage only - NO Firebase import to avoid gapi errors on load
   useEffect(() => {
     try {
-      const storedUser = localStorage.getItem("user");
       const token = localStorage.getItem("token");
-      if (looksLikeHtml(storedUser) || looksLikeHtml(token)) {
-        // Guard against cached HTML accidentally persisted to localStorage.
+      // Use the safeJsonParser utility instead of manual JSON.parse
+      const parsedUser = safeLocalStorageParse("user");
+
+      if (parsedUser && token) {
+        setUser(parsedUser);
+      } else {
         localStorage.removeItem("user");
         localStorage.removeItem("token");
         setUser(null);
-        setLoading(false);
-        return;
-      }
-      if (storedUser && token) {
-        const parsed = JSON.parse(storedUser);
-        if (parsed && typeof parsed === "object" && parsed.email) {
-          setUser(parsed);
-        }
       }
     } catch (_) {
       setUser(null);
@@ -42,7 +32,9 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const { data } = await axiosInstance.post("/auth/login", { email, password });
+      const res = await api.post("/auth/login", { email, password });
+      const data = res.data; // Always use res.data directly
+
       if (data?.success && data?.data) {
         const { user: backendUser, token } = data.data;
         const userData = {
@@ -65,11 +57,12 @@ export const AuthProvider = ({ children }) => {
 
   const signup = async (email, password, name) => {
     try {
-      const { data } = await axiosInstance.post("/auth/signup", {
+      const res = await api.post("/auth/signup", {
         email,
         password,
         name,
       });
+      const data = res.data; // Always use res.data directly
 
       if (data?.success && data?.data) {
         const { user: backendUser, token } = data.data;
@@ -99,9 +92,12 @@ export const AuthProvider = ({ children }) => {
       const { signInWithPopup } = await import("firebase/auth");
       const result = await signInWithPopup(auth, googleProvider);
       const idToken = await result.user.getIdToken();
-      const response = await axiosInstance.post("/auth/google-signin", { token: idToken });
-      if (response.data?.success && response.data?.data) {
-        const { user: backendUser, token } = response.data.data;
+      
+      const res = await api.post("/auth/google-signin", { token: idToken });
+      const data = res.data; // Always use res.data directly
+
+      if (data?.success && data?.data) {
+        const { user: backendUser, token } = data.data;
         const userData = {
           id: backendUser.id,
           email: backendUser.email,
@@ -114,7 +110,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem("token", token);
         return { success: true };
       }
-      return { success: false, message: response.data?.message || "Google sign-in failed" };
+      return { success: false, message: data?.message || "Google sign-in failed" };
     } catch (error) {
       console.error("Google sign-in error:", error);
       return { success: false, message: error.message || "Google sign-in failed" };
@@ -123,7 +119,6 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      // Only call Firebase signOut if we've already loaded it (user used Google sign-in)
       if (isFirebaseLoaded()) {
         const { auth } = await getFirebaseAuth();
         const { signOut } = await import("firebase/auth");

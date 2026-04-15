@@ -81,17 +81,24 @@ app.use("/api/admin", adminRoutes);
 
 // Health endpoint for Docker/K8s readiness checks
 app.get("/health", (req, res) => {
-  res.status(200).json({ success: true, status: "ok" });
+  res.status(200).json({ success: true, message: "ok", data: { status: "ok" } });
 });
 
 // VAPID public key for PWA push (no auth required)
 app.get("/api/vapid-public", (req, res) => {
-  res.json({ publicKey: process.env.VAPID_PUBLIC_KEY || null });
+  res.status(200).json({
+    success: true,
+    message: "VAPID key fetched",
+    data: { publicKey: process.env.VAPID_PUBLIC_KEY || null },
+  });
 });
 
 // Simple welcome route for testing
 app.get("/", (req, res) => {
-  res.send("🚀 EduRoute AI Backend is running!");
+  res.status(200).json({
+    success: true,
+    message: "EduRoute AI Backend is running",
+  });
 });
 
 // Global Error Handler (MUST BE LAST)

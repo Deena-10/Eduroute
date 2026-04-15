@@ -9,11 +9,25 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const looksLikeHtml = (value) =>
+    typeof value === "string" &&
+    (value.includes("You need to enable JavaScript") ||
+      value.trim().startsWith("<!doctype") ||
+      value.trim().startsWith("<html"));
+
   // Initial state from localStorage only - NO Firebase import to avoid gapi errors on load
   useEffect(() => {
     try {
       const storedUser = localStorage.getItem("user");
       const token = localStorage.getItem("token");
+      if (looksLikeHtml(storedUser) || looksLikeHtml(token)) {
+        // Guard against cached HTML accidentally persisted to localStorage.
+        localStorage.removeItem("user");
+        localStorage.removeItem("token");
+        setUser(null);
+        setLoading(false);
+        return;
+      }
       if (storedUser && token) {
         const parsed = JSON.parse(storedUser);
         if (parsed && typeof parsed === "object" && parsed.email) {

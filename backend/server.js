@@ -35,21 +35,32 @@ if (process.env.FRONTEND_URL) {
     if (!allowedOrigins.includes(url)) allowedOrigins.push(url);
   });
 }
+
+const isAllowedOrigin = (origin) => {
+  if (!origin || allowedOrigins.includes(origin)) return true;
+  if (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:")) return true;
+  // Render preview/static domains (helps avoid accidental CORS lockouts between Render frontend/backend services).
+  if (/^https:\/\/[a-z0-9-]+\.onrender\.com$/i.test(origin)) return true;
+  return false;
+};
+
+const corsOptions = {
+  origin: (origin, cb) => {
+    if (isAllowedOrigin(origin)) return cb(null, true);
+    console.warn(`⚠️ CORS blocked origin: ${origin}`);
+    cb(null, false);
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "x-admin-key"],
+  credentials: true,
+};
+
 app.use(
-  cors({
-    origin: (origin, cb) => {
-      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-      if (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:")) return cb(null, true);
-      cb(null, false);
-    },
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "x-admin-key"],
-    credentials: true,
-  })
+  cors(corsOptions)
 );
 
 // ✅ Handle preflight requests globally
-app.options("*", cors());
+app.options("*", cors(corsOptions));
 
 // Parse JSON request bodies
 app.use(express.json());

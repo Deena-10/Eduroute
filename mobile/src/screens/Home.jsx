@@ -66,7 +66,7 @@ export default function Home() {
               <Text style={styles.quickBtnOutlinedText}>Sign Up</Text>
             </TouchableOpacity>
           </View>
-          <Text style={styles.testAccount}>Test Account: test@example.com / password123</Text>
+          <Text style={styles.testAccount}>Use your own account credentials to continue.</Text>
         </View>
       )}
 

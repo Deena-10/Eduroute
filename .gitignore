@@ -147,3 +147,6 @@ temp-*.js
 deploy.sh
 deploy.*
 production.*
+
+
+docs/

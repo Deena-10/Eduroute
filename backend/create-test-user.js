@@ -10,9 +10,9 @@ const connection = mysql.createConnection({
 
 async function createTestUser() {
   try {
-    const name = 'Test User';
-    const email = 'test@example.com';
-    const password = 'password123';
+    const name = process.env.TEST_USER_NAME || 'Test User';
+    const email = process.env.TEST_USER_EMAIL || 'test@example.com';
+    const password = process.env.TEST_USER_PASSWORD || `Temp-${Math.random().toString(36).slice(2, 10)}`;
     
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -35,6 +35,9 @@ async function createTestUser() {
     console.log('User ID:', result.insertId);
     console.log('Email:', email);
     console.log('Password:', password);
+    if (!process.env.TEST_USER_PASSWORD) {
+      console.log('ℹ️ TEST_USER_PASSWORD not set; generated temporary password used.');
+    }
     
   } catch (error) {
     console.error('❌ Error creating test user:', error);

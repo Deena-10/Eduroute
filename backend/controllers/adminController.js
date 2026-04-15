@@ -2,9 +2,15 @@
 const pool = require("../config/postgres");
 const { sendPushToUsers } = require("../utils/pushNotifications");
 
-const ADMIN_KEY = process.env.ADMIN_API_KEY || "admin-secret-key";
+const ADMIN_KEY = process.env.ADMIN_API_KEY;
 
 function requireAdmin(req, res, next) {
+    if (!ADMIN_KEY) {
+        return res.status(503).json({
+            success: false,
+            message: "Admin route not configured. Set ADMIN_API_KEY on backend service.",
+        });
+    }
     const key = req.headers["x-admin-key"] || req.body?.admin_key;
     if (!key || key !== ADMIN_KEY) {
         return res.status(403).json({ success: false, message: "Admin access required" });

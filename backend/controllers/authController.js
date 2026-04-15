@@ -6,20 +6,15 @@ const admin = require("../config/firebaseAdmin");
 const { v4: uuidv4 } = require("uuid");
 
 // Standard Response Wrapper
-const sendResponse = (res, statusCode, success, message, data = null) => {
-    return res.status(statusCode).json({
-        success,
-        message,
-        data,
-        error: !success ? message : null
-    });
+const sendResponse = (res, statusCode, success, message, data = undefined) => {
+    const payload = { success, message };
+    if (data !== undefined) payload.data = data;
+    return res.status(statusCode).json(payload);
 };
 
 
 const createToken = (userId) => {
-    if (!process.env.JWT_SECRET) {
-        throw new Error("JWT_SECRET is missing");
-    }
+    // JWT secret must come from environment; never hardcode in source.
     return jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: "7d" });
 };
 
@@ -46,7 +41,7 @@ exports.signup = async (req, res, next) => {
         );
 
         if (existing.length > 0) {
-            return res.error("User already exists", "Signup failed", 400);
+            return sendResponse(res, 409, false, "User already exists");
         }
 
         const hashedPassword = await bcrypt.hash(safePassword, 10);
@@ -69,7 +64,10 @@ exports.signup = async (req, res, next) => {
         if (error?.code === "23505") {
             return sendResponse(res, 409, false, "User already exists");
         }
-        return sendResponse(res, 500, false, error.message || "Signup failed");
+        if (error?.code) {
+            return sendResponse(res, 503, false, "Database temporarily unavailable");
+        }
+        return sendResponse(res, 500, false, "Signup failed");
     }
 };
 
@@ -88,13 +86,13 @@ exports.login = async (req, res, next) => {
 
         const { rows } = await pool.query("SELECT * FROM users WHERE email = $1", [safeEmail]);
         if (rows.length === 0) {
-            return res.error("Invalid email or password", "Login failed", 401);
+            return sendResponse(res, 404, false, "User not found");
         }
 
         const user = rows[0];
         const isMatch = await bcrypt.compare(safePassword, user.password || "");
         if (!isMatch) {
-            return res.error("Invalid email or password", "Login failed", 401);
+            return sendResponse(res, 401, false, "Invalid password");
         }
 
         const token = createToken(user.id);
@@ -104,7 +102,10 @@ exports.login = async (req, res, next) => {
         });
     } catch (error) {
         console.error("Login error:", error);
-        return sendResponse(res, 500, false, error.message || "Login failed");
+        if (error?.code) {
+            return sendResponse(res, 503, false, "Database temporarily unavailable");
+        }
+        return sendResponse(res, 500, false, "Login failed");
     }
 };
 
@@ -112,6 +113,12 @@ exports.login = async (req, res, next) => {
 exports.googleSignin = async (req, res, next) => {
     const { token } = req.body;
     try {
+        if (!token) {
+            return sendResponse(res, 400, false, "token is required");
+        }
+        if (!process.env.JWT_SECRET) {
+            return sendResponse(res, 503, false, "Auth service not configured. Set JWT_SECRET.");
+        }
         if (!admin.apps?.length) {
             return sendResponse(res, 503, false, "Google sign-in is not configured. Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY on the backend.");
         }
@@ -142,7 +149,10 @@ exports.googleSignin = async (req, res, next) => {
         });
     } catch (error) {
         console.error("Google login error:", error);
-        return sendResponse(res, 500, false, error.message || "Google sign-in failed");
+        if (error?.code) {
+            return sendResponse(res, 503, false, "Database temporarily unavailable");
+        }
+        return sendResponse(res, 500, false, "Google sign-in failed");
     }
 };
 

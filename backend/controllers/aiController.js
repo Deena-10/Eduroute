@@ -133,6 +133,7 @@ function buildFallbackRoadmap(domain) {
         });
     }
     return {
+        isFallback: true,
         roadmap: { domain, units },
         ui_metadata: { node_config: units.map((u, idx) => ({ unit: u.unit_number, offset: idx % 2 ? "right" : "left", color: colors[idx] })) },
         gamification: { daily_streak_goal_xp: 50 },

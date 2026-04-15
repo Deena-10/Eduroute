@@ -1,6 +1,5 @@
-// backend/controllers/aiController.js
 const aiService = require("../services/aiService");
-const pool = require("../config/postgres");
+const { prisma } = require("../config/prisma");
 
 /* =========================================
    1. AI SERVICE HEALTH CHECK
@@ -155,15 +154,14 @@ exports.generateRoadmap = async (req, res) => {
         let roadmapPayload;
 
         // 1. Check domain_roadmaps for existing roadmap (skip cache if forceRegenerate)
-        const domainResult = await pool.query(
-            "SELECT id, roadmap_content FROM domain_roadmaps WHERE domain = $1",
-            [domainKey]
-        );
+        const domainResult = await prisma.domainRoadmap.findUnique({
+            where: { domain: domainKey }
+        });
 
-        const useCache = domainResult.rows.length > 0 && !forceRegenerate;
+        const useCache = domainResult && !forceRegenerate;
 
         if (useCache) {
-            const content = domainResult.rows[0].roadmap_content;
+            const content = domainResult.roadmap_content;
             roadmapPayload = typeof content === "string" ? JSON.parse(content) : content;
             roadmapPayload = normalizeRoadmapUnits(roadmapPayload, domainKey);
         } else {
@@ -186,50 +184,73 @@ exports.generateRoadmap = async (req, res) => {
             roadmapPayload = normalizeRoadmapUnits(roadmapPayload, domainKey);
 
             // 3. Store in domain_roadmaps (upsert: insert new or update existing)
-            await pool.query(
-                `INSERT INTO domain_roadmaps (domain, roadmap_content, updated_at)
-                 VALUES ($1, $2, CURRENT_TIMESTAMP)
-                 ON CONFLICT (domain) DO UPDATE SET roadmap_content = $2, updated_at = CURRENT_TIMESTAMP`,
-                [domainKey, JSON.stringify(roadmapPayload)]
-            );
+            await prisma.domainRoadmap.upsert({
+                where: { domain: domainKey },
+                update: { roadmap_content: roadmapPayload },
+                create: { domain: domainKey, roadmap_content: roadmapPayload }
+            });
             console.log(`[DB] Stored roadmap for domain "${domainKey}" in domain_roadmaps`);
         }
 
         // 4. Pause existing active roadmaps for this user
-        await pool.query(
-            "UPDATE user_roadmaps SET status = 'paused' WHERE user_id = $1 AND status = 'active'",
-            [req.user.id]
-        );
+        await prisma.roadmap.updateMany({
+            where: { user_id: req.user.id, status: 'active' },
+            data: { status: 'paused' }
+        });
 
         // 5. Create user roadmap (domain-linked; content comes from domain_roadmaps on fetch)
-        await pool.query(
-            `INSERT INTO user_roadmaps 
-            (user_id, domain, roadmap_content, status, progress_percentage, completed_tasks, updated_at)
-            VALUES ($1, $2, $3, 'active', 0, '[]', CURRENT_TIMESTAMP)`,
-            [req.user.id, domainKey, JSON.stringify(roadmapPayload)]
-        );
+        await prisma.roadmap.create({
+            data: {
+                user_id: req.user.id,
+                domain: domainKey,
+                roadmap_content: roadmapPayload,
+                status: 'active',
+                progress_percentage: 0,
+                completed_tasks: []
+            }
+        });
         console.log(`[DB] Stored user roadmap for user ${req.user.id}, domain "${domainKey}" in user_roadmaps`);
 
         // 6. Persist mandatory one-time inputs
         const uid = String(req.user.id);
+        
         try {
-            await pool.query(
-                `INSERT INTO career_onboarding_state (uid, step, domain, proficiency_level, professional_goal, current_status, updated_at)
-                 VALUES ($1, 'done', $2, $3, $4, $5, CURRENT_TIMESTAMP)
-                 ON CONFLICT (uid) DO UPDATE SET domain = $2, proficiency_level = $3, professional_goal = $4, current_status = $5, updated_at = CURRENT_TIMESTAMP`,
-                [uid, domainKey, proficiency_level || null, professional_goal || null, current_status || null]
-            );
+            await prisma.careerOnboardingState.upsert({
+                where: { uid: uid },
+                update: {
+                    step: 'done',
+                    domain: domainKey,
+                    proficiency_level: proficiency_level || null,
+                    professional_goal: professional_goal || null,
+                    current_status: current_status || null,
+                },
+                create: {
+                    uid: uid,
+                    step: 'done',
+                    domain: domainKey,
+                    proficiency_level: proficiency_level || null,
+                    professional_goal: professional_goal || null,
+                    current_status: current_status || null,
+                }
+            });
         } catch (colError) {
-            if (colError.code === "42703" || (colError.message && colError.message.includes("professional_goal"))) {
-                await pool.query(
-                    `INSERT INTO career_onboarding_state (uid, step, domain, proficiency_level, current_status, updated_at)
-                     VALUES ($1, 'done', $2, $3, $4, CURRENT_TIMESTAMP)
-                     ON CONFLICT (uid) DO UPDATE SET domain = $2, proficiency_level = $3, current_status = $4, updated_at = CURRENT_TIMESTAMP`,
-                    [uid, domainKey, proficiency_level || null, current_status || null]
-                );
-            } else {
-                throw colError;
-            }
+            console.error("Warning: professional_goal might be missing from schema, retrying without it", colError.message);
+            await prisma.careerOnboardingState.upsert({
+                where: { uid: uid },
+                update: {
+                    step: 'done',
+                    domain: domainKey,
+                    proficiency_level: proficiency_level || null,
+                    current_status: current_status || null,
+                },
+                create: {
+                    uid: uid,
+                    step: 'done',
+                    domain: domainKey,
+                    proficiency_level: proficiency_level || null,
+                    current_status: current_status || null,
+                }
+            });
         }
 
         return res.status(200).json({
@@ -251,16 +272,12 @@ exports.generateRoadmap = async (req, res) => {
 ========================================= */
 exports.getOnboardingState = async (req, res) => {
     try {
-        const result = await pool.query(
-            `SELECT roadmap_content, progress_percentage, updated_at
-             FROM user_roadmaps
-             WHERE user_id = $1 AND status = 'active'
-             ORDER BY updated_at DESC
-             LIMIT 1`,
-            [req.user.id]
-        );
+        const result = await prisma.roadmap.findFirst({
+            where: { user_id: req.user.id, status: 'active' },
+            orderBy: { updated_at: 'desc' },
+        });
 
-        if (result.rows.length === 0) {
+        if (!result) {
             return res.status(200).json({
                 success: true,
                 hasActiveRoadmap: false,
@@ -271,9 +288,9 @@ exports.getOnboardingState = async (req, res) => {
         return res.status(200).json({
             success: true,
             hasActiveRoadmap: true,
-            roadmap: result.rows[0].roadmap_content,
-            progress: result.rows[0].progress_percentage,
-            updatedAt: result.rows[0].updated_at,
+            roadmap: result.roadmap_content,
+            progress: result.progress_percentage,
+            updatedAt: result.updated_at,
         });
 
     } catch (error) {

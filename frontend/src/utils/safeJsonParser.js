@@ -24,20 +24,7 @@ export const safeJsonParse = (jsonString, fallback = null, context = 'Unknown') 
 
   const trimmed = jsonString.trim();
 
-  // Check for common HTML/error patterns that shouldn't be parsed as JSON
-  const invalidPatterns = [
-    'You need to enable JavaScript',
-    'You need t',
-    '<!DOCTYPE',
-    '<html',
-    '<script',
-    '<body',
-    '<head',
-    'SyntaxError',
-    'Unexpected token',
-    'is not valid JSON',
-    'Sign in wi',  // e.g. "Sign in with Google" from auth redirect/HTML
-  ];
+
 
   for (const pattern of invalidPatterns) {
     if (trimmed.includes(pattern)) {
@@ -72,15 +59,20 @@ export const safeLocalStorageParse = (key, fallback = null) => {
     const item = localStorage.getItem(key);
     if (!item) return fallback;
 
-    // Check for corruption patterns
+// Check for corruption patterns
     const corruptedPatterns = [
       'You need to enable JavaScript',
       'You need t',
-      '<!DOCTYPE',
+      'You need to sign in',
+      'Service Unavailable', 
+      '<!DOCTYPE html',
       '<html',
       'SyntaxError',
       'Unexpected token',
       'Sign in wi',
+      // Render
+      'onrender.com',
+      'render.com'
     ];
 
     for (const pattern of corruptedPatterns) {
@@ -132,14 +124,17 @@ export const clearCorruptedLocalStorage = () => {
   keysToCheck.forEach(key => {
     try {
       const item = localStorage.getItem(key);
-      if (item && (
+if (item && (
         item.includes('You need to enable JavaScript') ||
         item.includes('You need t') ||
+        item.includes('You need to sign in') ||
+        item.includes('Service Unavailable') ||
         item.includes('<!DOCTYPE') ||
         item.includes('<html') ||
         item.includes('SyntaxError') ||
         item.includes('Unexpected token') ||
-        item.includes('Sign in wi')
+        item.includes('Sign in wi') ||
+        item.includes('onrender.com')
       )) {
         corruptedKeys.push(key);
       }

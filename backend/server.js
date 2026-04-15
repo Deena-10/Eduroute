@@ -81,7 +81,7 @@ app.use("/api/admin", adminRoutes);
 
 // Health endpoint for Docker/K8s readiness checks
 app.get("/health", (req, res) => {
-  res.status(200).json({ success: true, message: "ok", data: { status: "ok" } });
+  res.status(200).json({ status: "ok" });
 });
 
 // VAPID public key for PWA push (no auth required)

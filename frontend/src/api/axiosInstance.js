@@ -8,8 +8,9 @@ const getApiBaseUrl = () => {
     }
   } catch (e) {}
   try {
-    if (typeof process !== 'undefined' && process.env && process.env.REACT_APP_API_BASE_URL) {
-      return process.env.REACT_APP_API_BASE_URL;
+    if (typeof process !== 'undefined' && process.env) {
+      if (process.env.REACT_APP_API_URL) return process.env.REACT_APP_API_URL;
+      if (process.env.REACT_APP_API_BASE_URL) return process.env.REACT_APP_API_BASE_URL;
     }
   } catch (e) {}
   // Default Render backend if env is missing
@@ -49,46 +50,81 @@ api.interceptors.request.use(config => {
   return config;
 });
 
-// Response Interceptor
+// Response Interceptor - RENDER 503 HTML SAFETY
+// Clones data early to prevent mutation; safely handles HTML error pages
 api.interceptors.response.use(
-  (response) => {
-    // Axios safely parses standard JSON to response.data automatically
-    return response;
-  },
-  (error) => {
-    // 503 Error (e.g. Supabase or Render backend waking up)
+  (response) => response,
+  async (error) => {
+    const { safeJsonParse } = await import('../utils/safeJsonParser');
+    
+    // 🔧 FIX: Safely handle Render HTML 503 before any parsing
     if (error.response?.status === 503) {
-      console.warn("Server waking up, please try again in a few seconds");
-      alert("Server is currently waking up, please try again in a few seconds.");
+      const rawData = error.response.data;
+      const htmlErrorMsg = typeof rawData === 'string' ? 
+        rawData.substring(0, 100) : 
+        String(rawData || '').substring(0, 100);
+      
+      console.warn('🚀 Render 503 detected (cold start):', htmlErrorMsg);
+      
+      // Create safe error object - NO raw HTML passed to app code
+      const safeError = {
+        ...error,
+        response: {
+          ...error.response,
+          data: {
+            success: false,
+            message: 'Server waking up (Render cold start). Please retry in 10-30 seconds.',
+            status: 503,
+            renderColdStart: true,
+            rawHint: htmlErrorMsg.includes('You need t') || htmlErrorMsg.includes('JavaScript')
+          }
+        }
+      };
+      
+      // UX: Non-blocking toast instead of alert
+      if (typeof window !== 'undefined') {
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+          position:fixed;top:20px;right:20px;z-index:9999;
+          padding:16px 20px;border-radius:12px;background:#fef3c7;
+          border:1px solid #f59e0b;color:#92400e;font-family:sans-serif;
+          font-size:14px;max-width:340px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.1);
+          animation:toastIn 0.25s ease-out;
+        `;
+        toast.innerHTML = `⏳ Server waking up...<br><small>Please retry in 10-30s</small>`;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 5000);
+      }
+      
+      return Promise.reject(safeError);
     }
     
-    // 401 Unauthorized
-    else if (error.response?.status === 401) {
-      console.log('401 error received from API, clearing auth data:', error.config?.url);
+    // 401: Clear auth & redirect
+    if (error.response?.status === 401) {
+      console.log('401 - clearing auth:', error.config?.url);
       try {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-      } catch (e) {
-        console.warn('Failed to clear auth storage on 401:', e);
-      }
-      if (typeof window !== 'undefined' && window.location?.pathname !== '/login') {
+      } catch(e){}
+      if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }
+      return Promise.reject(error);
     }
-
-    // 404 Not Found
-    else if (error.response?.status === 404) {
-      console.error(`API endpoint not found (404): ${error.config?.url}`);
+    
+    // Other HTTP errors: Safely parse data
+    if (error.response?.data && typeof error.response.data === 'string') {
+      error.response.data = safeJsonParse(error.response.data, 
+        { success: false, message: `Server error (${error.response.status})` },
+        `axios-${error.config?.url}`
+      );
     }
-
-    // 500 Internal Server Error
-    else if (error.response?.status === 500) {
-      console.error('Internal Server Error. The backend encountered a problem.');
-    }
-
-    // Fallback error logging
-    else if (error.message && error.message.includes('JSON')) {
-      console.error('JSON Parsing Error:', error.message);
+    
+    // Log unhandled
+    if (error.response?.status >= 500) {
+      console.error(`Server Error ${error.response.status}:`, error.response.data);
+    } else if (error.response?.status === 404) {
+      console.error(`API 404: ${error.config?.url}`);
     }
     
     return Promise.reject(error);

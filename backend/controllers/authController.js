@@ -1,7 +1,7 @@
 // backend/controllers/authController.js
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-const pool = require("../config/postgres");
+const { prisma } = require("../config/prisma");
 const admin = require("../config/firebaseAdmin");
 const { v4: uuidv4 } = require("uuid");
 
@@ -35,28 +35,31 @@ exports.signup = async (req, res, next) => {
             return sendResponse(res, 503, false, "Auth service not configured. Set JWT_SECRET.");
         }
 
-        const { rows: existing } = await pool.query(
-            "SELECT * FROM users WHERE email = $1",
-            [safeEmail]
-        );
+        const existing = await prisma.user.findUnique({
+            where: { email: safeEmail }
+        });
 
-        if (existing.length > 0) {
+        if (existing) {
             return sendResponse(res, 409, false, "User already exists");
         }
 
         const hashedPassword = await bcrypt.hash(safePassword, 10);
         const uid = uuidv4();   // 🔥 generate uid
 
-        const { rows: inserted } = await pool.query(
-            "INSERT INTO users (uid, name, email, password) VALUES ($1, $2, $3, $4) RETURNING id",
-            [uid, safeName, safeEmail, hashedPassword]
-        );
+        const inserted = await prisma.user.create({
+            data: {
+                uid: uid,
+                name: safeName,
+                email: safeEmail,
+                password: hashedPassword
+            }
+        });
 
-        const token = createToken(inserted[0].id);
+        const token = createToken(inserted.id);
 
         return sendResponse(res, 201, true, "Signup successful", {
             token,
-            user: { id: inserted[0].id, name: safeName, email: safeEmail }
+            user: { id: inserted.id, name: safeName, email: safeEmail }
         });
 
     } catch (error) {
@@ -84,12 +87,13 @@ exports.login = async (req, res, next) => {
             return sendResponse(res, 503, false, "Auth service not configured. Set JWT_SECRET.");
         }
 
-        const { rows } = await pool.query("SELECT * FROM users WHERE email = $1", [safeEmail]);
-        if (rows.length === 0) {
+        const user = await prisma.user.findUnique({
+            where: { email: safeEmail }
+        });
+        
+        if (!user) {
             return sendResponse(res, 404, false, "User not found");
         }
-
-        const user = rows[0];
         const isMatch = await bcrypt.compare(safePassword, user.password || "");
         if (!isMatch) {
             return sendResponse(res, 401, false, "Invalid password");
@@ -125,21 +129,29 @@ exports.googleSignin = async (req, res, next) => {
         const decoded = await admin.auth().verifyIdToken(token);
         const { uid, email, name, picture } = decoded;
 
-        let { rows: existing } = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
+        let row = await prisma.user.findUnique({
+            where: { email: email }
+        });
         let user;
 
-        if (existing.length > 0) {
-            const row = existing[0];
+        if (row) {
             if (!row.firebase_uid) {
-                await pool.query("UPDATE users SET firebase_uid = $1, profile_picture = $2 WHERE id = $3", [uid, picture, row.id]);
+                row = await prisma.user.update({
+                    where: { id: row.id },
+                    data: { firebase_uid: uid, profile_picture: picture }
+                });
             }
             user = { id: row.id, name: row.name, email: row.email, profilePicture: row.profile_picture || picture };
         } else {
-            const { rows: inserted } = await pool.query(
-                "INSERT INTO users (name, email, firebase_uid, profile_picture) VALUES ($1, $2, $3, $4) RETURNING id",
-                [name || "Google User", email, uid, picture]
-            );
-            user = { id: inserted[0].id, name: name || "Google User", email, profilePicture: picture };
+            const inserted = await prisma.user.create({
+                data: {
+                    name: name || "Google User",
+                    email: email,
+                    firebase_uid: uid,
+                    profile_picture: picture
+                }
+            });
+            user = { id: inserted.id, name: name || "Google User", email, profilePicture: picture };
         }
 
         const jwtToken = createToken(user.id);

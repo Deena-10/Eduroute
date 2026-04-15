@@ -13,19 +13,15 @@ import "./index.css";
 setupGlobalErrorHandler();
 
 // Clear corrupted localStorage before any code can JSON.parse it
+import { clearCorruptedLocalStorage } from './utils/safeJsonParser';
+
+// 🚀 Comprehensive localStorage cleanup using safeJsonParser
 try {
-  ["user", "token"].forEach((key) => {
-    const v = localStorage.getItem(key);
-    if (
-      typeof v === "string" &&
-      (v.includes("You need") ||
-        v.includes("Sign in wi") ||
-        v.trim().startsWith("<"))
-    ) {
-      localStorage.removeItem(key);
-    }
-  });
-} catch (_) {}
+  const cleared = clearCorruptedLocalStorage();
+  if (cleared > 0) {
+    console.log(`Cleaned up ${cleared} corrupted records.`);
+  }
+} catch (e) {}
 
 // Create a custom theme
 const theme = createTheme({

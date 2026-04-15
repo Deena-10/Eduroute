@@ -17,11 +17,17 @@ const Navbar = () => {
     if (!user) { setHasRoadmap(false); return; }
     const check = async () => {
       try {
-        const res = await axiosInstance.get("/user/roadmap");
-        setHasRoadmap(!!(res.data.success && (res.data.data || res.data.roadmap)));
+        // Use lightweight preferences check instead of fetching the entire roadmap JSON
+        const res = await axiosInstance.get("/user/onboarding-preferences");
+        const prefs = res.data?.data ?? res.data;
+        const isComplete = prefs?.domain && String(prefs.domain).trim() && prefs?.proficiency_level && String(prefs.proficiency_level).trim();
+        setHasRoadmap(!!isComplete);
       } catch { setHasRoadmap(false); }
     };
-    check();
+    // Only check if we are on root or just logged in to avoid redundant parallel calls every navigation
+    if (location.pathname === '/' || location.pathname === '/login' || location.pathname === '/questionnaire') {
+      check();
+    }
   }, [user, location.pathname]);
 
   useEffect(() => {

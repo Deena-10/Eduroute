@@ -148,5 +148,12 @@ deploy.sh
 deploy.*
 production.*
 
-
+# Ignore all markdown documentation except the main README
 docs/
+*.md
+!README.md
+!readme.md
+!Readme.md
+
+# Ignore Windows batch scripts
+*.bat

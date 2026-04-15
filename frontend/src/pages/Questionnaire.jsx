@@ -3,6 +3,7 @@ import React, { useState, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import axiosInstance from "../api/axiosInstance";
+import RoadmapLoader from "../components/RoadmapLoader";
 
 const steps = ['Domain', 'Level', 'Goal', 'Status'];
 
@@ -49,9 +50,23 @@ const Questionnaire = () => {
         domain: domain.trim(), proficiency_level: proficiency,
         professional_goal: professionalGoal, current_status: currentStatus, forceRegenerate: true,
       });
-      if (res.data.success) { navigate("/roadmap"); }
-      else { setError("Something went wrong. Please try again."); }
+
+      if (res.data.success) {
+        // Handle Fallback UI check
+        if (res.data.roadmap?.isFallback || res.data.isFallback) {
+          setError("AI is warming up — showing a starter roadmap. Regenerate in a moment for your personalized version.");
+          // Wait slightly longer so the user can read the error/info if I stop loading here
+          // But actually I'll just navigate and let the roadmap page show it or show it here.
+          // User said "show a different message". I'll use a toast or just stay on page.
+          setTimeout(() => navigate("/roadmap"), 2500);
+        } else {
+          // Smooth fade transition
+          setTimeout(() => navigate("/roadmap"), 800);
+        }
+      }
+      else { setError("Something went wrong. Please try again."); setSubmitting(false); }
     } catch (err) {
+      setSubmitting(false);
       const msg = err.response?.data?.error || err.message;
       const isUnreachable =
         msg?.includes("not running") ||
@@ -65,7 +80,7 @@ const Questionnaire = () => {
           ? "Could not reach the AI service. On Render: set the backend env AI_SERVICE_URL to your Python service URL (no trailing slash), redeploy backend, then try again. For local dev: run the ai_service on port 5001."
           : msg || "Failed to generate roadmap. Please try again."
       );
-    } finally { setSubmitting(false); }
+    }
   };
 
   const filledCount = [domain.trim(), proficiency, professionalGoal, currentStatus].filter(Boolean).length;
@@ -203,6 +218,7 @@ const Questionnaire = () => {
       `}</style>
 
       <div style={{ width: '100%', maxWidth: 500 }}>
+        {submitting && <RoadmapLoader />}
 
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
@@ -353,16 +369,35 @@ const Questionnaire = () => {
               </div>
             </div>
 
-            {/* Error */}
+            {/* Error / Feedback Status */}
             {error && (
               <div style={{
-                padding: '12px 16px',
-                background: '#FFF5F5',
-                border: '1px solid #FED7D7',
-                borderLeft: '3px solid #E53E3E',
-                borderRadius: 11,
-                fontSize: 13, color: '#C53030', lineHeight: 1.5,
-              }}>{error}</div>
+                padding: '14px 18px',
+                background: error.includes("warming up") ? '#FEFCE8' : '#FFF5F5',
+                border: '1px solid',
+                borderColor: error.includes("warming up") ? '#FEF08A' : '#FED7D7',
+                borderLeft: '4px solid',
+                borderLeftColor: error.includes("warming up") ? '#F59E0B' : '#E53E3E',
+                borderRadius: 13,
+                fontSize: 13, 
+                color: error.includes("warming up") ? '#854D0E' : '#C53030', 
+                lineHeight: 1.6,
+                fontWeight: 500,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {error.includes("warming up") ? '⏳' : '⚠️'}
+                  <span style={{ fontWeight: 700 }}>{error.includes("warming up") ? 'Status Updated' : 'Generation Error'}</span>
+                </div>
+                {error}
+                {!error.includes("warming up") && (
+                  <div style={{ fontSize: 11, opacity: 0.8, marginTop: 4 }}>
+                    Please check your connection and click "Generate My Roadmap" to try again.
+                  </div>
+                )}
+              </div>
             )}
 
             {/* Submit */}

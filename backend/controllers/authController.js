@@ -25,34 +25,50 @@ const createToken = (userId) => {
 
 exports.signup = async (req, res, next) => {
     const { name, email, password } = req.body;
+    const safeName = String(name || "").trim();
+    const safeEmail = String(email || "").trim().toLowerCase();
+    const safePassword = String(password || "");
 
     try {
+        if (!safeName || !safeEmail || !safePassword) {
+            return sendResponse(res, 400, false, "name, email and password are required");
+        }
+        if (safePassword.length < 6) {
+            return sendResponse(res, 400, false, "Password must be at least 6 characters");
+        }
+        if (!process.env.JWT_SECRET) {
+            return sendResponse(res, 503, false, "Auth service not configured. Set JWT_SECRET.");
+        }
+
         const { rows: existing } = await pool.query(
             "SELECT * FROM users WHERE email = $1",
-            [email]
+            [safeEmail]
         );
 
         if (existing.length > 0) {
             return res.error("User already exists", "Signup failed", 400);
         }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await bcrypt.hash(safePassword, 10);
         const uid = uuidv4();   // 🔥 generate uid
 
         const { rows: inserted } = await pool.query(
             "INSERT INTO users (uid, name, email, password) VALUES ($1, $2, $3, $4) RETURNING id",
-            [uid, name, email, hashedPassword]
+            [uid, safeName, safeEmail, hashedPassword]
         );
 
         const token = createToken(inserted[0].id);
 
         return sendResponse(res, 201, true, "Signup successful", {
             token,
-            user: { id: inserted[0].id, name, email }
+            user: { id: inserted[0].id, name: safeName, email: safeEmail }
         });
 
     } catch (error) {
         console.error("Signup error:", error);
+        if (error?.code === "23505") {
+            return sendResponse(res, 409, false, "User already exists");
+        }
         return sendResponse(res, 500, false, error.message || "Signup failed");
     }
 };
@@ -60,14 +76,23 @@ exports.signup = async (req, res, next) => {
 
 exports.login = async (req, res, next) => {
     const { email, password } = req.body;
+    const safeEmail = String(email || "").trim().toLowerCase();
+    const safePassword = String(password || "");
     try {
-        const { rows } = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
+        if (!safeEmail || !safePassword) {
+            return sendResponse(res, 400, false, "email and password are required");
+        }
+        if (!process.env.JWT_SECRET) {
+            return sendResponse(res, 503, false, "Auth service not configured. Set JWT_SECRET.");
+        }
+
+        const { rows } = await pool.query("SELECT * FROM users WHERE email = $1", [safeEmail]);
         if (rows.length === 0) {
             return res.error("Invalid email or password", "Login failed", 401);
         }
 
         const user = rows[0];
-        const isMatch = await bcrypt.compare(password, user.password || "");
+        const isMatch = await bcrypt.compare(safePassword, user.password || "");
         if (!isMatch) {
             return res.error("Invalid email or password", "Login failed", 401);
         }

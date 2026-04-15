@@ -1,5 +1,7 @@
 // backend/server.js
 require("dotenv").config();
+const pool = require("./config/postgres");
+const { connectPrismaWithRetry, logPrismaDbSummary } = require("./config/prisma");
 const authRoutes = require("./routes/authRoutes");
 const questionsRoute = require("./routes/questions");
 const chatRoutes = require("./routes/chatRoutes");
@@ -96,7 +98,28 @@ const server = app.listen(PORT, () => {
       ? `✅ AI_SERVICE_URL set (${String(aiUrl).replace(/\/$/, "")})`
       : "⚠️ AI_SERVICE_URL not set — using http://localhost:5001 (set this on Render to your Python service URL)"
   );
+  // Log connection settings safely and run startup DB checks without crashing the app.
+  if (typeof pool.logDbConfigSummary === "function") pool.logDbConfigSummary();
+  logPrismaDbSummary();
+  Promise.allSettled([
+    typeof pool.checkPostgresConnection === "function" ? pool.checkPostgresConnection() : Promise.resolve(false),
+    connectPrismaWithRetry({ maxRetries: 5, minDelayMs: 2000, maxDelayMs: 3000 }),
+  ]).then((results) => {
+    const pgOk = results[0]?.status === "fulfilled" && results[0]?.value === true;
+    const prismaOk = results[1]?.status === "fulfilled" && results[1]?.value === true;
+    if (!pgOk || !prismaOk) {
+      console.warn("⚠️ DB check failed on startup. Service stays up and will retry on incoming requests.");
+    }
+  });
 });
 // Allow long-running AI roadmap generation (proxies and default Node timeouts are often 60s or less).
 server.setTimeout(Number(process.env.REQUEST_TIMEOUT_MS) || 180000);
 server.headersTimeout = Number(process.env.REQUEST_TIMEOUT_MS) || 180000;
+
+// Keep process alive on transient async errors; log loudly for Render diagnostics.
+process.on("unhandledRejection", (reason) => {
+  console.error("❌ Unhandled promise rejection:", reason);
+});
+process.on("uncaughtException", (error) => {
+  console.error("❌ Uncaught exception:", error);
+});

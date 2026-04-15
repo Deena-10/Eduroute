@@ -31,8 +31,15 @@ const responseHelper = (req, res, next) => {
 const errorHandler = (err, req, res, next) => {
     console.error(`[ERROR] ${req.method} ${req.url}:`, err);
 
-    const status = err.status || 500;
-    const message = err.message || "Internal Server Error";
+    const isDbError =
+        Boolean(err?.code && String(err.code).startsWith("P")) || // Prisma (P1001, etc.)
+        Boolean(err?.code && String(err.code).match(/^\d{5}$/)) || // Postgres SQLSTATE
+        /database|postgres|prisma|connection/i.test(String(err?.message || ""));
+
+    const status = err.status || (isDbError ? 503 : 500);
+    const message = isDbError
+        ? "Database temporarily unavailable. Please try again shortly."
+        : (err.message || "Internal Server Error");
 
     return res.status(status).json({
         success: false,

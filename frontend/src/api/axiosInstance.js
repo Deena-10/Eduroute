@@ -57,8 +57,8 @@ api.interceptors.response.use(
   async (error) => {
     const { safeJsonParse } = await import('../utils/safeJsonParser');
     
-    // 🔧 FIX: Safely handle Render HTML 503 before any parsing and RETRY
-    if (error.response?.status === 503) {
+    // 🔧 FIX: Safely handle Render HTML 503/502 before any parsing and RETRY
+    if (error.response?.status === 503 || error.response?.status === 502) {
       const config = error.config;
       config.__retryCount = config.__retryCount || 0;
       
@@ -84,7 +84,7 @@ api.interceptors.response.use(
           }, 15000); // Wait until all retries are roughly done
         }
         
-        console.warn(`🚀 Render 503 detected (cold start). Retrying in 5s... (${config.__retryCount}/3)`);
+        console.warn(`🚀 Render ${error.response.status} detected. Retrying in 5s... (${config.__retryCount}/3)`);
         await new Promise(resolve => setTimeout(resolve, 5000));
         return api(config);
       }
@@ -98,8 +98,8 @@ api.interceptors.response.use(
           ...error.response,
           data: {
             success: false,
-            message: 'Server waking up (Render cold start). Please retry in 10-30 seconds.',
-            status: 503,
+            message: 'Server waking up (Render cold start/Bad Gateway). Please retry in a moment.',
+            status: error.response.status,
             renderColdStart: true,
             rawHint: htmlErrorMsg.includes('You need t') || htmlErrorMsg.includes('JavaScript')
           }

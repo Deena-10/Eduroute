@@ -30,58 +30,71 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = async (email, password) => {
-    try {
-      const res = await api.post("/auth/login", { email, password });
-      const data = res.data; // Always use res.data directly
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-      if (data?.success && data?.data) {
-        const { user: backendUser, token } = data.data;
-        const userData = {
-          id: backendUser.id,
-          email: backendUser.email,
-          name: backendUser.name,
-          token,
-        };
-        setUser(userData);
-        localStorage.setItem("user", JSON.stringify(userData));
-        localStorage.setItem("token", token);
-        return { success: true };
+  const login = async (email, password) => {
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const res = await api.post("/auth/login", { email, password }, { __skipInterceptorRetry: true });
+        const data = res.data;
+
+        if (data?.success && data?.data) {
+          const { user: backendUser, token } = data.data;
+          const userData = {
+            id: backendUser.id,
+            email: backendUser.email,
+            name: backendUser.name,
+            token,
+          };
+          setUser(userData);
+          localStorage.setItem("user", JSON.stringify(userData));
+          localStorage.setItem("token", token);
+          return { success: true };
+        }
+        return { success: false, message: data?.message || "Login failed" };
+      } catch (err) {
+        if (err.response?.status === 503 && attempt < 3) {
+          console.warn(`[Auth] 503 Server waking up, retrying login... (${attempt}/3)`);
+          // Show intermediate message via early return or UI update (handled by frontend usually or just sleep)
+          await sleep(5000);
+          continue;
+        }
+        const msg = err.response?.data?.message || err.message || "Login failed";
+        return { success: false, message: (err.response?.status === 503) ? "Server is starting up, please try again." : msg };
       }
-      return { success: false, message: data?.message || "Login failed" };
-    } catch (err) {
-      const msg = err.response?.data?.message || err.message || "Login failed";
-      return { success: false, message: msg };
     }
   };
 
   const signup = async (email, password, name) => {
-    try {
-      const res = await api.post("/auth/signup", {
-        email,
-        password,
-        name,
-      });
-      const data = res.data; // Always use res.data directly
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const res = await api.post("/auth/signup", { email, password, name }, { __skipInterceptorRetry: true });
+        const data = res.data;
 
-      if (data?.success && data?.data) {
-        const { user: backendUser, token } = data.data;
-        const userData = {
-          id: backendUser.id,
-          email: backendUser.email,
-          name: backendUser.name,
-          token,
-        };
-        setUser(userData);
-        localStorage.setItem("user", JSON.stringify(userData));
-        localStorage.setItem("token", token);
-        return { success: true };
+        if (data?.success && data?.data) {
+          const { user: backendUser, token } = data.data;
+          const userData = {
+            id: backendUser.id,
+            email: backendUser.email,
+            name: backendUser.name,
+            token,
+          };
+          setUser(userData);
+          localStorage.setItem("user", JSON.stringify(userData));
+          localStorage.setItem("token", token);
+          return { success: true };
+        }
+
+        return { success: false, message: data?.message || "Signup failed" };
+      } catch (err) {
+        if (err.response?.status === 503 && attempt < 3) {
+          console.warn(`[Auth] 503 Server waking up, retrying signup... (${attempt}/3)`);
+          await sleep(5000);
+          continue;
+        }
+        const msg = err.response?.data?.message || err.message || "Signup failed";
+        return { success: false, message: (err.response?.status === 503) ? "Server is starting up, please try again." : msg };
       }
-
-      return { success: false, message: data?.message || "Signup failed" };
-    } catch (err) {
-      const msg = err.response?.data?.message || err.message || "Signup failed";
-      return { success: false, message: msg };
     }
   };
 

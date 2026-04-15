@@ -24,6 +24,36 @@ function App() {
     if (clearedKeys > 0) {
       console.log(`🧹 Preventively cleared ${clearedKeys} corrupted localStorage keys on startup`);
     }
+
+    // Wake-up Ping: Fire a health check to completely wake Render app
+    let toastTimeout;
+    const apiUrl = (typeof process !== 'undefined' && process.env.REACT_APP_API_URL) 
+      ? process.env.REACT_APP_API_URL 
+      : 'https://eduroute-1.onrender.com/api';
+    const rootUrl = apiUrl.replace(/\/api\/?$/, '');
+
+    toastTimeout = setTimeout(() => {
+      if (typeof window !== 'undefined' && !document.getElementById('startup-toast')) {
+        const toast = document.createElement('div');
+        toast.id = "startup-toast";
+        toast.style.cssText = `
+          position:fixed;bottom:20px;right:20px;z-index:9999;
+          padding:12px 16px;border-radius:12px;background:#EBF5EE;
+          border:1px solid #B7E4C7;color:#2D6A4F;font-family:sans-serif;
+          font-size:13px;box-shadow:0 10px 15px -3px rgba(0,0,0,0.1);
+        `;
+        toast.innerHTML = `🔌 Connecting to server...`;
+        document.body.appendChild(toast);
+      }
+    }, 3000);
+
+    fetch(`${rootUrl}/health`)
+      .then(() => {
+        clearTimeout(toastTimeout);
+        const el = document.getElementById("startup-toast");
+        if (el) el.remove();
+      })
+      .catch(() => clearTimeout(toastTimeout));
   }, []);
 
   return (

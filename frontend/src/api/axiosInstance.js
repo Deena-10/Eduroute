@@ -57,16 +57,41 @@ api.interceptors.response.use(
   async (error) => {
     const { safeJsonParse } = await import('../utils/safeJsonParser');
     
-    // 🔧 FIX: Safely handle Render HTML 503 before any parsing
+    // 🔧 FIX: Safely handle Render HTML 503 before any parsing and RETRY
     if (error.response?.status === 503) {
+      const config = error.config;
+      config.__retryCount = config.__retryCount || 0;
+      
+      if (config.__retryCount < 3 && !config.__skipInterceptorRetry) {
+        config.__retryCount += 1;
+        
+        // Non-blocking toast UX
+        if (typeof window !== 'undefined' && config.__retryCount === 1) {
+          const toast = document.createElement('div');
+          toast.id = "wakeup-toast";
+          toast.style.cssText = `
+            position:fixed;top:20px;right:20px;z-index:9999;
+            padding:16px 20px;border-radius:12px;background:#fef3c7;
+            border:1px solid #f59e0b;color:#92400e;font-family:sans-serif;
+            font-size:14px;max-width:340px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.1);
+            animation:toastIn 0.25s ease-out;
+          `;
+          toast.innerHTML = `⏳ Server is waking up, please wait...`;
+          document.body.appendChild(toast);
+          setTimeout(() => {
+            const el = document.getElementById("wakeup-toast");
+            if (el) el.remove();
+          }, 15000); // Wait until all retries are roughly done
+        }
+        
+        console.warn(`🚀 Render 503 detected (cold start). Retrying in 5s... (${config.__retryCount}/3)`);
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        return api(config);
+      }
+      
+      // If we exhausted retries, format the error nicely
       const rawData = error.response.data;
-      const htmlErrorMsg = typeof rawData === 'string' ? 
-        rawData.substring(0, 100) : 
-        String(rawData || '').substring(0, 100);
-      
-      console.warn('🚀 Render 503 detected (cold start):', htmlErrorMsg);
-      
-      // Create safe error object - NO raw HTML passed to app code
+      const htmlErrorMsg = typeof rawData === 'string' ? rawData.substring(0, 100) : String(rawData || '').substring(0, 100);
       const safeError = {
         ...error,
         response: {
@@ -80,21 +105,6 @@ api.interceptors.response.use(
           }
         }
       };
-      
-      // UX: Non-blocking toast instead of alert
-      if (typeof window !== 'undefined') {
-        const toast = document.createElement('div');
-        toast.style.cssText = `
-          position:fixed;top:20px;right:20px;z-index:9999;
-          padding:16px 20px;border-radius:12px;background:#fef3c7;
-          border:1px solid #f59e0b;color:#92400e;font-family:sans-serif;
-          font-size:14px;max-width:340px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.1);
-          animation:toastIn 0.25s ease-out;
-        `;
-        toast.innerHTML = `⏳ Server waking up...<br><small>Please retry in 10-30s</small>`;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 5000);
-      }
       
       return Promise.reject(safeError);
     }

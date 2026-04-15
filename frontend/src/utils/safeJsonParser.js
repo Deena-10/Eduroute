@@ -24,7 +24,19 @@ export const safeJsonParse = (jsonString, fallback = null, context = 'Unknown') 
 
   const trimmed = jsonString.trim();
 
-
+  const invalidPatterns = [
+    'You need to enable JavaScript',
+    'You need t',
+    'You need to sign in',
+    'Service Unavailable', 
+    '<!DOCTYPE html',
+    '<html',
+    'SyntaxError',
+    'Unexpected token',
+    'Sign in wi',
+    'onrender.com',
+    'render.com'
+  ];
 
   for (const pattern of invalidPatterns) {
     if (trimmed.includes(pattern)) {

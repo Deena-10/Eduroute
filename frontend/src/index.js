@@ -1,6 +1,7 @@
 // c:\finalyearproject\career-roadmap-app\frontend\src\index.js
 import "./bootstrap";
 import setupGlobalErrorHandler from "./utils/globalErrorHandler";
+import { clearCorruptedLocalStorage } from './utils/safeJsonParser';
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter as Router } from "react-router-dom";
@@ -13,7 +14,6 @@ import "./index.css";
 setupGlobalErrorHandler();
 
 // Clear corrupted localStorage before any code can JSON.parse it
-import { clearCorruptedLocalStorage } from './utils/safeJsonParser';
 
 // 🚀 Comprehensive localStorage cleanup using safeJsonParser
 try {

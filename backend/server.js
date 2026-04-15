@@ -20,46 +20,52 @@ const app = express();
 // ✅ Middleware
 // ==========================
 
-// CORS: allow both localhost and ngrok (so switching between them works)
+// ✅ CORS Configuration
 const allowedOrigins = [
   "http://localhost:3000",
   "http://localhost:5173",
   "http://127.0.0.1:3000",
   "http://127.0.0.1:5173",
 ];
+
+// Add origins from environment variables (comma-separated support)
 if (process.env.FRONTEND_URL) {
-  const urls = process.env.FRONTEND_URL.split(/[\s,]+/)
-    .map((s) => s.trim().replace(/\/$/, ""))
+  const envUrls = process.env.FRONTEND_URL.split(",")
+    .map((url) => url.trim().replace(/\/$/, ""))
     .filter(Boolean);
-  urls.forEach((url) => {
+  envUrls.forEach((url) => {
     if (!allowedOrigins.includes(url)) allowedOrigins.push(url);
   });
 }
 
-const isAllowedOrigin = (origin) => {
-  if (!origin || allowedOrigins.includes(origin)) return true;
-  if (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:")) return true;
-  // Render preview/static domains (helps avoid accidental CORS lockouts between Render frontend/backend services).
-  if (/^https:\/\/[a-z0-9-]+\.onrender\.com$/i.test(origin)) return true;
-  return false;
-};
-
 const corsOptions = {
-  origin: (origin, cb) => {
-    if (isAllowedOrigin(origin)) return cb(null, true);
-    console.warn(`⚠️ CORS blocked origin: ${origin}`);
-    cb(null, false);
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, curl, or Postman)
+    if (!origin) return callback(null, true);
+
+    const isAllowed =
+      allowedOrigins.includes(origin) ||
+      origin.startsWith("http://localhost:") ||
+      origin.startsWith("http://127.0.0.1:") ||
+      origin.endsWith(".onrender.com");
+
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      console.warn(`🛑 CORS Blocked: Origin ${origin} is not in the allowed list.`);
+      callback(null, false);
+    }
   },
+  credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "x-admin-key"],
-  credentials: true,
+  optionsSuccessStatus: 200, // Legacy support
 };
 
-app.use(
-  cors(corsOptions)
-);
+// Apply CORS globally
+app.use(cors(corsOptions));
 
-// ✅ Handle preflight requests globally
+// Handle preflight requests for all routes
 app.options("*", cors(corsOptions));
 
 // Parse JSON request bodies

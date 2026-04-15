@@ -5,14 +5,35 @@ const { maskDatabaseUrl, validateSupabasePooledUrl } = require("./databaseUrl");
 const databaseUrl = process.env.DATABASE_URL ? String(process.env.DATABASE_URL).trim() : "";
 const globalForPrisma = global;
 
-const prisma =
+const basePrisma =
   globalForPrisma.__eduroutePrisma ||
   new PrismaClient({
     log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
   });
 
+const prisma = basePrisma.$extends({
+  query: {
+    $allModels: {
+      async $allOperations({ query, args }) {
+        let retries = 3;
+        while (retries > 0) {
+          try {
+            return await query(args);
+          } catch (error) {
+            retries--;
+            const isConnectionDrop = error.message?.includes('Can\'t reach database') || error.code === 'P1001' || error.code === 'P1011';
+            if (retries === 0 || !isConnectionDrop) throw error;
+            console.log(`⚠️ Prisma connection drop detected. Retrying... (${retries} retries left)`);
+            await new Promise(r => setTimeout(r, 1500));
+          }
+        }
+      }
+    }
+  }
+});
+
 if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.__eduroutePrisma = prisma;
+  globalForPrisma.__eduroutePrisma = basePrisma;
 }
 
 const testPrismaConnection = async () => {

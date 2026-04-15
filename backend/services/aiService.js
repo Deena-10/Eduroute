@@ -31,7 +31,7 @@ const postWithRetry = async (endpoint, data, config = {}, attempts = 3) => {
         } catch (err) {
             lastError = err;
             if (!shouldRetry(err) || i === attempts - 1) throw err;
-            await sleep(800 * Math.pow(2, i));
+            await sleep(5000); // 5s delay for full AI service cold starts
         }
     }
     throw lastError;

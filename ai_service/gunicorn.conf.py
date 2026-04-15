@@ -1,13 +1,6 @@
-# ai_service/gunicorn.conf.py
-import multiprocessing
+import os
 
-bind = "0.0.0.0:5001"
-workers = multiprocessing.cpu_count() * 2 + 1
-worker_class = "sync"
 timeout = 120
-keepalive = 5
-max_requests = 1000
-max_requests_jitter = 50
-accesslog = "-"
-errorlog = "-"
-loglevel = "info"
+workers = 1
+# Render provides the PORT environment variable. Fallback to 10000 which is common for Render.
+bind = "0.0.0.0:" + str(os.environ.get('PORT', '10000'))

@@ -251,4 +251,5 @@ def generate_next_chapter():
     return jsonify({"units": units, "ui_metadata": {"node_config": node_config}}), 200
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5001, debug=True)
+    port = int(os.environ.get("PORT", 5001))
+    app.run(host="0.0.0.0", port=port, debug=False)

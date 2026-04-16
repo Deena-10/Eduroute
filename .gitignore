@@ -143,11 +143,13 @@ debug.js
 debug.*
 test-*.js
 temp-*.js
+test-integration.js
 
 # Production deployment files
 deploy.sh
 deploy.*
 production.*
+render.example.yaml
 
 # Ignore all markdown documentation except the main README
 docs/
@@ -156,5 +158,6 @@ docs/
 !readme.md
 !Readme.md
 
-# Ignore Windows batch scripts
-*.bat
+# Ignore Windows scripts
+*.bat
+*.ps1

@@ -2,52 +2,45 @@
 
 A comprehensive career guidance platform that provides personalized learning roadmaps, progress tracking, and milestone-based recommendations.
 
-## 🌟 Features
+## 🌟 Key Features
 
-### 1. **User Authentication & Profile Management**
-- Secure login/signup system
-- User profile creation with education details
-- Contact information for notifications
+### 1. **AI-Powered Career Assessment**
+- Interactive questionnaire system with domain-specific analysis.
+- Personalized roadmap generation based on education level, skills, and goals.
+- Structured career assessment questions (Education, Interests, Skills inventory).
 
-### 2. **AI-Powered Career Assessment**
-- Interactive questionnaire system
-- Structured career assessment questions:
-  - Education level and department
-  - Career interests and goals
-  - Current skills inventory
-  - Skills to learn
-  - Planning timeline
-  - Contact information
+### 2. **Personalized Roadmap & Progress**
+- AI-generated learning phases and milestones.
+- Daily/weekly task breakdowns with resource recommendations.
+- Real-time progress monitoring with visual indicators.
+- **Task completion tracking** with automated progress calculation.
 
-### 3. **Personalized Roadmap Generation**
-- AI-generated comprehensive career roadmaps
-- Learning phases and milestones
-- Daily/weekly task breakdown
-- Resource recommendations
-- Timeline planning
-- Progress tracking suggestions
+### 3. **Gamification & Community (New!)**
+- **Streak System**: Track your daily learning consistency with visual "flame" streaks.
+- **Leaderboard**: Compete with other learners based on your streaks and progress.
+- **Achievements & Badges**: Earn rewards like "Halfway There" at 50% and "Path Master" on completion.
+- **Skill Analytics**: Visual breakdown of mastered, advanced, and learning skills.
 
-### 4. **Progress Tracking & Milestones**
-- Real-time progress monitoring
-- Milestone-based notifications:
-  - **40%**: Event and conference suggestions
-  - **60%**: Project recommendations
-  - **80%**: Job opening alerts
-- Task completion tracking
-- Visual progress indicators
+### 4. **Resource Library & Events**
+- **Personalized Resources**: Curated video recommendations tailored to your career domain.
+- **Events & Conferences**: Discover upcoming tech conferences, hackathons, and webinars.
+- **Sharing Capabilities**: Easily share interesting events with your network.
 
 ### 5. **Smart Notifications System**
-- **Daily reminders** via email
-- **Milestone notifications** with personalized recommendations
-- **Event suggestions** based on domain and progress
-- **Project recommendations** for skill building
-- **Job opening alerts** when ready
+- **Daily reminders** via email to keep you on track.
+- **Milestone notifications** triggered at specific progress points:
+  - **40%**: Event and conference suggestions.
+  - **60%**: Project recommendations.
+  - **80%**: Job opening alerts and interview prep.
 
-### 6. **Database Integration**
-- postgresql(prisma) database for data persistence
-- User profiles and roadmaps storage
-- Chat history tracking
-- Progress and notification management
+### 6. **Modern, Responsive UI**
+- **Forest Sage Theme**: A premium, nature-inspired design system with smooth animations.
+- **Mobile-First Approach**: Fully responsive with a dedicated bottom navigation bar for mobile users.
+- **PWA Support**: Installable on mobile devices for a native app experience.
+
+### 7. **Secure Authentication**
+- **Email/Password** login with JWT security.
+- **Google OAuth Integration**: Fast and secure one-tap login.
 
 ## 🏗️ Architecture
 
@@ -56,51 +49,45 @@ A comprehensive career guidance platform that provides personalized learning roa
 frontend/
 ├── src/
 │   ├── components/
-│   │   ├── Navbar.jsx          # Navigation component
-│   │   └── UI/                 # Reusable UI components
+│   │   ├── Navbar.jsx          # Dynamic navigation (Desktop/Mobile)
+│   │   ├── NotificationBell.js # Real-time alerts
+│   │   └── UI/                 # Framer Motion animated components
 │   ├── pages/
-│   │   ├── Home.jsx            # Landing page
-│   │   ├── Login.jsx           # Authentication
-│   │   ├── Questionnaire.jsx   # AI Chat & Assessment
-│   │   ├── Roadmap.jsx         # Roadmap display
-│   │   └── Profile.jsx         # User profile
+│   │   ├── Roadmap.jsx         # Core learning path + Leaderboard + Achievements
+│   │   ├── Events.jsx          # Tech conferences & webinars
+│   │   ├── Profile.jsx         # User stats, Skills analytics & Streak history
+│   │   └── Questionnaire.jsx   # AI-driven onboarding
 │   ├── context/
-│   │   └── AuthContext.jsx     # Authentication state
+│   │   └── AuthContext.jsx     # Global auth state + Google Sign-in
 │   └── api/
-│       └── axiosInstance.js    # API configuration
+│       └── axiosInstance.js    # Centralized API config with interceptors
 ```
 
 ### Backend (Node.js + Express)
 ```
 backend/
 ├── routes/
-│   ├── authRoutes.js           # Authentication endpoints
-│   ├── userRoutes.js           # User profile & roadmap
-│   ├── aiRoutes.js             # AI chat endpoints
-│   └── chatRoutes.js           # Chat history
-├── middleware/
-│   └── authMiddleware.js       # JWT authentication
-├── service/
-│   ├── notifications.js        # Email notifications
-│   └── application.py          # AI service (Flask)
-└── config/
-    └── mysql.js               # Database connection
+│   ├── authRoutes.js           # Auth & Google OAuth
+│   ├── userRoutes.js           # Profiles, Streaks, Leaderboard
+│   ├── aiRoutes.js             # Roadmap generation logic
+│   └── eventsRoutes.js         # Curated events management
+├── prisma/
+│   └── schema.prisma           # Database schema & migrations
+└── services/
+    └── application.py          # AI Service (Flask/LLM integration)
 ```
 
-### Database Schema
+### Database Schema (PostgreSQL via Prisma)
 ```sql
 -- Core Tables
-users                    # User accounts
-user_profiles           # Detailed user information
-user_roadmaps           # Generated roadmaps
-chat_history            # AI conversation history
-user_progress           # Progress tracking
-
--- Recommendation Tables
-notifications           # System notifications
-events                  # Event suggestions
-projects                # Project recommendations
-job_openings            # Job opportunities
+User                     # Authentication & core profile
+Profile                  # Detailed education & skills
+Roadmap                  # AI-generated content & status
+Task                     # Individual learning steps
+Streak                   # Daily activity tracking
+Achievement              # User badges and rewards
+Notification             # System & milestone alerts
+Event                    # Global tech conferences list
 ```
 
 ## 🚀 Getting Started
@@ -108,7 +95,7 @@ job_openings            # Job opportunities
 ### Prerequisites
 - Node.js (v16+)
 - Python (v3.8+)
-- MySQL (v8.0+)
+- PostgreSQL (v14+)
 - npm or yarn
 
 ### Installation
@@ -130,18 +117,16 @@ cd ../backend
 npm install
 
 # AI Service
-cd ../backend/service
+cd ../ai_service
 pip install -r requirements.txt
 ```
 
 3. **Database Setup**
 ```bash
-# Create MySQL database
-mysql -u root -p
-CREATE DATABASE career_roadmap;
-
-# Run schema
-mysql -u root -p career_roadmap < database/schema.sql
+# Configure your PostgreSQL connection in backend/.env
+# Then run Prisma migrations
+cd backend
+npx prisma migrate dev --name init
 ```
 
 4. **Environment Configuration**

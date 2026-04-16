@@ -25,6 +25,8 @@ const Profile = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const [streak, setStreak] = useState({ current_streak: 0, last_activity_date: null });
   const [currentRoadmap, setCurrentRoadmap] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -133,6 +135,8 @@ const Profile = () => {
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,600&display=swap');
         @keyframes fadein { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
         @keyframes flamePulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.12)} }
+        @keyframes spinner-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .modal-spinner { animation: spinner-spin 0.8s linear infinite; }
         .pf-tab { padding: 8px 20px; border-radius: 10px; font-size: 13px; font-weight: 700; border: 1px solid ${G.border}; cursor: pointer; transition: all 0.16s; font-family: 'Plus Jakarta Sans',sans-serif; background: ${G.surface}; color: ${G.text3}; }
         .pf-tab:hover { background: ${G.greenMist}; color: ${G.green}; border-color: ${G.greenLine}; }
         .pf-tab.active { background: ${G.green}; color: #fff; border-color: ${G.green}; box-shadow: ${G.shadowGreen}; }
@@ -235,11 +239,7 @@ const Profile = () => {
             {currentRoadmap && (
               <button
                 className="pf-danger-btn"
-                onClick={async () => {
-                  if (!window.confirm('Reset your progress and generate a new journey?')) return;
-                  try { await axiosInstance.delete('/user/roadmap'); setCurrentRoadmap(null); navigate('/questionnaire', { replace: true }); }
-                  catch (e) { console.error('Reset error:', e); }
-                }}
+                onClick={() => setShowResetModal(true)}
               >Reset journey</button>
             )}
           </div>
@@ -426,6 +426,59 @@ const Profile = () => {
 
         </div>
       </div>
+
+      {/* ── Reset Journey Modal Overlay ── */}
+      {showResetModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', 
+          background: 'rgba(26,46,26,0.5)', WebkitBackdropFilter: 'blur(6px)', backdropFilter: 'blur(6px)', 
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999,
+          animation: 'fadein 0.2s ease-out'
+        }}>
+          <div style={{
+            background: G.surface, borderRadius: 24, padding: '32px 28px', maxWidth: 420, width: '90%',
+            boxShadow: G.shadowMd, border: `1px solid ${G.border}`, textAlign: 'center',
+            position: 'relative', top: '-5vh'
+          }}>
+            <div style={{ width: 64, height: 64, background: G.roseLight, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', color: G.rose, boxShadow: '0 4px 20px rgba(225,29,72,0.15)' }}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <h3 style={{ fontFamily: "'Fraunces',serif", fontSize: 24, fontWeight: 700, color: G.text1, marginBottom: 12 }}>Reset your journey?</h3>
+            <p style={{ fontSize: 14, color: G.text3, marginBottom: 28, lineHeight: 1.6 }}>
+              This will permanently clear your current roadmap and progress. You will be redirected to generate a fresh one. 
+            </p>
+            <div style={{ display: 'flex', gap: 14, justifyContent: 'center' }}>
+              <button 
+                onClick={() => setShowResetModal(false)}
+                style={{ padding: '14px 20px', background: G.bg, color: G.text2, border: `1px solid ${G.border}`, borderRadius: 14, fontSize: 14, fontWeight: 700, cursor: 'pointer', flex: 1, transition: 'all 0.15s', fontFamily: "'Plus Jakarta Sans',sans-serif" }}
+                onMouseEnter={e => e.currentTarget.style.background = G.borderSoft}
+                onMouseLeave={e => e.currentTarget.style.background = G.bg}
+                disabled={isResetting}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={async () => {
+                  setIsResetting(true);
+                  try { await axiosInstance.delete('/user/roadmap'); setCurrentRoadmap(null); navigate('/questionnaire', { replace: true }); }
+                  catch (e) { console.error('Reset error:', e); setIsResetting(false); setShowResetModal(false); }
+                }}
+                style={{ padding: '14px 20px', background: G.rose, color: '#fff', border: 'none', borderRadius: 14, fontSize: 14, fontWeight: 700, cursor: 'pointer', flex: 1, boxShadow: '0 4px 14px rgba(225,29,72,0.3)', transition: 'all 0.15s', opacity: isResetting ? 0.7 : 1, fontFamily: "'Plus Jakarta Sans',sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                onMouseEnter={e => { if(!isResetting) e.currentTarget.style.transform = 'translateY(-2px)' }}
+                onMouseLeave={e => { if(!isResetting) e.currentTarget.style.transform = 'translateY(0)' }}
+                disabled={isResetting}
+              >
+                {isResetting ? (
+                  <>
+                    <svg className="modal-spinner" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                    Resetting...
+                  </>
+                ) : 'Yes, Reset'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

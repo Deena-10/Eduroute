@@ -4,6 +4,18 @@ const aiService = require("../services/aiService");
 
 const MAX_MCQS_PER_CHAPTER = 5;
 
+// Helper: Safely parse JSON strings or return the object if already parsed (handles pg jsonb)
+const safeParse = (data, fallback = []) => {
+    if (!data) return fallback;
+    if (typeof data === 'object') return data;
+    try {
+        return JSON.parse(data);
+    } catch (e) {
+        console.error("SafeParse failure:", e.message, data);
+        return fallback;
+    }
+};
+
 // Normalize: max 5 MCQs per unit; move excess to next chapter
 function normalizeRoadmapUnits(payload, domain) {
     const units = payload?.roadmap?.units || payload?.units || [];
@@ -110,7 +122,7 @@ exports.getProfileDashboard = async (req, res, next) => {
         const achievementsRes = await pool.query(
             "SELECT achievement_type, achieved_at FROM user_achievements WHERE user_id = $1 ORDER BY achieved_at DESC",
             [userId]
-        );
+        ).catch(() => ({ rows: [] }));
         const activityRes = await pool.query(
             "SELECT activity_type, title, created_at FROM user_activity_log WHERE user_id = $1 ORDER BY created_at DESC LIMIT 20",
             [userId]
@@ -133,14 +145,14 @@ exports.getProfileDashboard = async (req, res, next) => {
         };
         const achievements = (achievementsRes.rows || []).map(row => ({
             ...row,
-            ...achievementsDefs[row.achievement_type],
+            ...(achievementsDefs[row.achievement_type] || {}),
         }));
 
-        const skillsLearned = Array.isArray(p?.skills_learned) ? p.skills_learned : (typeof p?.skills_learned === "string" ? JSON.parse(p?.skills_learned || "[]") : []);
-        const skillsToLearn = Array.isArray(p?.skills_to_learn) ? p.skills_to_learn : (typeof p?.skills_to_learn === "string" ? JSON.parse(p?.skills_to_learn || "[]") : []);
+        const skillsLearned = safeParse(p?.skills_learned);
+        const skillsToLearn = safeParse(p?.skills_to_learn);
         const domain = r?.domain || null;
-        const completedTasks = r?.completed_tasks ? (Array.isArray(r.completed_tasks) ? r.completed_tasks : JSON.parse(r.completed_tasks || "[]")) : [];
-        const progressPct = r?.progress_percentage ?? 0;
+        const completedTasks = safeParse(r?.completed_tasks);
+        const progressPct = Number(r?.progress_percentage ?? 0);
         const skills = [
             ...skillsLearned.map(s => ({ name: typeof s === "string" ? s : s?.name || "Skill", level: 85, category: "Learned" })),
             ...skillsToLearn.map(s => ({ name: typeof s === "string" ? s : s?.name || "Skill", level: Math.min(progressPct, 70), category: "Learning" })),
@@ -171,13 +183,13 @@ exports.getProfileDashboard = async (req, res, next) => {
         const lessonsCompleted = completedTasks.length;
         let totalTaskCount = 0;
         if (r?.roadmap_content) {
-            const content = typeof r.roadmap_content === "string" ? JSON.parse(r.roadmap_content) : r.roadmap_content;
+            const content = safeParse(r.roadmap_content, {});
             totalTaskCount = getFlatTaskIds(content).length;
         }
         if (totalTaskCount === 0 && r?.domain) {
             const dmRes = await pool.query("SELECT roadmap_content FROM domain_roadmaps WHERE domain = $1", [r.domain]);
             if (dmRes.rows?.length > 0) {
-                const content = typeof dmRes.rows[0].roadmap_content === "string" ? JSON.parse(dmRes.rows[0].roadmap_content) : dmRes.rows[0].roadmap_content;
+                const content = safeParse(dmRes.rows[0].roadmap_content, {});
                 totalTaskCount = getFlatTaskIds(content).length;
             }
         }
@@ -192,8 +204,8 @@ exports.getProfileDashboard = async (req, res, next) => {
             profile: {
                 name: p?.user_name ?? p?.email ?? null,
                 email: p?.email ?? p?.user_email ?? null,
-                interests: Array.isArray(p?.interests) ? p.interests : (typeof p?.interests === "string" ? JSON.parse(p?.interests || "[]") : []),
-                streak_snapshots: Array.isArray(p?.streak_snapshots) ? p.streak_snapshots : [],
+                interests: safeParse(p?.interests),
+                streak_snapshots: safeParse(p?.streak_snapshots),
             },
             overview: {
                 lessonsCompleted,
@@ -306,18 +318,18 @@ exports.getRoadmap = async (req, res, next) => {
             );
             if (dmResult.rows.length > 0) {
                 let content = dmResult.rows[0].roadmap_content;
-                content = typeof content === "string" ? JSON.parse(content) : content;
+                content = safeParse(content, {});
                 row.roadmap_content = normalizeRoadmapUnits(content, row.domain);
             }
         }
         if (!row.domain && row.roadmap_content) {
-            let content = typeof row.roadmap_content === "string" ? JSON.parse(row.roadmap_content) : row.roadmap_content;
+            let content = safeParse(row.roadmap_content, {});
             row.roadmap_content = normalizeRoadmapUnits(content, content?.roadmap?.domain || "General");
         }
         // Recalculate progress for accuracy (completed / total from current content)
         const content = row.roadmap_content?.roadmap || row.roadmap_content;
         const allTaskIds = getFlatTaskIds(row.roadmap_content);
-        const completedTasks = Array.isArray(row.completed_tasks) ? row.completed_tasks : JSON.parse(row.completed_tasks || "[]");
+        const completedTasks = safeParse(row.completed_tasks);
         if (allTaskIds.length > 0) {
             row.progress_percentage = Math.min(100, Math.round((completedTasks.length / allTaskIds.length) * 100));
         }
@@ -370,17 +382,17 @@ exports.completeTask = async (req, res, next) => {
             const dmRes = await pool.query("SELECT roadmap_content FROM domain_roadmaps WHERE domain = $1", [roadmap.domain]);
             if (dmRes.rows.length > 0) {
                 let raw = dmRes.rows[0].roadmap_content;
-                raw = typeof raw === "string" ? JSON.parse(raw) : raw;
+                raw = safeParse(raw, {});
                 content = normalizeRoadmapUnits(raw, roadmap.domain);
             }
         }
-        if (typeof content === "string") content = JSON.parse(content);
+        content = safeParse(content, {});
         content = normalizeRoadmapUnits(content, roadmap.domain || content?.roadmap?.domain);
         const allTaskIds = getFlatTaskIds(content);
 
         if (!allTaskIds.includes(taskId)) return res.error("Task not found in roadmap", "Task completion failed", 400);
 
-        let completedTasks = Array.isArray(roadmap.completed_tasks) ? roadmap.completed_tasks : JSON.parse(roadmap.completed_tasks || "[]");
+        let completedTasks = safeParse(roadmap.completed_tasks);
         let progress = roadmap.progress_percentage != null ? Number(roadmap.progress_percentage) : 0;
         let completedHours = Number(roadmap.completed_hours) || 0;
         const isNewCompletion = !completedTasks.includes(taskId);
@@ -494,7 +506,7 @@ exports.completeTask = async (req, res, next) => {
                 let snapshots = [];
                 if (profRows.length > 0 && profRows[0].streak_snapshots != null) {
                     const raw = profRows[0].streak_snapshots;
-                    snapshots = Array.isArray(raw) ? raw : (typeof raw === "string" ? JSON.parse(raw || "[]") : []);
+                    snapshots = safeParse(raw);
                 }
                 const withoutToday = snapshots.filter((s) => s && s.date !== today);
                 snapshots = [...withoutToday, { date: today, streak: currentStreak }].sort(

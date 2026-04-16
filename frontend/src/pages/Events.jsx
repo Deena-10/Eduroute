@@ -19,10 +19,52 @@ const G = {
 };
 
 const typeConfig = {
-  webinar: { label: 'Webinar', color: G.blue,     bg: G.blueLight,   icon: '🎙️' },
-  event:   { label: 'Event',   color: G.greenMid,  bg: G.sageDim,     icon: '📅' },
-  job:     { label: 'Job',     color: G.violet,    bg: G.violetLight, icon: '💼' },
+  webinar:    { label: 'Webinar',    color: G.blue,      bg: G.blueLight,   icon: '🎙️' },
+  event:      { label: 'Event',      color: G.greenMid,  bg: G.sageDim,     icon: '📅' },
+  job:        { label: 'Job',        color: G.violet,    bg: G.violetLight, icon: '💼' },
+  conference: { label: 'Conference', color: G.amber,     bg: G.amberLight,  icon: '🎟️' },
+  hackathon:  { label: 'Hackathon',  color: G.rose,      bg: '#FFF1F2',     icon: '🏆' },
 };
+
+const globalEvents = [
+  // Conferences
+  { id: 'global-c1', type: 'conference', title: 'KubeCon + CloudNativeCon Europe 2026', description: 'CNCF’s flagship cloud-native conference; brings together developers and operators of Kubernetes and related tech.', event_date: '2026-03-23', url: 'https://events.linuxfoundation.org/kubecon-cloudnativecon-europe', domain: 'Cloud-native / Kubernetes', location: 'Amsterdam, Netherlands' },
+  { id: 'global-c2', type: 'conference', title: 'NVIDIA GTC 2026', description: 'Annual GPU Technology Conference; AI/deep learning focus.', event_date: '2026-03-16', url: 'https://www.nvidia.com/gtc/', domain: 'AI, GPU Computing', location: 'San Jose, CA, USA & Virtual' },
+  { id: 'global-c3', type: 'conference', title: 'Red Hat Summit 2026', description: 'Four-day open-source tech event with labs, keynotes on AI, cloud, virtualization.', event_date: '2026-05-11', url: 'https://reg.experiences.redhat.com', domain: 'Open source, cloud', location: 'Atlanta, GA, USA' },
+  { id: 'global-c4', type: 'conference', title: 'SANS AI Cybersecurity Summit 2026', description: 'Summit on AI in cybersecurity; covers AI for defense and threat detection.', event_date: '2026-04-20', url: 'https://www.sans.org/cyber-security-training-events/ai-summit-2026', domain: 'Cybersecurity, AI', location: 'Arlington, VA, USA' },
+  { id: 'global-c5', type: 'conference', title: 'Agentic AI Security Summit 2026', description: 'Virtual event on designing and scaling secure autonomous AI systems.', event_date: '2026-04-29', url: 'https://csaurl.org', domain: 'AI Security', location: 'Virtual' },
+  { id: 'global-c6', type: 'conference', title: 'KubeCon + CloudNativeCon India 2026', description: 'CNCF’s flagship cloud-native conference in India.', event_date: '2026-06-18', url: 'https://events.linuxfoundation.org/kubecon-cloudnativecon-india/', domain: 'Cloud-native / Kubernetes', location: 'Mumbai, India' },
+  { id: 'global-c7', type: 'conference', title: 'Google I/O 2026', description: 'Google’s flagship developer conference (Android, web, AI).', event_date: '2026-05-19', url: 'https://io.google/', domain: 'Android, web, AI', location: 'Mountain View, USA' },
+
+  // Hackathons
+  { id: 'global-h1', type: 'hackathon', title: 'HSIL Hackathon 2026', description: 'Global public health hackathon; theme “Building High-Value Health Systems: Leveraging AI.”', event_date: '2026-04-10', url: 'https://hsph.harvard.edu/research/health-systems-innovation-lab/work/hsil-hackathon-2026-building-high-value-health-systems-leveraging-ai/', domain: 'Health Systems, AI', location: 'Patna & Bhubaneswar, India' },
+  { id: 'global-h2', type: 'hackathon', title: 'KIEFER AI Open Hackathon 2026', description: 'AI innovation lab with NVIDIA DGX™ hardware; teams optimize AI apps on GPUs.', event_date: '2026-04-27', url: 'http://bit.ly/4u6UC06', domain: 'AI / GPU Computing', location: 'Athens, Greece' },
+  { id: 'global-h3', type: 'hackathon', title: 'NMIT Hacks 2026', description: '48-hour national-level student hackathon with mentorship and judged tracks.', event_date: '2026-05-08', url: 'https://www.nmithacks.com/', domain: 'Web, AI & ML, IoT, Blockchain', location: 'Bangalore, India' },
+  { id: 'global-h4', type: 'hackathon', title: 'HackPSU Spring 2026', description: 'Biannual collegiate hackathon at Penn State with workshops and speakers.', event_date: '2026-03-28', url: 'https://hackpsu.org/', domain: 'General Building', location: 'State College, PA, USA' },
+
+  // Webinars
+  { id: 'global-w1', type: 'webinar', title: 'Snowflake Connect: AI Data Cloud', description: 'Webinar on aligning enterprise data strategy with AI; covers governance, security.', event_date: '2026-04-07', url: 'https://www.snowflake.com/en/webinars/thought-leadership/snowflake-connect-ai-data-cloud-2026-04-07/', domain: 'Data Science, AI', location: 'Online' },
+  { id: 'global-w2', type: 'webinar', title: 'The New Era of Connection', description: 'Salesforce webinar with Harmony Public Schools on using AI to personalize constituent experiences.', event_date: '2026-04-30', url: 'https://www.salesforce.com/events/webinars/', domain: 'EdTech, AI Marketing', location: 'Online' },
+
+  // Workshops & Meetups (Mapped to 'event')
+  { id: 'global-e1', type: 'event', title: 'Workshop on Blockchain and DLT', description: 'Public NIST workshop on technical architectures, interoperability, and security in real-world deployments.', event_date: '2026-04-16', url: 'https://www.nist.gov/events/workshop-blockchain-and-distributed-ledger-technologies', domain: 'Blockchain, Cybersecurity', location: 'Rockville, MD, USA' },
+  { id: 'global-e2', type: 'event', title: 'OpenID Foundation Hybrid Workshop', description: 'In-person/virtual workshop on OpenID standards and identity management updates.', event_date: '2026-04-27', url: 'https://oidf_workshop_iiw_spring26.eventbrite.co.uk', domain: 'Digital Identity', location: 'San Jose, CA, USA' },
+  { id: 'global-e3', type: 'event', title: 'AIDataTech Connect', description: 'Monthly virtual meetup for AI/ML professionals worldwide; networking platform.', event_date: '2026-04-23', url: 'https://events.tao.ai/pod/analytics.club/q4j5imq9qjs9', domain: 'AI, ML, Data Science', location: 'Online' },
+
+  // Jobs & Internships
+  { id: 'global-j1', type: 'job', title: 'Senior Eng. Manager, ML Infrastructure (Ads)', description: 'Oversees the ML infrastructure for Google Ads safety. Drives technical strategy for ML systems and leads engineers.', url: 'https://careers.google.com/', domain: 'Google', location: 'Pittsburgh, PA (On-site)' },
+  { id: 'global-j2', type: 'job', title: 'Software Engineer Intern, Summer 2026', description: 'Develop core Google services with AI and data projects. (Apply by May 8, 2026)', event_date: '2026-05-08', url: 'https://careers.google.com/', domain: 'Google', location: 'Sydney, NSW, Australia' },
+  { id: 'global-j3', type: 'job', title: 'Software Development Engineer Intern, Summer 2026', description: 'Interns work on real customer-facing services and collaborate on large-scale distributed systems.', url: 'https://amazon.jobs/', domain: 'Amazon', location: 'Seattle, WA (On-site)' },
+  { id: 'global-j4', type: 'job', title: 'Sr. HR Service Advisor (Payroll, P&O)', description: 'Part of the Pay Centralization team, managing payroll operations across Europe/Americas.', event_date: '2026-04-15', url: 'https://careers.microsoft.com/', domain: 'Microsoft', location: 'Hyderabad, India (Hybrid)' },
+  { id: 'global-j5', type: 'job', title: 'Principal Software Engineer (AI/Ads, MAI)', description: 'Building the AI-driven advertising platform (Copilot, Bing, etc.) and optimizing large-scale ML inference.', event_date: '2026-04-15', url: 'https://careers.microsoft.com/', domain: 'Microsoft', location: 'Redmond, WA (On-site)' },
+  { id: 'global-j6', type: 'job', title: 'Software Engineer Intern, Summer 2026', description: 'Contribute to Salesforce CRM platform: design, implement, and test cloud features (often with AI).', event_date: '2026-03-10', url: 'https://careers.salesforce.com/', domain: 'Salesforce', location: 'CA / WA / NY' },
+  { id: 'global-j7', type: 'job', title: 'Go-to-Market Strategy Intern', description: 'Intern tasks include project coordination, metric tracking, and analytics to support strategy initiatives.', url: 'https://openai.com/careers', domain: 'OpenAI', location: 'San Francisco, CA (Hybrid)' },
+  { id: 'global-j8', type: 'job', title: 'Asset Management Summer Analyst', description: 'Analyzes investment strategies and supports portfolio managers in Asset & Wealth Management.', url: 'https://careers.jpmorgan.com/', domain: 'JPMorgan Chase & Co.', location: 'Various (Global)' },
+  { id: 'global-j9', type: 'job', title: '2026 Summer Analyst Programme', description: 'Summer internship across various divisions. Undergraduates participate and are assigned to real projects.', url: 'https://www.goldmansachs.com/careers/', domain: 'Goldman Sachs', location: 'EMEA' },
+  { id: 'global-j10', type: 'job', title: 'Quality Engineering Co-op (Fall 2026)', description: 'Analyze test data, manage specifications, and propose process improvements.', event_date: '2026-04-06', url: 'https://careers.jnj.com/', domain: 'Johnson & Johnson', location: 'Cornelia, GA (On-site)' },
+  { id: 'global-j11', type: 'job', title: 'ML Engineering Intern (PhD) – Search Team', description: 'Apply AI/LLM techniques to Airbnb search. Own end-to-end projects.', url: 'https://careers.airbnb.com/', domain: 'Airbnb', location: 'USA (Remote-eligible)' },
+  { id: 'global-j12', type: 'job', title: 'Software Engineer Intern (Summer)', description: 'Tackle meaningful engineering projects and improve payment systems.', url: 'https://stripe.com/jobs', domain: 'Stripe', location: 'USA (SF, Seattle, NYC)' }
+];
 
 const EventCard = ({ event }) => {
   const cfg = typeConfig[event.type] || { label: event.type, color: G.green, bg: G.greenMist, icon: '🔖' };
@@ -51,8 +93,9 @@ const EventCard = ({ event }) => {
             <span style={{ fontSize: 11, color: G.text4, fontWeight: 600 }}>{event.domain}</span>
           )}
           {event.event_date && (
-            <span style={{ fontSize: 11, color: G.text4, marginLeft: 'auto' }}>
-              {new Date(event.event_date).toLocaleDateString()}
+            <span style={{ fontSize: 11, color: G.text4, marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              {new Date(event.event_date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
             </span>
           )}
         </div>
@@ -61,30 +104,59 @@ const EventCard = ({ event }) => {
           {event.title}
         </h3>
 
+        {event.location && (
+          <p style={{ fontSize: 11, color: G.text4, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            {event.location}
+          </p>
+        )}
+
         {event.description && (
-          <p style={{ fontSize: 13, color: G.text3, lineHeight: 1.65, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+          <p style={{ fontSize: 13, color: G.text3, lineHeight: 1.65, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', marginBottom: 12 }}>
             {event.description}
           </p>
         )}
-      </div>
 
-      {event.url && (
-        <a
-          href={event.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            flexShrink: 0, padding: '8px 16px', background: G.green, color: '#fff',
-            fontSize: 12, fontWeight: 700, borderRadius: 9, textDecoration: 'none',
-            boxShadow: G.shadowGreen, transition: 'all 0.15s',
-            fontFamily: "'Plus Jakarta Sans',sans-serif", alignSelf: 'center',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.background = G.greenMid; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = G.green; e.currentTarget.style.transform = ''; }}
-        >
-          View →
-        </a>
-      )}
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          {event.url && (
+            <a
+              href={event.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                padding: '7px 14px', background: G.green, color: '#fff',
+                fontSize: 12, fontWeight: 700, borderRadius: 9, textDecoration: 'none',
+                boxShadow: G.shadowGreen, transition: 'all 0.15s',
+                fontFamily: "'Plus Jakarta Sans',sans-serif"
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = G.greenMid; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = G.green; e.currentTarget.style.transform = ''; }}
+            >
+              View →
+            </a>
+          )}
+          <button
+            onClick={() => {
+              if (navigator.share && event.url) {
+                navigator.share({ title: event.title, url: event.url }).catch(console.error);
+              } else if (event.url) {
+                navigator.clipboard.writeText(`${event.title} - ${event.url}`);
+                alert('Link copied to clipboard!');
+              }
+            }}
+            style={{
+              padding: '7px 14px', background: G.bg, color: G.text2, border: `1px solid ${G.border}`,
+              fontSize: 12, fontWeight: 700, borderRadius: 9, cursor: 'pointer', transition: 'all 0.15s',
+              fontFamily: "'Plus Jakarta Sans',sans-serif", display: 'flex', alignItems: 'center', gap: 6
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = G.borderSoft; e.currentTarget.style.borderColor = G.greenLine; }}
+            onMouseLeave={e => { e.currentTarget.style.background = G.bg; e.currentTarget.style.borderColor = G.border; }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            Share
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
@@ -99,17 +171,21 @@ const Events = () => {
     axiosInstance.get("/events?ts=" + Date.now()).then(res => {
       if (res.data?.success && res.data?.data) {
         const d = res.data.data;
-        setEvents(d.events || []);
+        setEvents(d.events ? [...d.events, ...globalEvents] : globalEvents);
         setUserContext(d.user_context || {});
+      } else {
+        setEvents(globalEvents);
       }
-    }).catch(e => console.error(e)).finally(() => setLoading(false));
+    }).catch(e => { console.error(e); setEvents(globalEvents); }).finally(() => setLoading(false));
   }, []);
 
   const filters = [
-    { id: 'all',    label: 'All' },
-    { id: 'webinar',label: 'Webinars' },
-    { id: 'event',  label: 'Events' },
-    { id: 'job',    label: 'Jobs' },
+    { id: 'all',        label: 'All' },
+    { id: 'conference', label: 'Conferences' },
+    { id: 'hackathon',  label: 'Hackathons' },
+    { id: 'webinar',    label: 'Webinars' },
+    { id: 'event',      label: 'Other Events' },
+    { id: 'job',        label: 'Jobs' },
   ];
   const filtered = filter === 'all' ? events : events.filter(e => e.type === filter);
 

@@ -25,6 +25,9 @@ model User {
   chat_history     ChatHistory[]
   streak           Streak?
   notifications    Notification[]
+  achievements     Achievement[]
+  activity_logs    ActivityLog[]
+  score            UserScore?
 
   @@map("users")
 }
@@ -152,4 +155,39 @@ model PushSubscription {
 
   @@unique([user_id, endpoint])
   @@map("push_subscriptions")
+}
+
+model Achievement {
+  id               Int      @id @default(autoincrement())
+  user_id          Int
+  achievement_type String   @db.VarChar(100)
+  achieved_at      DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, achievement_type])
+  @@map("user_achievements")
+}
+
+model ActivityLog {
+  id            Int      @id @default(autoincrement())
+  user_id       Int
+  activity_type String   @db.VarChar(50)
+  title         String   @db.VarChar(255)
+  created_at    DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("user_activity_log")
+}
+
+model UserScore {
+  user_id         Int      @id
+  total_correct   Int      @default(0)
+  total_questions Int      @default(0)
+  updated_at      DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("user_scores")
 }

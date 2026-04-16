@@ -239,7 +239,7 @@ const Roadmap = () => {
 
   useEffect(() => {
     if (activeTab === 'rank')
-      axiosInstance.get('/user/rank').then(r => { if (r.data?.success) setRankList(r.data.data || []); }).catch(() => setRankList([]));
+      axiosInstance.get('/user/leaderboard').then(r => { if (r.data?.success) setRankList(r.data.data || []); }).catch(() => setRankList([]));
     else if (activeTab === 'achievements')
       axiosInstance.get('/user/achievements').then(r => { if (r.data?.success) setAchievements(r.data.data || []); }).catch(() => setAchievements([]));
     else if (activeTab === 'resources')
@@ -478,22 +478,6 @@ const Roadmap = () => {
               </div>
             </div>
 
-            {/* Mobile tabs inside header */}
-            <div className="rm-mt" style={{ borderTop: `1px solid ${G.borderSoft}`, display: 'none' }}>
-              {tabs.map(({ id, label, Icon }) => (
-                <button key={id} onClick={() => setActiveTab(id)} style={{
-                  flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-                  padding: '8px 2px', border: 'none', background: 'transparent', cursor: 'pointer',
-                  fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 9, fontWeight: 700,
-                  textTransform: 'uppercase', letterSpacing: '0.06em',
-                  color: activeTab === id ? G.green : G.text4,
-                  borderTop: `2px solid ${activeTab === id ? G.green : 'transparent'}`,
-                  marginTop: -1, transition: 'color 0.15s',
-                }}>
-                  <Icon size={14} color={activeTab === id ? G.green : G.text4} />{label}
-                </button>
-              ))}
-            </div>
           </header>
 
           {/* Scrollable body */}
@@ -563,46 +547,40 @@ const Roadmap = () => {
                 </div>
               )}
 
-              {/* ── RANK TAB ── */}
               {activeTab === 'rank' && (
                 <div>
-                  <SectionHdr dot={G.violet} label="Community" title="Leaderboard" sub="Ranked by quiz score and accuracy" />
-                  {rankList.length === 0
-                    ? <Empty icon={<IcoChart size={20} color={G.text4} />} msg="Complete quizzes to appear on the leaderboard and compete with peers." />
-                    : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        {rankList.map((r, i) => (
-                          <motion.div key={r.id} style={{
-                            ...card, padding: '14px 18px',
-                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                            borderColor: r.isCurrentUser ? 'rgba(45,106,79,0.3)' : G.border,
-                            background: r.isCurrentUser ? G.greenMist : G.surface,
-                            boxShadow: r.isCurrentUser ? '0 4px 18px rgba(45,106,79,0.14)' : G.shadowXs,
-                          }} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                              <div style={{
-                                width: 32, height: 32, borderRadius: 10, flexShrink: 0,
-                                background: r.rank <= 3 ? G.green : G.bgDeep,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                fontFamily: "'Fraunces',serif", fontSize: 13, fontWeight: 700,
-                                color: r.rank <= 3 ? '#fff' : G.text4,
-                              }}>
-                                {r.rank <= 3 ? ['🥇','🥈','🥉'][r.rank - 1] : `#${r.rank}`}
-                              </div>
-                              <div>
-                                <p style={{ fontFamily: "'Fraunces',serif", fontSize: 14, fontWeight: 600, color: G.text1 }}>{r.name || 'User'}</p>
-                                {r.isCurrentUser && <span style={{ fontSize: 9, padding: '2px 8px', background: G.greenSoft, color: G.green, borderRadius: 20, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>You</span>}
-                              </div>
-                            </div>
-                            <div style={{ textAlign: 'right' }}>
-                              <p style={{ fontFamily: "'Fraunces',serif", fontSize: 15, fontWeight: 700, color: G.text1 }}>{r.total_correct} pts</p>
-                              <p style={{ fontSize: 11, color: G.text4, marginTop: 2 }}>{r.accuracy_pct}% accuracy</p>
-                            </div>
-                          </motion.div>
-                        ))}
-                      </div>
-                    )
-                  }
+                  <SectionHdr dot={G.violet} label="Community" title="Leaderboard" sub="Ranked by learning streak" />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {rankList.map((r, i) => (
+                      <motion.div key={r.id} style={{
+                        ...card, padding: '14px 18px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        borderColor: r.isCurrentUser ? 'rgba(45,106,79,0.3)' : G.border,
+                        background: r.isCurrentUser ? G.greenMist : G.surface,
+                        boxShadow: r.isCurrentUser ? '0 4px 18px rgba(45,106,79,0.14)' : G.shadowXs,
+                      }} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <div style={{
+                            width: 32, height: 32, borderRadius: 10, flexShrink: 0,
+                            background: r.rank <= 3 ? G.green : G.bgDeep,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontFamily: "'Fraunces',serif", fontSize: 13, fontWeight: 700,
+                            color: r.rank <= 3 ? '#fff' : G.text4,
+                          }}>
+                            {r.rank <= 3 ? ['🥇','🥈','🥉'][r.rank - 1] : `#${r.rank}`}
+                          </div>
+                          <div>
+                            <p style={{ fontFamily: "'Fraunces',serif", fontSize: 14, fontWeight: 600, color: G.text1 }}>{r.name || 'User'}</p>
+                            {r.isCurrentUser && <span style={{ fontSize: 9, padding: '2px 8px', background: G.greenSoft, color: G.green, borderRadius: 20, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>You</span>}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <p style={{ fontFamily: "'Fraunces',serif", fontSize: 15, fontWeight: 700, color: G.text1 }}>🔥 {r.streak || 0}</p>
+                          <p style={{ fontSize: 11, color: G.text4, marginTop: 2 }}>Lv.{r.level || 1} • {r.completedSteps || 0} done</p>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -635,9 +613,9 @@ const Roadmap = () => {
 
       {/* ── Mobile bottom nav ── */}
       <nav className="rm-bn" style={{
-        position: 'fixed', bottom: 10, left: 10, right: 10,
-        background: G.surface, borderRadius: 20,
-        border: `1px solid ${G.border}`,
+        position: 'fixed', bottom: 0, left: 0, right: 0,
+        background: G.surface,
+        borderTop: `1px solid ${G.border}`,
         boxShadow: G.shadowLg,
         zIndex: 50, paddingBottom: 'env(safe-area-inset-bottom)',
         display: 'none',

@@ -650,6 +650,53 @@ exports.getRank = async (req, res, next) => {
     }
 };
 
+exports.getLeaderboard = async (req, res, next) => {
+    try {
+        let rows = [];
+        try {
+            const result = await pool.query(
+                `SELECT u.id, u.name, 
+                        COALESCE(s.current_streak, 0)::int AS streak, 
+                        u.created_at,
+                        COALESCE(r.progress_percentage, 0)::int as level_progress,
+                        r.completed_tasks
+                 FROM users u
+                 LEFT JOIN user_learning_streak s ON u.id = s.user_id
+                 LEFT JOIN (
+                     SELECT user_id, progress_percentage, completed_tasks,
+                            ROW_NUMBER() OVER(PARTITION BY user_id ORDER BY created_at DESC) as rn
+                     FROM user_roadmaps
+                     WHERE status = 'active'
+                 ) r ON u.id = r.user_id AND r.rn = 1
+                 ORDER BY streak DESC, u.created_at ASC`
+            );
+            rows = result.rows || [];
+        } catch (_) {
+            rows = [];
+        }
+        
+        const currentUserId = req.user.id;
+        const withRank = rows.map((r, i) => {
+            const level = Math.floor((r.level_progress || 0) / 25) + 1;
+            const completedSteps = safeParse(r.completed_tasks).length;
+            
+            return {
+                id: r.id,
+                name: r.name,
+                streak: r.streak,
+                level: level,
+                completedSteps: completedSteps,
+                rank: i + 1,
+                isCurrentUser: r.id === currentUserId
+            };
+        });
+        
+        res.success(withRank, "Leaderboard fetched");
+    } catch (error) {
+        next(error);
+    }
+};
+
 exports.getAchievements = async (req, res, next) => {
     try {
         const { rows } = await pool.query(

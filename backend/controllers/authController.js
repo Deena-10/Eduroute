@@ -4,6 +4,7 @@ const bcrypt = require("bcrypt");
 const { prisma } = require("../config/prisma");
 const admin = require("../config/firebaseAdmin");
 const { v4: uuidv4 } = require("uuid");
+const pool = require("../config/postgres");
 
 // Standard Response Wrapper
 const sendResponse = (res, statusCode, success, message, data = undefined) => {
@@ -54,6 +55,11 @@ exports.signup = async (req, res, next) => {
                 password: hashedPassword
             }
         });
+
+        await pool.query(
+            "INSERT INTO user_learning_streak (user_id, current_streak, last_activity_date, updated_at) VALUES ($1, 0, NULL, CURRENT_TIMESTAMP) ON CONFLICT (user_id) DO NOTHING",
+            [inserted.id]
+        );
 
         const token = createToken(inserted.id);
 
@@ -151,6 +157,10 @@ exports.googleSignin = async (req, res, next) => {
                     profile_picture: picture
                 }
             });
+            await pool.query(
+                "INSERT INTO user_learning_streak (user_id, current_streak, last_activity_date, updated_at) VALUES ($1, 0, NULL, CURRENT_TIMESTAMP) ON CONFLICT (user_id) DO NOTHING",
+                [inserted.id]
+            );
             user = { id: inserted.id, name: name || "Google User", email, profilePicture: picture };
         }
 

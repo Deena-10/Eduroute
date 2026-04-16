@@ -15,6 +15,7 @@ router.delete("/roadmap", userController.resetRoadmap);
 router.post("/roadmap/complete-task", userController.completeTask);
 router.get("/streak", userController.getStreak);
 router.get("/rank", userController.getRank);
+router.get("/leaderboard", userController.getLeaderboard);
 router.get("/achievements", userController.getAchievements);
 router.get("/resources", userController.getResources);
 router.post("/push-subscription", userController.savePushSubscription);
